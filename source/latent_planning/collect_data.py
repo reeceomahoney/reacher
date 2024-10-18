@@ -43,12 +43,12 @@ import gymnasium as gym
 import os
 import torch
 
-from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
+from source.latent_planning.latent_planning_data_collector import (
+    LatentPlanningDataCollector,
+)
 
 import omni.isaac.lab_tasks  # noqa: F401
-from omni.isaac.lab_tasks.manager_based.manipulation.lift import mdp
-from omni.isaac.lab_tasks.utils.data_collector import RobomimicDataCollector
 from omni.isaac.lab_tasks.utils.parse_cfg import parse_env_cfg
 
 
@@ -71,12 +71,9 @@ def main():
     dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
 
     # create data-collector
-    collector_interface = RobomimicDataCollector(
-        env_name=task,
+    collector_interface = LatentPlanningDataCollector(
         directory_path=log_dir,
         filename=args_cli.filename,
-        num_demos=args_cli.num_demos,
-        flush_freq=env.unwrapped.num_envs,
     )
 
     # reset environment
@@ -85,10 +82,12 @@ def main():
     # reset interfaces
     collector_interface.reset()
 
+    #env.scene.articulations["robot"].data.default_joint_limits
+
     # simulate environment -- run everything in inference mode
     timestep = 0
     with torch.inference_mode():
-        while not collector_interface.is_stopped():
+        while simulation_app.is_running():
             actions = torch.zeros(
                 (env.unwrapped.num_envs, 7),
                 device=env.unwrapped.device,
@@ -119,16 +118,13 @@ def main():
             # -- dones
             collector_interface.add("dones", dones)
 
-            # flush data from collector for successful environments
-            # reset_env_ids = dones.nonzero(as_tuple=False).squeeze(-1)
-            # collector_interface.flush(reset_env_ids)
-
-            # check if enough data is collected
-            if collector_interface.is_stopped():
-                break
-
             print(timestep)
             timestep += 1
+
+            # flush data from collector
+            if timestep >= 100:
+                collector_interface.flush()
+                break
 
     # close the simulator
     collector_interface.close()
