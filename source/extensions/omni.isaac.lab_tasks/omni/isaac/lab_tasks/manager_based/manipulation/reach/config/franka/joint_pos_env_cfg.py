@@ -43,6 +43,8 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         self.commands.ee_pose.body_name = "panda_hand"
         self.commands.ee_pose.ranges.pitch = (math.pi, math.pi)
 
+        self.episode_length_s = 1.0 / 50.0
+
 
 @configclass
 class FrankaReachEnvCfg_PLAY(FrankaReachEnvCfg):
