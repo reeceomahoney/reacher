@@ -42,39 +42,27 @@ from omni.isaac.lab_assets import FRANKA_PANDA_CFG  # isort: skip
 ##
 
 
-def reset_joints_by_offset(
+def reset_joints_random(
     env: ManagerBasedEnv,
     env_ids: torch.Tensor,
-    position_range: tuple[float, float],
-    velocity_range: tuple[float, float],
     asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
 ):
-    """Reset the robot joints with offsets around the default position and velocity by the given ranges.
-
-    This function samples random values from the given ranges and biases the default joint positions and velocities
-    by these values. The biased values are then set into the physics simulation.
-    """
+    """Reset the robot joints to a random position within its full range."""
     # extract the used quantities (to enable type-hinting)
     asset: Articulation = env.scene[asset_cfg.name]
 
-    # get default joint state
+    # get default joint state for shape
     joint_pos = asset.data.default_joint_pos[env_ids].clone()
     joint_vel = asset.data.default_joint_vel[env_ids].clone()
 
-    # bias these values randomly
+    # sample position
+    joint_pos_limits = asset.data.soft_joint_pos_limits[env_ids]
     joint_pos += math_utils.sample_uniform(
-        *position_range, joint_pos.shape, joint_pos.device
-    )
-    joint_vel += math_utils.sample_uniform(
-        *velocity_range, joint_vel.shape, joint_vel.device
+        *joint_pos_limits, joint_pos.shape, joint_pos.device
     )
 
-    # clamp joint pos to limits
-    joint_pos_limits = asset.data.soft_joint_pos_limits[env_ids]
-    joint_pos = joint_pos.clamp_(joint_pos_limits[..., 0], joint_pos_limits[..., 1])
-    # clamp joint vel to limits
-    joint_vel_limits = asset.data.soft_joint_vel_limits[env_ids]
-    joint_vel = joint_vel.clamp_(-joint_vel_limits, joint_vel_limits)
+    # set velocities to zero
+    joint_vel = torch.zeros_like(joint_vel)
 
     # set into the physics simulation
     asset.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
@@ -153,7 +141,7 @@ class ActionsCfg:
 class ObservationsCfg:
     """Observation specifications for the MDP."""
 
-    #TODO: add end effector pose
+    # TODO: add end effector pose
 
     @configclass
     class PolicyCfg(ObsGroup):
@@ -183,16 +171,7 @@ class ObservationsCfg:
 class EventCfg:
     """Configuration for events."""
 
-    # TODO: use custom reset function
-
-    reset_robot_joints = EventTerm(
-        func=mdp.reset_joints_by_offset,
-        mode="reset",
-        params={
-            "position_range": (0.0, 6.28),
-            "velocity_range": (0.0, 6.28),
-        },
-    )
+    reset_robot_joints = EventTerm(func=reset_joints_random, mode="reset")
 
 
 @configclass
