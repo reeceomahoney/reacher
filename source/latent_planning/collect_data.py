@@ -19,10 +19,10 @@ parser.add_argument(
     "--num_envs", type=int, default=1, help="Number of environments to simulate."
 )
 parser.add_argument(
-    "--num_demos",
+    "--num_timesteps",
     type=int,
-    default=1,
-    help="Number of episodes to store in the dataset.",
+    default=100,
+    help="Number of timesteps to store in the dataset.",
 )
 parser.add_argument(
     "--filename", type=str, default="hdf_dataset", help="Basename of output file."
@@ -31,7 +31,7 @@ parser.add_argument(
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli = parser.parse_args()
-args_cli.headless = True
+# args_cli.headless = True
 
 # launch the simulator
 app_launcher = AppLauncher(args_cli)
@@ -42,7 +42,9 @@ simulation_app = app_launcher.app
 import gymnasium as gym
 import os
 import torch
+import tqdm
 
+import source.latent_planning.env_cfg
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 from source.latent_planning.latent_planning_data_collector import (
     LatentPlanningDataCollector,
@@ -54,7 +56,7 @@ from omni.isaac.lab_tasks.utils.parse_cfg import parse_env_cfg
 
 def main():
     """Collect demonstrations from the environment using teleop interfaces."""
-    task = "Isaac-Reach-Franka-v0"
+    task = "Isaac-Latent-Planning"
     env_cfg = parse_env_cfg(task, device=args_cli.device, num_envs=args_cli.num_envs)
 
     # we want to have the terms in the observations returned as a dictionary
@@ -82,11 +84,11 @@ def main():
     # reset interfaces
     collector_interface.reset()
 
-    #env.scene.articulations["robot"].data.default_joint_limits
+    # print(env.scene.articulations["robot"].data.default_joint_limits[0])
 
     # simulate environment -- run everything in inference mode
     timestep = 0
-    with torch.inference_mode():
+    with torch.inference_mode() and tqdm.tqdm(total=args_cli.num_timesteps) as pbar:
         while simulation_app.is_running():
             actions = torch.zeros(
                 (env.unwrapped.num_envs, 7),
@@ -118,11 +120,11 @@ def main():
             # -- dones
             collector_interface.add("dones", dones)
 
-            print(timestep)
             timestep += 1
+            pbar.update(1)
 
             # flush data from collector
-            if timestep >= 100:
+            if timestep >= args_cli.num_timesteps:
                 collector_interface.flush()
                 break
 

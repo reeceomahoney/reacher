@@ -7,12 +7,11 @@ import gymnasium as gym
 import math
 import torch
 from dataclasses import MISSING
-from typing import TYPE_CHECKING
 
 import omni.isaac.lab.sim as sim_utils
 import omni.isaac.lab.utils.math as math_utils
 from omni.isaac.lab.assets import Articulation, ArticulationCfg, AssetBaseCfg
-from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
+from omni.isaac.lab.envs import ManagerBasedEnv, ManagerBasedRLEnvCfg
 from omni.isaac.lab.managers import ActionTermCfg as ActionTerm
 from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
@@ -27,10 +26,6 @@ from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
-
-if TYPE_CHECKING:
-    from omni.isaac.lab.envs import ManagerBasedEnv
-
 
 ##
 # Pre-defined configs
@@ -57,8 +52,8 @@ def reset_joints_random(
 
     # sample position
     joint_pos_limits = asset.data.soft_joint_pos_limits[env_ids]
-    joint_pos += math_utils.sample_uniform(
-        *joint_pos_limits, joint_pos.shape, joint_pos.device
+    joint_pos = math_utils.sample_uniform(
+        joint_pos_limits[..., 0], joint_pos_limits[..., 1], joint_pos.shape, joint_pos.device
     )
 
     # set velocities to zero
@@ -312,7 +307,7 @@ class LatentPlanningEnvCfg_PLAY(LatentPlanningEnvCfg):
 ##
 
 gym.register(
-    id="Isaac-Reach-Franka-v0",
+    id="Isaac-Latent-Planning",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
@@ -321,7 +316,7 @@ gym.register(
 )
 
 gym.register(
-    id="Isaac-Reach-Franka-Play-v0",
+    id="Isaac-Latent-Planning-Play",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={

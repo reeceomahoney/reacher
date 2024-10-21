@@ -7,12 +7,14 @@ def print_h5_contents(file_path):
 
         def print_group(name, obj):
             if isinstance(obj, h5py.Dataset):
-                print(f"Dataset: {name}")
-                print(f"  Shape: {obj.shape}")
-                print(f"  Dtype: {obj.dtype}")
-                print(f"mean: {np.mean(obj)}")
-                print(f"std: {np.std(obj)}")
-                print("\n")
+                if name.endswith("/obs/joint_pos"):
+                    print(f"  Shape: {obj.shape}")
+                    print(f"  Dtype: {obj.dtype}")
+                    print(f"mean: {np.mean(obj)}")
+                    print(f"std: {np.std(obj)}")
+                    print(f"min: {np.min(obj, axis=(0,1))}")
+                    print(f"max: {np.max(obj, axis=(0,1))}")
+                    print("\n")
             elif isinstance(obj, h5py.Group):
                 print(f"Group: {name}")
 
@@ -21,5 +23,5 @@ def print_h5_contents(file_path):
 
 
 # Usage
-file_path = "logs/latent_planning/Isaac-Reach-Franka-v0/hdf_dataset.hdf5"
+file_path = "logs/latent_planning/Isaac-Latent-Planning/hdf_dataset.hdf5"
 print_h5_contents(file_path)
