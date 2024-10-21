@@ -10,7 +10,12 @@ from dataclasses import MISSING
 
 import omni.isaac.lab.sim as sim_utils
 import omni.isaac.lab.utils.math as math_utils
-from omni.isaac.lab.assets import Articulation, ArticulationCfg, AssetBaseCfg
+from omni.isaac.lab.assets import (
+    Articulation,
+    ArticulationCfg,
+    AssetBaseCfg,
+    RigidObject,
+)
 from omni.isaac.lab.envs import ManagerBasedEnv, ManagerBasedRLEnvCfg
 from omni.isaac.lab.managers import ActionTermCfg as ActionTerm
 from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
@@ -23,7 +28,6 @@ from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
 from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
-from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
 
@@ -33,7 +37,7 @@ import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
 from omni.isaac.lab_assets import FRANKA_PANDA_CFG  # isort: skip
 
 ##
-# Reset function
+# Custom functions
 ##
 
 
@@ -53,7 +57,10 @@ def reset_joints_random(
     # sample position
     joint_pos_limits = asset.data.soft_joint_pos_limits[env_ids]
     joint_pos = math_utils.sample_uniform(
-        joint_pos_limits[..., 0], joint_pos_limits[..., 1], joint_pos.shape, joint_pos.device
+        joint_pos_limits[..., 0],
+        joint_pos_limits[..., 1],
+        joint_pos.shape,
+        joint_pos.device,
     )
 
     # set velocities to zero
@@ -61,6 +68,17 @@ def reset_joints_random(
 
     # set into the physics simulation
     asset.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
+
+
+def ee_pos_w(
+    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
+) -> torch.Tensor:
+    """Asset ee position in the environment frame."""
+    # extract the used quantities (to enable type-hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+    return (
+        asset.data.body_pos_w[:, asset_cfg.body_ids].squeeze() - env.scene.env_origins
+    )
 
 
 ##
@@ -136,23 +154,18 @@ class ActionsCfg:
 class ObservationsCfg:
     """Observation specifications for the MDP."""
 
-    # TODO: add end effector pose
-
     @configclass
     class PolicyCfg(ObsGroup):
         """Observations for policy group."""
 
         # observation terms (order preserved)
-        joint_pos = ObsTerm(
-            func=mdp.joint_pos, # noise=Unoise(n_min=-0.01, n_max=0.01)
+        # NB: maybe add noise to these?
+        joint_pos = ObsTerm(func=mdp.joint_pos)
+        joint_vel = ObsTerm(func=mdp.joint_vel_rel)
+        ee_pos = ObsTerm(
+            func=ee_pos_w,
+            params={"asset_cfg": SceneEntityCfg("robot", body_names="panda_hand")},
         )
-        joint_vel = ObsTerm(
-            func=mdp.joint_vel_rel, # noise=Unoise(n_min=-0.01, n_max=0.01)
-        )
-        pose_command = ObsTerm(
-            func=mdp.generated_commands, params={"command_name": "ee_pose"}
-        )
-        actions = ObsTerm(func=mdp.last_action)
 
         def __post_init__(self):
             self.enable_corruption = True

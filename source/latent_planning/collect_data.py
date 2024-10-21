@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser(
     description="Collect demonstrations for Isaac Lab environments."
 )
 parser.add_argument(
-    "--num_envs", type=int, default=1, help="Number of environments to simulate."
+    "--num_envs", type=int, default=16, help="Number of environments to simulate."
 )
 parser.add_argument(
     "--num_timesteps",
@@ -44,7 +44,7 @@ import os
 import torch
 import tqdm
 
-import source.latent_planning.env_cfg
+import source.latent_planning.env_cfg # noqa: F401
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 from source.latent_planning.latent_planning_data_collector import (
     LatentPlanningDataCollector,
@@ -89,34 +89,21 @@ def main():
     with torch.inference_mode() and tqdm.tqdm(total=args_cli.num_timesteps) as pbar:
         while simulation_app.is_running():
             actions = torch.zeros(
-                (env.unwrapped.num_envs, 7),
-                device=env.unwrapped.device,
+                (args_cli.num_envs, 7),
+                device=args_cli.device,
                 dtype=torch.float,
             )
 
-            # store signals before stepping
             # -- obs
             for key, value in obs_dict["policy"].items():
                 collector_interface.add(f"obs/{key}", value)
-            # -- actions
-            collector_interface.add("actions", actions)
 
             # perform action on environment
-            obs_dict, rewards, terminated, truncated, info = env.step(actions)
-            dones = terminated | truncated
+            obs_dict = env.step(actions)[0]
+
             # check that simulation is stopped or not
             if env.unwrapped.sim.is_stopped():
                 break
-
-            # robomimic only cares about policy observations
-            # store signals from the environment
-            # -- next_obs
-            for key, value in obs_dict["policy"].items():
-                collector_interface.add(f"next_obs/{key}", value)
-            # -- rewards
-            collector_interface.add("rewards", rewards)
-            # -- dones
-            collector_interface.add("dones", dones)
 
             timestep += 1
             pbar.update(1)

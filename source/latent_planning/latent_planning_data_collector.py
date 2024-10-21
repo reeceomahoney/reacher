@@ -168,7 +168,7 @@ class LatentPlanningDataCollector:
             return
 
         # store number of steps taken
-        self._h5_data_group.attrs["num_samples"] = len(self._dataset["actions"])
+        self._h5_data_group.attrs["num_samples"] = len(self._dataset["obs"]["joint_pos"])
         # store other data from dictionary
         for key, value in self._dataset.items():
             if isinstance(value, dict):
