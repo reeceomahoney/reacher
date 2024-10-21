@@ -31,7 +31,7 @@ parser.add_argument(
 AppLauncher.add_app_launcher_args(parser)
 # parse the arguments
 args_cli = parser.parse_args()
-# args_cli.headless = True
+args_cli.headless = True
 
 # launch the simulator
 app_launcher = AppLauncher(args_cli)
@@ -83,8 +83,6 @@ def main():
 
     # reset interfaces
     collector_interface.reset()
-
-    # print(env.scene.articulations["robot"].data.default_joint_limits[0])
 
     # simulate environment -- run everything in inference mode
     timestep = 0

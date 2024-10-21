@@ -144,10 +144,10 @@ class ObservationsCfg:
 
         # observation terms (order preserved)
         joint_pos = ObsTerm(
-            func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01)
+            func=mdp.joint_pos, # noise=Unoise(n_min=-0.01, n_max=0.01)
         )
         joint_vel = ObsTerm(
-            func=mdp.joint_vel_rel, noise=Unoise(n_min=-0.01, n_max=0.01)
+            func=mdp.joint_vel_rel, # noise=Unoise(n_min=-0.01, n_max=0.01)
         )
         pose_command = ObsTerm(
             func=mdp.generated_commands, params={"command_name": "ee_pose"}
