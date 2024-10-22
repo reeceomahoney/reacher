@@ -325,6 +325,7 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": LatentPlanningEnvCfg,
+        "cfg_entry_point": "source/latent_planning/cfg.yaml",
     },
 )
 
@@ -334,5 +335,6 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": LatentPlanningEnvCfg_PLAY,
+        "cfg_entry_point": "source/latent_planning/cfg.yaml",
     },
 )

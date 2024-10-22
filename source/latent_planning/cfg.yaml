@@ -1,0 +1,8 @@
+max_iterations: 1e5
+num_envs: 128
+seed: 42
+device: cuda
+resume: False
+
+video_length: 200
+video_interval: 2000
