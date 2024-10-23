@@ -1,8 +1,15 @@
-max_iterations: 1e5
+num_learning_iterations: 1e5
 num_envs: 128
+episode_length: 5
 seed: 42
 device: cuda
 resume: False
+save_interval: 2000
+wandb_project: latent_planning
 
 video_length: 200
 video_interval: 2000
+
+algorithm:
+  input_dim: 1
+  latent_dim: 1

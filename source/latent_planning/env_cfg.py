@@ -87,7 +87,7 @@ def ee_pos_w(
 
 
 @configclass
-class ReachSceneCfg(InteractiveSceneCfg):
+class LatentPlanningSceneCfg(InteractiveSceneCfg):
     """Configuration for the scene with a robotic arm."""
 
     # world
@@ -108,7 +108,7 @@ class ReachSceneCfg(InteractiveSceneCfg):
     )
 
     # robots
-    robot: ArticulationCfg = MISSING
+    robot: ArticulationCfg = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     # lights
     light = AssetBaseCfg(
@@ -128,7 +128,7 @@ class CommandsCfg:
 
     ee_pose = mdp.UniformPoseCommandCfg(
         asset_name="robot",
-        body_name=MISSING,
+        body_name="panda_hand",
         resampling_time_range=(4.0, 4.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
@@ -136,7 +136,7 @@ class CommandsCfg:
             pos_y=(-0.2, 0.2),
             pos_z=(0.15, 0.5),
             roll=(0.0, 0.0),
-            pitch=MISSING,  # depends on end-effector axis
+            pitch=(math.pi, math.pi),
             yaw=(-3.14, 3.14),
         ),
     )
@@ -146,7 +146,12 @@ class CommandsCfg:
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    arm_action: ActionTerm = MISSING
+    arm_action: ActionTerm = mdp.JointPositionActionCfg(
+        asset_name="robot",
+        joint_names=["panda_joint.*"],
+        scale=0.5,
+        use_default_offset=True,
+    )
     gripper_action: ActionTerm | None = None
 
 
@@ -191,7 +196,7 @@ class RewardsCfg:
         func=mdp.position_command_error,
         weight=-0.2,
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=MISSING),
+            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
             "command_name": "ee_pose",
         },
     )
@@ -199,7 +204,7 @@ class RewardsCfg:
         func=mdp.position_command_error_tanh,
         weight=0.1,
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=MISSING),
+            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
             "std": 0.1,
             "command_name": "ee_pose",
         },
@@ -208,17 +213,9 @@ class RewardsCfg:
         func=mdp.orientation_command_error,
         weight=-0.1,
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names=MISSING),
+            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
             "command_name": "ee_pose",
         },
-    )
-
-    # action penalty
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.0001)
-    joint_vel = RewTerm(
-        func=mdp.joint_vel_l2,
-        weight=-0.0001,
-        params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
 
@@ -254,7 +251,9 @@ class LatentPlanningEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the reach end-effector pose tracking environment."""
 
     # Scene settings
-    scene: ReachSceneCfg = ReachSceneCfg(num_envs=4096, env_spacing=2.5)
+    scene: LatentPlanningSceneCfg = LatentPlanningSceneCfg(
+        num_envs=4096, env_spacing=2.5
+    )
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()
@@ -274,45 +273,26 @@ class LatentPlanningEnvCfg(ManagerBasedRLEnvCfg):
         self.viewer.eye = (3.5, 3.5, 3.5)
         # simulation settings
         self.sim.dt = 1.0 / 50.0
-
-        # switch robot to franka
-        self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        # override rewards
-        self.rewards.end_effector_position_tracking.params["asset_cfg"].body_names = [
-            "panda_hand"
-        ]
-        self.rewards.end_effector_position_tracking_fine_grained.params[
-            "asset_cfg"
-        ].body_names = ["panda_hand"]
-        self.rewards.end_effector_orientation_tracking.params[
-            "asset_cfg"
-        ].body_names = ["panda_hand"]
-
-        # override actions
-        self.actions.arm_action = mdp.JointPositionActionCfg(
-            asset_name="robot",
-            joint_names=["panda_joint.*"],
-            scale=0.5,
-            use_default_offset=True,
-        )
-        # override command generator body
-        # end-effector is along z-direction
-        self.commands.ee_pose.body_name = "panda_hand"
-        self.commands.ee_pose.ranges.pitch = (math.pi, math.pi)
-
-        self.episode_length_s = 1.0 / 50.0
+        self.episode_length_s = 10
 
 
 @configclass
 class LatentPlanningEnvCfg_PLAY(LatentPlanningEnvCfg):
     def __post_init__(self):
-        # post init of parent
         super().__post_init__()
         # make a smaller scene for play
         self.scene.num_envs = 50
         self.scene.env_spacing = 2.5
         # disable randomization for play
         self.observations.policy.enable_corruption = False
+
+
+@configclass
+class LatentPlanningEnvCfg_RECORD(LatentPlanningEnvCfg):
+    def __post_init__(self):
+        super().__post_init__()
+        # reset every step for recording
+        self.episode_length_s = 1.0 / 50.0
 
 
 ##
@@ -335,6 +315,16 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": LatentPlanningEnvCfg_PLAY,
+        "cfg_entry_point": "source/latent_planning/cfg.yaml",
+    },
+)
+
+gym.register(
+    id="Isaac-Latent-Planning-Record",
+    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": LatentPlanningEnvCfg_RECORD,
         "cfg_entry_point": "source/latent_planning/cfg.yaml",
     },
 )

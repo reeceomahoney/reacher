@@ -65,6 +65,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg: DictConfig):
     env_cfg.scene.num_envs = agent_cfg["num_envs"]
     env_cfg.seed = agent_cfg["seed"]
     env_cfg.sim.device = agent_cfg["device"]
+    env_cfg.episode_length_s = agent_cfg["episode_length"]
 
     # specify directory for logging experiments
     log_root_path = os.path.abspath(os.path.join("logs", "latent_planning"))
@@ -102,11 +103,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg: DictConfig):
     env = RslRlVecEnvWrapper(env)
 
     # create runner from rsl-rl
-    runner = Runner(env, agent_cfg, log_dir=log_dir, device=agent_cfg.device)
+    runner = Runner(env, agent_cfg, log_dir=log_dir, device=agent_cfg["device"])
     # write git state to logs
     runner.add_git_repo_to_log(__file__)
     # load the checkpoint
-    if agent_cfg.resume:
+    if agent_cfg["resume"]:
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
         # load previously trained model
         runner.load(resume_path)
@@ -118,9 +119,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg: DictConfig):
     dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), agent_cfg)
 
     # run training
-    runner.learn(
-        num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True
-    )
+    runner.learn()
 
     # close the simulator
     env.close()

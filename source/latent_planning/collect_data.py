@@ -16,12 +16,12 @@ parser = argparse.ArgumentParser(
     description="Collect demonstrations for Isaac Lab environments."
 )
 parser.add_argument(
-    "--num_envs", type=int, default=16, help="Number of environments to simulate."
+    "--num_envs", type=int, default=8192, help="Number of environments to simulate."
 )
 parser.add_argument(
     "--num_timesteps",
     type=int,
-    default=100,
+    default=128,
     help="Number of timesteps to store in the dataset.",
 )
 parser.add_argument(
@@ -56,7 +56,7 @@ from omni.isaac.lab_tasks.utils.parse_cfg import parse_env_cfg
 
 def main():
     """Collect demonstrations from the environment using teleop interfaces."""
-    task = "Isaac-Latent-Planning"
+    task = "Isaac-Latent-Planning-Record"
     env_cfg = parse_env_cfg(task, device=args_cli.device, num_envs=args_cli.num_envs)
 
     # we want to have the terms in the observations returned as a dictionary
@@ -67,7 +67,7 @@ def main():
     env = gym.make(task, cfg=env_cfg)
 
     # specify directory for logging experiments
-    log_dir = os.path.join("./logs/latent_planning", task)
+    log_dir = "./logs/latent_planning_record"
     # dump the configuration into log-directory
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
@@ -102,7 +102,7 @@ def main():
             obs_dict = env.step(actions)[0]
 
             # check that simulation is stopped or not
-            if env.unwrapped.sim.is_stopped():
+            if env.unwrapped.sim.is_stopped():  # type: ignore
                 break
 
             timestep += 1
