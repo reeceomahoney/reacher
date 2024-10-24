@@ -99,11 +99,14 @@ def main():
                 collector_interface.add(f"obs/{key}", value)
 
             # perform action on environment
-            obs_dict = env.step(actions)[0]
-
+            obs_dict, rewards, terminated, truncated, info = env.step(actions)
+            dones = terminated | truncated
             # check that simulation is stopped or not
             if env.unwrapped.sim.is_stopped():  # type: ignore
                 break
+            
+            # -- dones
+            collector_interface.add("dones", dones)  # type: ignore
 
             timestep += 1
             pbar.update(1)

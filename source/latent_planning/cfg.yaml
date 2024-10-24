@@ -13,3 +13,12 @@ video_interval: 2000
 algorithm:
   input_dim: 1
   latent_dim: 1
+
+dataset:
+  data_directory: logs/latent_planning_record/hdf_dataset.hdf5
+  train_fraction: 0.98
+  train_batch_size: 1024
+  test_batch_size: 1024
+  num_workers: 4
+  device: cuda
+

@@ -16,6 +16,7 @@ from rsl_rl.utils import store_code_state
 
 import wandb
 from source.latent_planning.vae import VAE
+from source.latent_planning.dataset import get_dataloaders
 
 
 class Runner:
@@ -33,6 +34,7 @@ class Runner:
         self.save_interval = self.cfg["save_interval"]
         self.obs_normalizer = None  # TODO
         self.num_learning_iterations = float(self.cfg["num_learning_iterations"])
+        self.train_loader, self.test_loader = get_dataloaders(**train_cfg["dataset"])
 
         # Log
         self.log_dir = log_dir
