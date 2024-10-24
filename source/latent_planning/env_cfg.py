@@ -166,7 +166,7 @@ class ObservationsCfg:
         # observation terms (order preserved)
         # NB: maybe add noise to these?
         joint_pos = ObsTerm(func=mdp.joint_pos)
-        joint_vel = ObsTerm(func=mdp.joint_vel_rel)
+        # joint_vel = ObsTerm(func=mdp.joint_vel_rel)
         ee_pos = ObsTerm(
             func=ee_pos_w,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="panda_hand")},

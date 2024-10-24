@@ -13,7 +13,6 @@ def get_dataloaders(
     train_batch_size: int,
     test_batch_size: int,
     num_workers: int,
-    device: str,
 ):
     # build path
     current_dir = os.path.dirname(os.path.realpath(__file__))
@@ -32,12 +31,13 @@ def get_dataloaders(
 
     # (B, T, D)
     for k, v in data.items():
-        data[k] = torch.from_numpy(v).transpose(0, 1).to(device)
+        data[k] = torch.from_numpy(v).transpose(0, 1)
 
     # build obs
     obs = torch.cat((data["data/obs/joint_pos"], data["data/obs/ee_pos"]), dim=-1)
     obs = obs.reshape(-1, obs.shape[-1])
 
+    # TODO: use pretty table
     log.info(f"Dataset size | Observations: {obs.shape} ")
 
     # Build the datasets

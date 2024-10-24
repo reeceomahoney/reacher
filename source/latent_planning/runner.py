@@ -15,8 +15,8 @@ from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 
 import wandb
-from source.latent_planning.vae import VAE
 from source.latent_planning.dataset import get_dataloaders
+from source.latent_planning.vae import VAE
 
 
 class Runner:
@@ -31,8 +31,11 @@ class Runner:
         self.num_steps_per_env = int(
             self.cfg["episode_length"] / (self.env.cfg.decimation * self.env.cfg.sim.dt)
         )
-        self.save_interval = self.cfg["save_interval"]
-        self.obs_normalizer = None  # TODO
+        self.log_interval = float(self.cfg["log_interval"])
+        self.eval_interval = float(self.cfg["eval_interval"])
+        self.sim_interval = float(self.cfg["sim_interval"])
+        self.save_interval = float(self.cfg["save_interval"])
+        self.obs_normalizer = None  # TODO: add normalizer
         self.num_learning_iterations = float(self.cfg["num_learning_iterations"])
         self.train_loader, self.test_loader = get_dataloaders(**train_cfg["dataset"])
 
@@ -53,6 +56,7 @@ class Runner:
     def learn(self):
         obs, _ = self.env.get_observations()
         obs = obs.to(self.device)
+        goal = obs[0]  # TODO: randomize this
         self.train_mode()  # switch to train mode (for dropout for example)
 
         ep_infos = []
@@ -67,12 +71,14 @@ class Runner:
 
         start_iter = self.current_learning_iteration
         tot_iter = int(start_iter + self.num_learning_iterations)
+        generator = iter(self.train_loader)
         for it in range(start_iter, tot_iter):
             start = time.time()
+
             # Rollout
-            with torch.inference_mode():
+            if it % self.sim_interval == 0:
                 for _ in range(self.num_steps_per_env):
-                    actions = self.alg.act(obs)
+                    actions = self.alg.act(obs, goal)
                     obs, rewards, dones, infos = self.env.step(
                         actions.to(self.env.device)
                     )
@@ -100,67 +106,71 @@ class Runner:
                         cur_reward_sum[new_ids] = 0
                         cur_episode_length[new_ids] = 0
 
+            # training
+            try:
+                batch = next(generator)
+            except StopIteration:
+                generator = iter(self.train_loader)
+                batch = next(generator)
+
+            loss, recon_loss, kl_loss = self.alg.update(batch)
+
+            # logging
+            self.current_learning_iteration = it
+            if self.log_dir is not None and it % self.log_interval == 0:
                 # timing
                 stop = time.time()
-                collection_time = stop - start
-                start = stop
+                iter_time = stop - start
 
-            loss = self.alg.update()
-            stop = time.time()
-            learn_time = stop - start
-            self.current_learning_iteration = it
-            if self.log_dir is not None:
                 self.log(locals())
-                # if it % self.save_interval == 0:
-                #     self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
+                if it % self.save_interval == 0:
+                    self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
                 ep_infos.clear()
                 if it == start_iter:
                     # obtain all the diff files
-                    git_file_paths = store_code_state(
-                        self.log_dir, self.git_status_repos
-                    )
-                    # store them to wandb
-                    for path in git_file_paths:
-                        wandb.save(path, base_path=os.path.dirname(path))
+                    store_code_state(self.log_dir, self.git_status_repos)
 
-        # if self.log_dir is not None:
-        #     self.save(
-        #         os.path.join(
-        #             self.log_dir, f"model_{self.current_learning_iteration}.pt"
-        #         )
-        #     )
+        if self.log_dir is not None:
+            self.save(
+                os.path.join(
+                    self.log_dir, f"model_{self.current_learning_iteration}.pt"
+                )
+            )
 
     def log(self, locs: dict, width: int = 80, pad: int = 35):
-        self.tot_time += locs["collection_time"] + locs["learn_time"]
-        iteration_time = locs["collection_time"] + locs["learn_time"]
+        self.tot_time += locs["iter_time"]
+        iter_time = locs["iter_time"]
 
         ep_string = ""
-        for key in locs["ep_infos"][0]:
-            # get the mean of each ep info value
-            infotensor = torch.tensor([], device=self.device)
-            for ep_info in locs["ep_infos"]:
-                # handle scalar and zero dimensional tensor infos
-                if key not in ep_info:
-                    continue
-                if not isinstance(ep_info[key], torch.Tensor):
-                    ep_info[key] = torch.Tensor([ep_info[key]])
-                if len(ep_info[key].shape) == 0:
-                    ep_info[key] = ep_info[key].unsqueeze(0)
-                infotensor = torch.cat((infotensor, ep_info[key].to(self.device)))
-            value = torch.mean(infotensor)
-            # log to logger and terminal
-            if "/" in key:
-                wandb.log({key: value}, step=locs["it"])
-                ep_string += f"""{f'{key}:':>{pad}} {value:.4f}\n"""
-            else:
-                wandb.log({"Episode/" + key, value}, step=locs["it"])
-                ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
+        if locs["ep_infos"]:
+            for key in locs["ep_infos"][0]:
+                # get the mean of each ep info value
+                infotensor = torch.tensor([], device=self.device)
+                for ep_info in locs["ep_infos"]:
+                    # handle scalar and zero dimensional tensor infos
+                    if key not in ep_info:
+                        continue
+                    if not isinstance(ep_info[key], torch.Tensor):
+                        ep_info[key] = torch.Tensor([ep_info[key]])
+                    if len(ep_info[key].shape) == 0:
+                        ep_info[key] = ep_info[key].unsqueeze(0)
+                    infotensor = torch.cat((infotensor, ep_info[key].to(self.device)))
+                value = torch.mean(infotensor)
+                # log to logger and terminal
+                if "/" in key:
+                    wandb.log({key: value}, step=locs["it"])
+                    ep_string += f"""{f'{key}:':>{pad}} {value:.4f}\n"""
+                else:
+                    wandb.log({"Episode/" + key, value}, step=locs["it"])
+                    ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
 
         wandb.log(
             {
-                # "Loss/learning_rate": self.alg.learning_rate,
-                "Perf/collection time": locs["collection_time"],
-                "Perf/learning_time": locs["learn_time"],
+                "Loss/loss": locs["loss"],
+                "Loss/recon_loss": locs["recon_loss"],
+                "Loss/kl_loss": locs["kl_loss"],
+                "Loss/beta": self.alg.beta,
+                "Perf/iter_time": iter_time / self.log_interval,
                 "Train/mean_reward": statistics.mean(locs["rewbuffer"]),
                 "Train/mean_episode_length": statistics.mean(locs["lenbuffer"]),
             },
@@ -178,7 +188,7 @@ class Runner:
         log_string += ep_string
         log_string += (
             f"""{'-' * width}\n"""
-            f"""{'Iteration time:':>{pad}} {iteration_time:.2f}s\n"""
+            f"""{'Iteration time:':>{pad}} {iter_time/self.log_interval:.2f}s\n"""
             f"""{'Total time:':>{pad}} {self.tot_time:.2f}s\n"""
         )
 
@@ -196,37 +206,22 @@ class Runner:
 
     def save(self, path, infos=None):
         saved_dict = {
-            "model_state_dict": self.alg.actor_critic.state_dict(),
+            "model_state_dict": self.alg.state_dict(),
             "optimizer_state_dict": self.alg.optimizer.state_dict(),
             "iter": self.current_learning_iteration,
             "infos": infos,
         }
-        saved_dict["obs_norm_state_dict"] = self.obs_normalizer.state_dict()
+        # saved_dict["obs_norm_state_dict"] = self.obs_normalizer.state_dict()
         torch.save(saved_dict, path)
-
-        # Upload model to external logging service
-        wandb.save(path, step=self.current_learning_iteration)
 
     def load(self, path, load_optimizer=True):
         loaded_dict = torch.load(path)
-        self.alg.actor_critic.load_state_dict(loaded_dict["model_state_dict"])
-        self.obs_normalizer.load_state_dict(loaded_dict["obs_norm_state_dict"])
+        self.alg.load_state_dict(loaded_dict["model_state_dict"])
+        # self.obs_normalizer.load_state_dict(loaded_dict["obs_norm_state_dict"])
         if load_optimizer:
             self.alg.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
         self.current_learning_iteration = loaded_dict["iter"]
         return loaded_dict["infos"]
-
-    def get_inference_policy(self, device=None):
-        self.eval_mode()  # switch to evaluation mode (dropout for example)
-        if device is not None:
-            self.alg.actor_critic.to(device)
-        policy = self.alg.actor_critic.act_inference
-        if device is not None:
-            self.obs_normalizer.to(device)
-        policy = lambda x: self.alg.actor_critic.act_inference(
-            self.obs_normalizer(x)
-        )  # noqa: E731
-        return policy
 
     def train_mode(self):
         self.alg.train()
