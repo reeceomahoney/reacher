@@ -14,4 +14,4 @@ class VAE(nn.Module):
         return torch.zeros((x.shape[0], 7), device=self.device)
 
     def update(self):
-        return 0, 0
+        return 0
