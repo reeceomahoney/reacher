@@ -4,7 +4,21 @@ from torch.optim.adamw import AdamW
 
 
 class VAE(nn.Module):
-    def __init__(self, input_dim, latent_dim, hidden_dims, learning_rate, device):
+    def __init__(
+        self,
+        input_dim,
+        latent_dim,
+        hidden_dims,
+        learning_rate,
+        goal=0.1,
+        beta=0.5,
+        beta_min=1e-6,
+        beta_max=10,
+        alpha=0.99,
+        step_size=1e-5,
+        speedup=None,
+        device="cpu",
+    ):
         super().__init__()
         self.encoder = nn.Sequential(
             nn.Linear(input_dim, hidden_dims[0]),
@@ -24,14 +38,14 @@ class VAE(nn.Module):
         )
         self.optimizer = AdamW(self.parameters(), lr=float(learning_rate))
         self.latent_dim = latent_dim
-        self.goal = 0.1
-        self.beta = 1.0
-        self.beta_min = 1e-6
-        self.beta_max = 10
-        self.alpha = 0.99
-        self.step_size = 1e-5
+        self.goal = goal
+        self.beta = beta
+        self.beta_min = beta_min
+        self.beta_max = beta_max
+        self.alpha = alpha
+        self.step_size = step_size
+        self.speedup = speedup
         self.err_ema = None
-        self.speedup = None
 
         self.device = device
         self.to(device)

@@ -9,6 +9,7 @@ import time
 import torch
 from collections import deque
 from dataclasses import asdict
+from tqdm import trange
 
 import rsl_rl
 from rsl_rl.env import VecEnv
@@ -27,7 +28,11 @@ class Runner:
         self.alg_cfg = train_cfg["algorithm"]
         self.device = device
         self.env = env
+
         self.alg = VAE(device=self.device, **self.alg_cfg)
+        self.train_loader, self.test_loader = get_dataloaders(**train_cfg["dataset"])
+        self.obs_normalizer = None  # TODO: add normalizer
+
         self.num_steps_per_env = int(
             self.cfg["episode_length"] / (self.env.cfg.decimation * self.env.cfg.sim.dt)
         )
@@ -35,9 +40,7 @@ class Runner:
         self.eval_interval = float(self.cfg["eval_interval"])
         self.sim_interval = float(self.cfg["sim_interval"])
         self.save_interval = float(self.cfg["save_interval"])
-        self.obs_normalizer = None  # TODO: add normalizer
         self.num_learning_iterations = float(self.cfg["num_learning_iterations"])
-        self.train_loader, self.test_loader = get_dataloaders(**train_cfg["dataset"])
 
         # Log
         self.log_dir = log_dir
@@ -72,7 +75,7 @@ class Runner:
         start_iter = self.current_learning_iteration
         tot_iter = int(start_iter + self.num_learning_iterations)
         generator = iter(self.train_loader)
-        for it in range(start_iter, tot_iter):
+        for it in trange(start_iter, tot_iter):
             start = time.time()
 
             # Rollout
@@ -137,11 +140,10 @@ class Runner:
                 )
             )
 
-    def log(self, locs: dict, width: int = 80, pad: int = 35):
+    def log(self, locs: dict):
         self.tot_time += locs["iter_time"]
         iter_time = locs["iter_time"]
 
-        ep_string = ""
         if locs["ep_infos"]:
             for key in locs["ep_infos"][0]:
                 # get the mean of each ep info value
@@ -159,10 +161,8 @@ class Runner:
                 # log to logger and terminal
                 if "/" in key:
                     wandb.log({key: value}, step=locs["it"])
-                    ep_string += f"""{f'{key}:':>{pad}} {value:.4f}\n"""
                 else:
                     wandb.log({"Episode/" + key, value}, step=locs["it"])
-                    ep_string += f"""{f'Mean episode {key}:':>{pad}} {value:.4f}\n"""
 
         wandb.log(
             {
@@ -176,33 +176,6 @@ class Runner:
             },
             step=locs["it"],
         )
-
-        str = f" \033[1m Learning iteration {locs['it']}/{locs['tot_iter']} \033[0m "
-
-        log_string = (
-            f"""{'#' * width}\n"""
-            f"""{str.center(width, ' ')}\n\n"""
-            f"""{'Mean reward:':>{pad}} {statistics.mean(locs['rewbuffer']):.2f}\n"""
-            f"""{'Mean episode length:':>{pad}} {statistics.mean(locs['lenbuffer']):.2f}\n"""
-        )
-        log_string += ep_string
-        log_string += (
-            f"""{'-' * width}\n"""
-            f"""{'Iteration time:':>{pad}} {iter_time/self.log_interval:.2f}s\n"""
-            f"""{'Total time:':>{pad}} {self.tot_time:.2f}s\n"""
-        )
-
-        eta_secs = (
-            self.tot_time
-            / (locs["it"] + 1)
-            * (self.num_learning_iterations - locs["it"])
-        )
-        hours = int(eta_secs // 3600)
-        minutes = int((eta_secs % 3600) // 60)
-        seconds = int(eta_secs % 60)
-        log_string += f"""{'ETA:':>{pad}} {hours:02d}:{minutes:02d}:{seconds:02d}\n"""
-
-        print(log_string)
 
     def save(self, path, infos=None):
         saved_dict = {
