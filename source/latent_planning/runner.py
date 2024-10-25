@@ -9,16 +9,16 @@ import time
 import torch
 from collections import deque
 from dataclasses import asdict
-from tqdm import trange
+from tqdm import tqdm, trange
 
 import rsl_rl
+from latent_planning.dataset import get_dataloaders
+from latent_planning.normalizer import GaussianNormalizer
+from latent_planning.vae import VAE
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 
 import wandb
-from latent_planning.dataset import get_dataloaders
-from latent_planning.normalizer import GaussianNormalizer
-from latent_planning.vae import VAE
 
 
 class Runner:
@@ -110,6 +110,13 @@ class Runner:
                         cur_reward_sum[new_ids] = 0
                         cur_episode_length[new_ids] = 0
 
+            # evaluation
+            if it % self.eval_interval == 0:
+                test_recon_loss = []
+                for batch in tqdm(self.test_loader, desc="evaluating"):
+                    test_recon_loss.append(self.alg.test(batch))
+                test_recon_loss = statistics.mean(test_recon_loss)
+
             # training
             try:
                 batch = next(generator)
@@ -164,6 +171,11 @@ class Runner:
                     wandb.log({key: value}, step=locs["it"])
                 else:
                     wandb.log({"Episode/" + key, value}, step=locs["it"])
+
+        if "test_recon_loss" in locs:
+            wandb.log(
+                {"Loss/test_recon_loss": locs["test_recon_loss"]}, step=locs["it"]
+            )
 
         wandb.log(
             {

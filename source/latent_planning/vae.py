@@ -21,22 +21,32 @@ class VAE(nn.Module):
         device="cpu",
     ):
         super().__init__()
-        self.normalizer = normalizer
-        self.encoder = nn.Sequential(
-            nn.Linear(input_dim, hidden_dims[0]),
-            nn.ELU(),
-            nn.Linear(hidden_dims[0], hidden_dims[1]),
-            nn.ELU(),
-            nn.Linear(hidden_dims[1], 2 * latent_dim),
-        )
-        self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, hidden_dims[1]),
-            nn.ELU(),
-            nn.Linear(hidden_dims[1], hidden_dims[0]),
-            nn.ELU(),
-            nn.Linear(hidden_dims[0], input_dim),
-        )
+        # encoder
+        encoder_layers = []
+        encoder_layers.append(nn.Linear(input_dim, hidden_dims[0]))
+        encoder_layers.append(nn.ELU())
+
+        for i in range(1, len(hidden_dims)):
+            encoder_layers.append(nn.Linear(hidden_dims[i - 1], hidden_dims[i]))
+            encoder_layers.append(nn.ELU())
+
+        encoder_layers.append(nn.Linear(hidden_dims[-1], 2 * latent_dim))
+        self.encoder = nn.Sequential(*encoder_layers)
+
+        # decoder
+        decoder_layers = []
+        decoder_layers.append(nn.Linear(latent_dim, hidden_dims[-1]))
+        decoder_layers.append(nn.ELU())
+
+        for i in range(len(hidden_dims) - 1, 0, -1):
+            decoder_layers.append(nn.Linear(hidden_dims[i], hidden_dims[i - 1]))
+            decoder_layers.append(nn.ELU())
+
+        decoder_layers.append(nn.Linear(hidden_dims[0], input_dim))
+        self.decoder = nn.Sequential(*decoder_layers)
+
         self.optimizer = AdamW(self.parameters(), lr=float(learning_rate))
+        self.normalizer = normalizer
         self.latent_dim = latent_dim
         self.goal = float(goal)
         self.beta = beta_init
@@ -84,6 +94,14 @@ class VAE(nn.Module):
         z, mu, logvar = self.encode(x)
         x_hat = self.decoder(z)
         return x_hat, mu, logvar
+
+    def test(self, batch):
+        x_unnorm = batch[0].to(self.device)
+        x = self.normalizer(x_unnorm)
+        x_hat = self(x)[0]
+        x_hat = self.normalizer.inverse(x_hat)
+        recon_loss = torch.mean((x_unnorm - x_hat) ** 2)
+        return recon_loss.item()
 
     ##
     # Training
