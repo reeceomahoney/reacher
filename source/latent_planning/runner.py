@@ -16,9 +16,9 @@ from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 
 import wandb
-from source.latent_planning.dataset import get_dataloaders
-from source.latent_planning.normalizer import GaussianNormalizer
-from source.latent_planning.vae import VAE
+from latent_planning.dataset import get_dataloaders
+from latent_planning.normalizer import GaussianNormalizer
+from latent_planning.vae import VAE
 
 
 class Runner:

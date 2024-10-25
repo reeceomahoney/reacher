@@ -41,11 +41,11 @@ from datetime import datetime
 
 from omegaconf import DictConfig
 
-import source.latent_planning.env_cfg  # noqa: F401
+import latent_planning.env_cfg  # noqa: F401
 from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
-from source.latent_planning.runner import Runner
+from latent_planning.runner import Runner
 
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils import get_checkpoint_path

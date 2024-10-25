@@ -1,8 +1,10 @@
 [tool.poetry]
-name = "latent-planning"
+name = "latent_planning"
+version = "0.1.0"
 description = ""
 authors = ["Reece O'Mahoney <reeceo@robots.ox.ac.uk>"]
-package-mode = false
+readme = "README.md"
+packages = [{ include = "latent_planning", from = "source" }]
 
 [tool.poetry.dependencies]
 python = "3.10.15"

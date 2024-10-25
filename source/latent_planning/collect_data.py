@@ -46,7 +46,7 @@ import tqdm
 
 import source.latent_planning.env_cfg # noqa: F401
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
-from source.latent_planning.latent_planning_data_collector import (
+from latent_planning.latent_planning_data_collector import (
     LatentPlanningDataCollector,
 )
 
