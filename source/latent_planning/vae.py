@@ -132,7 +132,7 @@ class VAE(nn.Module):
             self.err_ema = (1.0 - self.alpha) * err + self.alpha * self.err_ema.detach()
 
         # compute loss
-        loss = self.beta * self.err_ema + kld
+        loss = self.beta * err + kld
 
         with torch.no_grad():
             # update beta
