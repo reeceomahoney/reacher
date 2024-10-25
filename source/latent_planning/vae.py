@@ -125,22 +125,21 @@ class VAE(nn.Module):
         return loss, recon_loss, kl_loss
 
     def geco_loss(self, err, kld):
-        with torch.no_grad():
-            # update ema
-            if self.err_ema is None:
-                self.err_ema = err
-            else:
-                self.err_ema = (1.0 - self.alpha) * err + self.alpha * self.err_ema.detach()
+        # update ema
+        if self.err_ema is None:
+            self.err_ema = err
+        else:
+            self.err_ema = (1.0 - self.alpha) * err + self.alpha * self.err_ema.detach()
 
-            # compute loss
-            loss = self.beta * self.err_ema + kld
+        # compute loss
+        loss = self.beta * self.err_ema + kld
 
-            # update beta
-            constraint = self.err_ema - self.goal
-            if self.speedup is not None and constraint.item() > 0:
-                factor = torch.exp(self.speedup * self.step_size * constraint)
-            else:
-                factor = torch.exp(self.step_size * constraint)
-            self.beta = (factor * self.beta).clamp(self.beta_min, self.beta_max)
+        # update beta
+        constraint = self.err_ema - self.goal
+        if self.speedup is not None and constraint.item() > 0:
+            factor = torch.exp(self.speedup * self.step_size * constraint)
+        else:
+            factor = torch.exp(self.step_size * constraint)
+        self.beta = (factor * self.beta).clamp(self.beta_min, self.beta_max)
 
         return loss
