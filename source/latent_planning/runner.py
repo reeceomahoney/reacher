@@ -50,7 +50,7 @@ class Runner:
         self.tot_timesteps = 0
         self.tot_time = 0
         self.current_learning_iteration = 0
-        self.git_status_repos = [rsl_rl.__file__]
+        self.git_status_repos = []
 
         # initialize wandb
         if self.log_dir is not None:
@@ -170,7 +170,7 @@ class Runner:
                 "Loss/loss": locs["loss"],
                 "Loss/recon_loss": locs["recon_loss"],
                 "Loss/kl_loss": locs["kl_loss"],
-                "Loss/beta": self.alg.beta,
+                "Loss/beta": self.alg.beta.item(),
                 "Perf/iter_time": iter_time / self.log_interval,
                 "Train/mean_reward": statistics.mean(locs["rewbuffer"]),
                 "Train/mean_episode_length": statistics.mean(locs["lenbuffer"]),

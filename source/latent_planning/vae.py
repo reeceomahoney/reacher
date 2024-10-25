@@ -15,9 +15,6 @@ class VAE(nn.Module):
         beta_init=1.0,
         beta_min=1e-6,
         beta_max=10,
-        alpha=0.99,
-        step_size=1e-5,
-        speedup=None,
         device="cpu",
     ):
         super().__init__()
@@ -36,16 +33,15 @@ class VAE(nn.Module):
             nn.ELU(),
             nn.Linear(hidden_dims[0], input_dim),
         )
+        self.beta = nn.Parameter(torch.tensor(beta_init))
+
         self.optimizer = AdamW(self.parameters(), lr=float(learning_rate))
+        self.beta_optimizer = AdamW([self.beta], lr=float(learning_rate))
+
         self.latent_dim = latent_dim
         self.goal = float(goal)
-        self.beta = beta_init
         self.beta_min = beta_min
         self.beta_max = beta_max
-        self.alpha = alpha
-        self.step_size = step_size
-        self.speedup = speedup
-        self.err_ema = None
 
         self.device = device
         self.to(device)
@@ -66,7 +62,7 @@ class VAE(nn.Module):
         loss.backward(retain_graph=True)
 
         with torch.inference_mode():
-            z = z - 0.1 * z.grad
+            z = z - z.grad
             x_hat = self.decoder(z)
 
         x_hat = self.normalizer.inverse(x_hat)
@@ -93,33 +89,28 @@ class VAE(nn.Module):
         x = batch[0].to(self.device)
         x = self.normalizer(x)
 
+        # optimize network
         x_hat, mu, logvar = self(x)
-
         recon_loss = torch.mean((x - x_hat) ** 2)
         kl_loss = -0.5 * torch.mean(1 + logvar - mu**2 - logvar.exp())
-
-        loss = self.geco_loss(recon_loss, kl_loss)
+        loss = recon_loss + self.beta.detach() * kl_loss
 
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
-        return loss, recon_loss, kl_loss
+        # optimize beta
+        with torch.inference_mode():
+            x_hat = self(x)[0]
+            recon_loss = torch.mean((x - x_hat) ** 2)
+        beta_loss = self.beta * torch.max(recon_loss - self.goal, torch.tensor(0.0))
+        beta_loss = self.beta_step(x)
 
-    def geco_loss(self, err, kld):
-        # Compute loss with current beta
-        loss = err + self.beta * kld
-        # Update beta without computing / backpropping gradients
-        with torch.no_grad():
-            if self.err_ema is None:
-                self.err_ema = err
-            else:
-                self.err_ema = (1.0 - self.alpha) * err + self.alpha * self.err_ema
-            constraint = self.goal - self.err_ema
-            if self.speedup is not None and constraint.item() > 0:
-                factor = torch.exp(self.speedup * self.step_size * constraint)
-            else:
-                factor = torch.exp(self.step_size * constraint)
-            self.beta = (factor * self.beta).clamp(self.beta_min, self.beta_max)
-        # Return loss
-        return loss
+        self.beta_optimizer.zero_grad()
+        beta_loss.backward()
+        self.beta_optimizer.step()
+
+        with torch.inference_mode():
+            self.beta.clamp_(self.beta_min, self.beta_max)
+
+        return loss, recon_loss, kl_loss
