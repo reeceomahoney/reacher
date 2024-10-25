@@ -1,4 +1,4 @@
-num_learning_iterations: 1e5
+num_learning_iterations: 1e6
 num_envs: 128
 episode_length: 5
 seed: 42
@@ -16,8 +16,10 @@ video_interval: 2000
 algorithm:
   input_dim: 12
   latent_dim: 6
-  hidden_dims: [128, 128]
-  learning_rate: 1e-4
+  hidden_dims: [256, 256]
+  learning_rate: 1e-3
+  goal: 0.1
+  beta: 0.05
 
 dataset:
   data_directory: logs/latent_planning_record/hdf_dataset.hdf5

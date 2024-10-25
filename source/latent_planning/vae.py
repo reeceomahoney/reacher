@@ -6,6 +6,7 @@ from torch.optim.adamw import AdamW
 class VAE(nn.Module):
     def __init__(
         self,
+        normalizer,
         input_dim,
         latent_dim,
         hidden_dims,
@@ -20,6 +21,7 @@ class VAE(nn.Module):
         device="cpu",
     ):
         super().__init__()
+        self.normalizer = normalizer
         self.encoder = nn.Sequential(
             nn.Linear(input_dim, hidden_dims[0]),
             nn.ReLU(),
@@ -55,6 +57,7 @@ class VAE(nn.Module):
     ##
 
     def act(self, x, goal):
+        x = self.normalizer(x)
         z = self.encode(x)[0]
 
         z = z.detach().requires_grad_(True)
@@ -68,6 +71,7 @@ class VAE(nn.Module):
             z = z - 0.1 * z.grad
             x_hat = self.decoder(z)
 
+        x_hat = self.normalizer.inverse(x_hat)
         joint_pos_target = x_hat[:, :7]
         return joint_pos_target
 
@@ -88,10 +92,12 @@ class VAE(nn.Module):
     ##
 
     def update(self, batch):
-        obs = batch[0].to(self.device)
-        x_hat, mu, logvar = self(obs)
+        x = batch[0].to(self.device)
+        x = self.normalizer(x)
 
-        recon_loss = torch.mean((obs - x_hat) ** 2)
+        x_hat, mu, logvar = self(x)
+
+        recon_loss = torch.mean((x - x_hat) ** 2)
         kl_loss = -0.5 * torch.mean(1 + logvar - mu**2 - logvar.exp())
 
         loss = self.geco_loss(recon_loss, kl_loss)

@@ -17,6 +17,7 @@ from rsl_rl.utils import store_code_state
 
 import wandb
 from source.latent_planning.dataset import get_dataloaders
+from source.latent_planning.normalizer import GaussianNormalizer
 from source.latent_planning.vae import VAE
 
 
@@ -29,9 +30,11 @@ class Runner:
         self.device = device
         self.env = env
 
-        self.alg = VAE(device=self.device, **self.alg_cfg)
-        self.train_loader, self.test_loader = get_dataloaders(**train_cfg["dataset"])
-        self.obs_normalizer = None  # TODO: add normalizer
+        self.train_loader, self.test_loader, all_obs = get_dataloaders(
+            **train_cfg["dataset"]
+        )
+        self.obs_normalizer = GaussianNormalizer(all_obs)
+        self.alg = VAE(self.obs_normalizer, device=self.device, **self.alg_cfg)
 
         self.num_steps_per_env = int(
             self.cfg["episode_length"] / (self.env.cfg.decimation * self.env.cfg.sim.dt)
@@ -91,8 +94,6 @@ class Runner:
                         rewards.to(self.device),
                         dones.to(self.device),
                     )
-                    # perform normalization
-                    # obs = self.obs_normalizer(obs)
 
                     if self.log_dir is not None:
                         # rewards and dones
@@ -184,13 +185,13 @@ class Runner:
             "iter": self.current_learning_iteration,
             "infos": infos,
         }
-        # saved_dict["obs_norm_state_dict"] = self.obs_normalizer.state_dict()
+        saved_dict["obs_norm_state_dict"] = self.obs_normalizer.state_dict()
         torch.save(saved_dict, path)
 
     def load(self, path, load_optimizer=True):
         loaded_dict = torch.load(path)
         self.alg.load_state_dict(loaded_dict["model_state_dict"])
-        # self.obs_normalizer.load_state_dict(loaded_dict["obs_norm_state_dict"])
+        self.obs_normalizer.load_state_dict(loaded_dict["obs_norm_state_dict"])
         if load_optimizer:
             self.alg.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
         self.current_learning_iteration = loaded_dict["iter"]
@@ -198,11 +199,9 @@ class Runner:
 
     def train_mode(self):
         self.alg.train()
-        # self.obs_normalizer.train()
 
     def eval_mode(self):
         self.alg.eval()
-        # self.obs_normalizer.eval()
 
     def add_git_repo_to_log(self, repo_file_path):
         self.git_status_repos.append(repo_file_path)
