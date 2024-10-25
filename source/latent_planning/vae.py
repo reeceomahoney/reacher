@@ -12,7 +12,7 @@ class VAE(nn.Module):
         hidden_dims,
         learning_rate,
         goal=0.1,
-        beta=0.5,
+        beta_init=1.0,
         beta_min=1e-6,
         beta_max=10,
         alpha=0.99,
@@ -38,8 +38,8 @@ class VAE(nn.Module):
         )
         self.optimizer = AdamW(self.parameters(), lr=float(learning_rate))
         self.latent_dim = latent_dim
-        self.goal = goal
-        self.beta = beta
+        self.goal = float(goal)
+        self.beta = beta_init
         self.beta_min = beta_min
         self.beta_max = beta_max
         self.alpha = alpha
