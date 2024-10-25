@@ -24,19 +24,17 @@ class VAE(nn.Module):
         self.normalizer = normalizer
         self.encoder = nn.Sequential(
             nn.Linear(input_dim, hidden_dims[0]),
-            nn.ReLU(),
+            nn.ELU(),
             nn.Linear(hidden_dims[0], hidden_dims[1]),
-            nn.ReLU(),
+            nn.ELU(),
             nn.Linear(hidden_dims[1], 2 * latent_dim),
-            nn.ReLU(),
         )
         self.decoder = nn.Sequential(
             nn.Linear(latent_dim, hidden_dims[1]),
-            nn.ReLU(),
+            nn.ELU(),
             nn.Linear(hidden_dims[1], hidden_dims[0]),
-            nn.ReLU(),
+            nn.ELU(),
             nn.Linear(hidden_dims[0], input_dim),
-            nn.ReLU(),
         )
         self.optimizer = AdamW(self.parameters(), lr=float(learning_rate))
         self.latent_dim = latent_dim
