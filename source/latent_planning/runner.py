@@ -50,7 +50,7 @@ class Runner:
         self.tot_timesteps = 0
         self.tot_time = 0
         self.current_learning_iteration = 0
-        self.git_status_repos = [rsl_rl.__file__]
+        self.git_status_repos = []
 
         # initialize wandb
         if self.log_dir is not None:
