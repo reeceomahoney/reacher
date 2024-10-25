@@ -126,7 +126,8 @@ class VAE(nn.Module):
 
     def geco_loss(self, err, kld):
         # Compute loss with current beta
-        loss = err + self.beta * kld
+        loss = (err - self.goal) + self.beta * kld
+        # loss = self.beta * (err - self.goal) + kld
         # Update beta without computing / backpropping gradients
         with torch.no_grad():
             if self.err_ema is None:
