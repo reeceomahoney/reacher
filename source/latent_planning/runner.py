@@ -61,7 +61,7 @@ class Runner:
     def learn(self):
         obs, _ = self.env.get_observations()
         obs = obs.to(self.device)
-        goal = obs[0]  # TODO: randomize this
+        goal_ee_pos = obs[0, -3:]  # TODO: randomize this
         self.train_mode()  # switch to train mode (for dropout for example)
 
         ep_infos = []
@@ -83,7 +83,7 @@ class Runner:
             # Rollout
             if it % self.sim_interval == 0:
                 for _ in range(self.num_steps_per_env):
-                    actions = self.alg.act(obs, goal)
+                    actions = self.alg.act(obs, goal_ee_pos)
                     obs, rewards, dones, infos = self.env.step(
                         actions.to(self.env.device)
                     )

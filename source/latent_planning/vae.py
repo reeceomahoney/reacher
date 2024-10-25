@@ -1,3 +1,5 @@
+import math
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.optim.adamw import AdamW
@@ -16,7 +18,9 @@ class VAE(nn.Module):
         beta_min=1e-6,
         beta_max=10,
         alpha=0.99,
-        step_size=1e-5,
+        geco_lr=1e-5,
+        am_lr=0.03,
+        am_prior_weight=1.0,
         speedup=None,
         device="cpu",
     ):
@@ -53,7 +57,9 @@ class VAE(nn.Module):
         self.beta_min = beta_min
         self.beta_max = beta_max
         self.alpha = alpha
-        self.step_size = float(step_size)
+        self.geco_lr = float(geco_lr)
+        self.am_lr = float(am_lr)
+        self.am_prior_weight = am_prior_weight
         self.speedup = speedup
         self.err_ema = None
 
@@ -64,19 +70,30 @@ class VAE(nn.Module):
     # Inference
     ##
 
-    def act(self, x, goal):
+    def act(self, x, goal_ee_pos):
         x = self.normalizer(x)
-        z = self.encode(x)[0]
+        z, mu, logvar = self.encode(x)
 
         z = z.detach().requires_grad_(True)
         z.retain_grad()
         x_hat = self.decoder(z)
 
-        loss = torch.mean((x_hat - goal) ** 2)
+        d = z.shape[-1]
+        z_log_prob = -0.5 * (
+            d * np.log(2 * math.pi)
+            + logvar.sum(dim=-1)
+            + ((z - mu) ** 2 / logvar.exp()).sum(dim=-1)
+        )
+
+        loss = (
+            torch.mean((x_hat[:, -3:] - goal_ee_pos) ** 2, dim=-1)
+            + self.am_prior_weight * -z_log_prob
+        )
+        loss = loss.sum()  # torch can only store retain graph for scalars
         loss.backward(retain_graph=True)
 
         with torch.inference_mode():
-            z = z - 1e4 * z.grad
+            z = z - self.am_lr * z.grad
             x_hat = self.decoder(z)
 
         x_hat = self.normalizer.inverse(x_hat)
@@ -137,9 +154,9 @@ class VAE(nn.Module):
             # update beta
             constraint = self.goal - self.err_ema
             if self.speedup is not None and constraint.item() > 0:
-                factor = torch.exp(self.speedup * self.step_size * constraint)
+                factor = torch.exp(self.speedup * self.geco_lr * constraint)
             else:
-                factor = torch.exp(self.step_size * constraint)
+                factor = torch.exp(self.geco_lr * constraint)
             self.beta = (factor * self.beta).clamp(self.beta_min, self.beta_max)
 
         return loss
