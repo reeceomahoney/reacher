@@ -76,7 +76,7 @@ class VAE(nn.Module):
         loss.backward(retain_graph=True)
 
         with torch.inference_mode():
-            z = z - 0.1 * z.grad
+            z = z - 1e4 * z.grad
             x_hat = self.decoder(z)
 
         x_hat = self.normalizer.inverse(x_hat)
