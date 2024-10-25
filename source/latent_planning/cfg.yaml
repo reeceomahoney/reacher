@@ -15,7 +15,7 @@ video_interval: 2000
 
 algorithm:
   input_dim: 12
-  latent_dim: 6
+  latent_dim: 12
   hidden_dims: [256, 256]
   learning_rate: 1e-3
   goal: 0.05
