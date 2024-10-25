@@ -44,7 +44,7 @@ import os
 import torch
 import tqdm
 
-import source.latent_planning.env_cfg # noqa: F401
+import latent_planning.env_cfg # noqa: F401
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 from latent_planning.latent_planning_data_collector import (
     LatentPlanningDataCollector,
