@@ -104,7 +104,6 @@ class VAE(nn.Module):
             x_hat = self(x)[0]
             recon_loss = torch.mean((x - x_hat) ** 2)
         beta_loss = self.beta * torch.max(recon_loss - self.goal, torch.tensor(0.0))
-        beta_loss = self.beta_step(x)
 
         self.beta_optimizer.zero_grad()
         beta_loss.backward()
