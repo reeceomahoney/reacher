@@ -172,7 +172,7 @@ class Runner:
                 else:
                     wandb.log({"Episode/" + key, value}, step=locs["it"])
 
-        if "test_recon_loss" in locs:
+        if locs["it"] % self.eval_interval == 0:
             wandb.log(
                 {"Loss/test_recon_loss": locs["test_recon_loss"]}, step=locs["it"]
             )
