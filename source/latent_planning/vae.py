@@ -43,7 +43,7 @@ class VAE(nn.Module):
         self.beta_min = beta_min
         self.beta_max = beta_max
         self.alpha = alpha
-        self.step_size = step_size
+        self.step_size = float(step_size)
         self.speedup = speedup
         self.err_ema = None
 
