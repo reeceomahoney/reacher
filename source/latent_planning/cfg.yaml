@@ -17,10 +17,10 @@ algorithm:
   input_dim: 12
   latent_dim: 6
   hidden_dims: [512, 512, 512]
-  learning_rate: 1e-3
+  learning_rate: 1e-4
   goal: 0.1
   beta_init: 1.0
-  step_size: 1e-3
+  step_size: 1e-4
 
 dataset:
   data_directory: logs/latent_planning_record/hdf_dataset.hdf5

@@ -9,9 +9,8 @@ import time
 import torch
 from collections import deque
 from dataclasses import asdict
-from tqdm import tqdm, trange
+from tqdm import trange
 
-import rsl_rl
 from latent_planning.dataset import get_dataloaders
 from latent_planning.normalizer import GaussianNormalizer
 from latent_planning.vae import VAE
@@ -113,7 +112,7 @@ class Runner:
             # evaluation
             if it % self.eval_interval == 0:
                 test_recon_loss = []
-                for batch in tqdm(self.test_loader, desc="evaluating"):
+                for batch in self.test_loader:
                     test_recon_loss.append(self.alg.test(batch))
                 test_recon_loss = statistics.mean(test_recon_loss)
 
