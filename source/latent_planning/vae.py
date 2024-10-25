@@ -134,7 +134,7 @@ class VAE(nn.Module):
         # compute loss
         loss = self.beta * self.err_ema + kld
 
-        with torch.inference_mode():
+        with torch.no_grad():
             # update beta
             constraint = self.err_ema - self.goal
             if self.speedup is not None and constraint.item() > 0:
