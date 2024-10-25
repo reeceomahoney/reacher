@@ -1,4 +1,4 @@
-num_learning_iterations: 1e7
+num_learning_iterations: 1e6
 num_envs: 128
 episode_length: 5
 seed: 42
@@ -6,7 +6,7 @@ device: cuda
 resume: False
 log_interval: 1e3
 eval_interval: 1e4
-sim_interval: 1e4
+sim_interval: 5e4
 save_interval: 1e4
 wandb_project: latent_planning
 
@@ -15,7 +15,7 @@ video_interval: 2000
 
 algorithm:
   input_dim: 12
-  latent_dim: 12
+  latent_dim: 24
   hidden_dims: [256, 256]
   learning_rate: 1e-3
   goal: 0.01
