@@ -139,7 +139,7 @@ class VAE(nn.Module):
             if self.speedup is not None and constraint.item() > 0:
                 factor = torch.exp(self.speedup * self.step_size * constraint)
             else:
-                factor = torch.exp(constraint).clamp(0.9, 1.1)
+                factor = torch.exp(self.step_size * constraint)
             self.beta = (factor * self.beta).clamp(self.beta_min, self.beta_max)
 
         return loss
