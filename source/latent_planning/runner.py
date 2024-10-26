@@ -61,7 +61,6 @@ class Runner:
     def learn(self):
         obs, _ = self.env.get_observations()
         obs = obs.to(self.device)
-        goal_ee_pos = obs[0, -3:]  # TODO: randomize this
         self.train_mode()  # switch to train mode (for dropout for example)
 
         ep_infos = []
@@ -82,6 +81,7 @@ class Runner:
 
             # Rollout
             if it % self.sim_interval == 0:
+                goal_ee_pos = self.get_goal_ee_pos()
                 for _ in range(self.num_steps_per_env):
                     actions = self.alg.act(obs, goal_ee_pos)
                     obs, rewards, dones, infos = self.env.step(
@@ -216,3 +216,11 @@ class Runner:
 
     def add_git_repo_to_log(self, repo_file_path):
         self.git_status_repos.append(repo_file_path)
+
+    def get_goal_ee_pos(self):
+        ranges = [[0.35, 0.65], [-0.2, 0.2], [0.15, 0.5]]
+        goals = torch.rand(self.env.num_envs, 3, device=self.device)
+        for i in range(3):
+            goals[:, i] = goals[:, i] * (ranges[i][1] - ranges[i][0]) + ranges[i][0]
+
+        return goals
