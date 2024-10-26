@@ -21,8 +21,8 @@ algorithm:
   goal: 0.01
   beta_init: 1.0
   geco_lr: 5e-3
-  am_lr: 0.03
-  am_prior_weight: 0.95
+  am_lr: 1.0
+  am_prior_weight: 0.0
 
 dataset:
   data_directory: logs/latent_planning_record/hdf_dataset.hdf5
