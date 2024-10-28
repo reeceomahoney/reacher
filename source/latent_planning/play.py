@@ -85,8 +85,8 @@ def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg: DictConfig):
 
     # reset environment
     obs, _ = env.get_observations()
+    goal_ee_pos = env.unwrapped.command_manager.get_command("ee_pose")[:, :3]
     timestep = 0
-    goal_ee_pos = runner.get_goal_ee_pos()
     # simulate environment
     while simulation_app.is_running():
         # agent stepping
@@ -97,7 +97,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg: DictConfig):
         # reset prior loss weight
         if dones.any():
             runner.alg.reset()
-            
+
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video

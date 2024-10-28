@@ -18,6 +18,9 @@ class GaussianNormalizer(nn.Module):
     def inverse(self, y):
         return y * self._std + self._mean
 
+    def normalize_goal(self, goal):
+        return (goal - self._mean[-3:]) / self._std[-3:]
+
     @property
     def mean(self):
         return self._mean.squeeze(0).clone()

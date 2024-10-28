@@ -222,9 +222,4 @@ class Runner:
         self.git_status_repos.append(repo_file_path)
 
     def get_goal_ee_pos(self):
-        ranges = [[0.35, 0.65], [-0.2, 0.2], [0.15, 0.5]]
-        goals = torch.rand(self.env.num_envs, 3, device=self.device)
-        for i in range(3):
-            goals[:, i] = goals[:, i] * (ranges[i][1] - ranges[i][0]) + ranges[i][0]
-
-        return goals
+        return self.env.unwrapped.command_manager.get_command("ee_pose")[:, :3]
