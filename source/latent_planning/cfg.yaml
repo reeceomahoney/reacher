@@ -21,6 +21,7 @@ algorithm:
   goal: 0.01
   geco_lr: 5e-3
   am_lr: 0.03
+  num_envs: 32
 
 dataset:
   data_directory: logs/latent_planning_record/hdf_dataset.hdf5

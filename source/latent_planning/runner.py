@@ -61,6 +61,7 @@ class Runner:
     def learn(self):
         obs, _ = self.env.get_observations()
         obs = obs.to(self.device)
+        self.alg.reset()
         self.train_mode()  # switch to train mode (for dropout for example)
 
         ep_infos = []
@@ -95,8 +96,7 @@ class Runner:
                     )
 
                     # reset prior loss weight
-                    if dones.any():
-                        self.alg.reset()
+                    self.alg.reset(dones)
 
                     if self.log_dir is not None:
                         # rewards and dones

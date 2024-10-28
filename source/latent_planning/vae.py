@@ -12,6 +12,7 @@ class VAE(nn.Module):
         latent_dim,
         hidden_dims,
         learning_rate,
+        num_envs,
         goal=0.1,
         beta_min=1e-6,
         beta_max=10,
@@ -60,7 +61,7 @@ class VAE(nn.Module):
 
         # planning
         self.am_lr = am_lr
-        self.prior_weight = 1.0
+        self.prior_weight = torch.ones(num_envs, device=device)
         self.prior_geco_lr = 0.01
         self.prior_goal = 0.9
         self.prior_ema = None
@@ -97,7 +98,9 @@ class VAE(nn.Module):
             # update beta
             constraint = self.prior_ema - self.prior_goal
             factor = torch.exp(self.prior_geco_lr * constraint)
-            self.prior_weight = factor * self.prior_weight
+            self.prior_weight = (factor * self.prior_weight).clamp(
+                self.beta_min, self.beta_max
+            )
 
         loss = mse + self.prior_weight * prior_loss
 
@@ -135,9 +138,11 @@ class VAE(nn.Module):
         recon_loss = torch.mean((x_unnorm - x_hat) ** 2)
         return recon_loss.item()
 
-    def reset(self):
-        # TODO: vectorize this
-        self.prior_weight = 1.0
+    def reset(self, dones=None):
+        if dones is not None:
+            self.prior_weight[dones.bool()] = 1.0
+        else:
+            self.prior_weight = torch.ones_like(self.prior_weight)
 
     ##
     # Training

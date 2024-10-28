@@ -85,6 +85,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg: DictConfig):
 
     # reset environment
     obs, _ = env.get_observations()
+    runner.alg.reset()
     timestep = 0
     # simulate environment
     while simulation_app.is_running():
@@ -95,8 +96,7 @@ def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg: DictConfig):
         obs, _, dones, _ = env.step(actions)
 
         # reset prior loss weight
-        if dones.any():
-            runner.alg.reset()
+        runner.alg.reset(dones)
 
         if args_cli.video:
             timestep += 1
