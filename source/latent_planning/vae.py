@@ -156,10 +156,13 @@ class VAE(nn.Module):
 
         x_hat, mu, logvar = self(x)
 
-        recon_loss = torch.mean((x - x_hat) ** 2)
-        kl_loss = -0.5 * torch.mean(1 + logvar - mu**2 - logvar.exp())
+        recon_loss = torch.mean((x - x_hat) ** 2, dim=-1)
+        kl_loss = -0.5 * torch.mean(1 + logvar - mu**2 - logvar.exp(), dim=-1)
 
-        loss = self.geco_loss(recon_loss, kl_loss)
+        self.geco_step(recon_loss)
+
+        loss = recon_loss + self.beta * kl_loss
+        loss = loss.mean()
 
         self.optimizer.zero_grad()
         loss.backward()
@@ -167,9 +170,8 @@ class VAE(nn.Module):
 
         return loss, recon_loss, kl_loss
 
-    def geco_loss(self, err, kld):
-        loss = err + self.beta * kld
-
+    def geco_step(self, err):
+        err = err.mean()
         with torch.no_grad():
             # update ema
             if self.err_ema is None:
@@ -184,5 +186,3 @@ class VAE(nn.Module):
             else:
                 factor = torch.exp(self.geco_lr * constraint)
             self.beta = (factor * self.beta).clamp(self.beta_min, self.beta_max)
-
-        return loss
