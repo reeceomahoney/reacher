@@ -85,7 +85,9 @@ class VAE(nn.Module):
         # calculate losses
         mse = torch.mean((x_hat[:, -3:] - goal_ee_pos) ** 2, dim=-1)
         dist = Normal(mu, (0.5 * logvar).exp())
-        prior_loss = -dist.log_prob(z).sum(dim=-1).mean()
+        # taking a mean here means interpreting the prior goal as dim-wise
+        # not 100% sure about this
+        prior_loss = (-dist.log_prob(z)).mean(dim=-1)
 
         # update prior weight with geco
         with torch.no_grad():
