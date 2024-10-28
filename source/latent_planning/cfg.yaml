@@ -14,7 +14,7 @@ video_length: 200
 video_interval: 2000
 
 algorithm:
-  input_dim: 12
+  input_dim: 10
   latent_dim: 8
   hidden_dims: [2048, 2048, 2048, 2048]
   learning_rate: 1e-4
