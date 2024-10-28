@@ -32,8 +32,10 @@ class VAE(nn.Module):
             encoder_layers.append(nn.Linear(hidden_dims[i - 1], hidden_dims[i]))
             encoder_layers.append(nn.ELU())
 
-        encoder_layers.append(nn.Linear(hidden_dims[-1], 2 * latent_dim))
+        # encoder_layers.append(nn.Linear(hidden_dims[-1], 2 * latent_dim))
         self.encoder = nn.Sequential(*encoder_layers)
+        self.ec1 = nn.Linear(hidden_dims[-1], latent_dim)
+        self.ec2 = nn.Linear(hidden_dims[-1], latent_dim)
 
         # decoder
         decoder_layers = []
@@ -122,9 +124,13 @@ class VAE(nn.Module):
 
     def encode(self, x):
         x = self.encoder(x)
-        mu, logvar = torch.split(x, self.latent_dim, dim=-1)
-        std = torch.exp(0.5 * logvar)
+        # mu, logvar = torch.split(x, self.latent_dim, dim=-1)
+        # std = torch.exp(0.5 * logvar)
+        mu = self.ec1(x)
+        var = nn.functional.softplus(self.ec2(x)) + 1e-5
+        std = var.sqrt()
         z = mu + std * torch.randn_like(mu)
+        logvar = 2 * torch.log(std)
         return z, mu, logvar
 
     def forward(self, x):
