@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
-from torch.optim.adam import Adam
+from torch.optim.adamw import AdamW
 
 
 class VAE(nn.Module):
@@ -47,7 +47,7 @@ class VAE(nn.Module):
         decoder_layers.append(nn.Linear(hidden_dims[0], input_dim))
         self.decoder = nn.Sequential(*decoder_layers)
 
-        self.optimizer = Adam(self.parameters(), lr=float(learning_rate))
+        self.optimizer = AdamW(self.parameters(), lr=float(learning_rate))
         self.normalizer = normalizer
         self.latent_dim = latent_dim
         self.goal = float(goal)
