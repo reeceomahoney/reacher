@@ -26,11 +26,11 @@ class VAE(nn.Module):
         # encoder
         encoder_layers = []
         encoder_layers.append(nn.Linear(input_dim, hidden_dims[0]))
-        encoder_layers.append(nn.ELU())
+        encoder_layers.append(nn.ReLU())
 
         for i in range(1, len(hidden_dims)):
             encoder_layers.append(nn.Linear(hidden_dims[i - 1], hidden_dims[i]))
-            encoder_layers.append(nn.ELU())
+            encoder_layers.append(nn.ReLU())
 
         encoder_layers.append(nn.Linear(hidden_dims[-1], 2 * latent_dim))
         self.encoder = nn.Sequential(*encoder_layers)
@@ -38,11 +38,11 @@ class VAE(nn.Module):
         # decoder
         decoder_layers = []
         decoder_layers.append(nn.Linear(latent_dim, hidden_dims[-1]))
-        decoder_layers.append(nn.ELU())
+        decoder_layers.append(nn.ReLU())
 
         for i in range(len(hidden_dims) - 1, 0, -1):
             decoder_layers.append(nn.Linear(hidden_dims[i], hidden_dims[i - 1]))
-            decoder_layers.append(nn.ELU())
+            decoder_layers.append(nn.ReLU())
 
         decoder_layers.append(nn.Linear(hidden_dims[0], input_dim))
         self.decoder = nn.Sequential(*decoder_layers)
