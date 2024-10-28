@@ -6,7 +6,6 @@
 import gymnasium as gym
 import math
 import torch
-from dataclasses import MISSING
 
 import omni.isaac.lab.sim as sim_utils
 import omni.isaac.lab.utils.math as math_utils
@@ -18,7 +17,6 @@ from omni.isaac.lab.assets import (
 )
 from omni.isaac.lab.envs import ManagerBasedEnv, ManagerBasedRLEnvCfg
 from omni.isaac.lab.managers import ActionTermCfg as ActionTerm
-from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
 from omni.isaac.lab.managers import ObservationTermCfg as ObsTerm
@@ -129,7 +127,7 @@ class CommandsCfg:
     ee_pose = mdp.UniformPoseCommandCfg(
         asset_name="robot",
         body_name="panda_hand",
-        resampling_time_range=(4.0, 4.0),
+        resampling_time_range=(12.0, 12.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
             pos_x=(0.35, 0.65),
@@ -149,8 +147,8 @@ class ActionsCfg:
     arm_action: ActionTerm = mdp.JointPositionActionCfg(
         asset_name="robot",
         joint_names=["panda_joint.*"],
-        scale=0.5,
-        use_default_offset=True,
+        scale=1.0,
+        use_default_offset=False,
     )
     gripper_action: ActionTerm | None = None
 
@@ -253,11 +251,9 @@ class LatentPlanningEnvCfg(ManagerBasedRLEnvCfg):
         # general settings
         self.decimation = 2
         self.sim.render_interval = self.decimation
+        self.sim.dt = 1.0 / 50.0
         self.episode_length_s = 12.0
         self.viewer.eye = (3.5, 3.5, 3.5)
-        # simulation settings
-        self.sim.dt = 1.0 / 50.0
-        self.episode_length_s = 10
 
 
 @configclass

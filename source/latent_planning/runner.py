@@ -200,7 +200,7 @@ class Runner:
         torch.save(saved_dict, path)
 
     def load(self, path, load_optimizer=True):
-        loaded_dict = torch.load(path)
+        loaded_dict = torch.load(path, weights_only=True)
         self.alg.load_state_dict(loaded_dict["model_state_dict"])
         self.obs_normalizer.load_state_dict(loaded_dict["obs_norm_state_dict"])
         if load_optimizer:
