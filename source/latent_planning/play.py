@@ -85,11 +85,11 @@ def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg: DictConfig):
 
     # reset environment
     obs, _ = env.get_observations()
-    goal_ee_pos = env.unwrapped.command_manager.get_command("ee_pose")[:, :3]
     timestep = 0
     # simulate environment
     while simulation_app.is_running():
         # agent stepping
+        goal_ee_pos = env.unwrapped.command_manager.get_command("ee_pose")[:, :3]
         actions = runner.alg.act(obs, goal_ee_pos)
         # env stepping
         obs, _, dones, _ = env.step(actions)
