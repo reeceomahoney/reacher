@@ -94,6 +94,10 @@ class Runner:
                         dones.to(self.device),
                     )
 
+                    # reset prior loss weight
+                    if dones.any():
+                        self.alg.reset()
+
                     if self.log_dir is not None:
                         # rewards and dones
                         ep_infos.append(infos["log"])

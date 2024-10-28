@@ -4,3 +4,4 @@
  - [x] randomise goal positions
  - [ ] add pretty table for dataset info
  - [ ] fix hydra loading
+ - [ ] change logdir structure to date/time

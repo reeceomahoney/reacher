@@ -58,10 +58,17 @@ class VAE(nn.Module):
         self.beta_max = beta_max
         self.alpha = alpha
         self.geco_lr = float(geco_lr)
-        self.am_lr = float(am_lr)
-        self.am_prior_weight = am_prior_weight
+        # self.am_lr = float(am_lr)
+        # self.am_prior_weight = am_prior_weight
         self.speedup = speedup
         self.err_ema = None
+
+        # planning
+        self.am_lr = 0.03
+        self.prior_weight = 1.0
+        self.prior_goal = 0.9
+        self.prior_ema = None
+        self.prior_geco_lr = 0.01
 
         self.device = device
         self.to(device)
@@ -78,17 +85,33 @@ class VAE(nn.Module):
         z.retain_grad()
         x_hat = self.decoder(z)
 
+        # calculate losses
+        mse = torch.mean((x_hat[:, -3:] - goal_ee_pos) ** 2, dim=-1)
         d = z.shape[-1]
-        z_log_prob = -0.5 * (
+        prior_loss = 0.5 * (
             d * np.log(2 * math.pi)
             + logvar.sum(dim=-1)
             + ((z - mu) ** 2 / logvar.exp()).sum(dim=-1)
-        )
+        )  # -log p(z)
 
-        loss = (
-            torch.mean((x_hat[:, -3:] - goal_ee_pos) ** 2, dim=-1)
-            + self.am_prior_weight * -z_log_prob
-        )
+        # update prior weight with geco
+        with torch.no_grad():
+            # update ema
+            if self.prior_ema is None:
+                self.prior_ema = prior_loss
+            else:
+                self.prior_ema = 0.05 * prior_loss + 0.95 * self.prior_ema
+
+            # update beta
+            constraint = self.prior_ema - self.prior_goal
+            factor = torch.exp(self.prior_geco_lr * constraint)
+            self.prior_weight = factor * self.prior_weight
+
+        loss = mse + self.prior_weight * prior_loss
+
+        print("mse: ", mse.mean())
+        print("prior_loss: ", prior_loss.mean())
+
         loss = loss.sum()  # torch can only store retain graph for scalars
         loss.backward(retain_graph=True)
 
@@ -119,6 +142,9 @@ class VAE(nn.Module):
         x_hat = self.normalizer.inverse(x_hat)
         recon_loss = torch.mean((x_unnorm - x_hat) ** 2)
         return recon_loss.item()
+
+    def reset(self):
+        self.prior_weight = 1.0
 
     ##
     # Training

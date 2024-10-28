@@ -92,7 +92,12 @@ def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg: DictConfig):
         # agent stepping
         actions = runner.alg.act(obs, goal_ee_pos)
         # env stepping
-        obs, _, _, _ = env.step(actions)
+        obs, _, dones, _ = env.step(actions)
+
+        # reset prior loss weight
+        if dones.any():
+            runner.alg.reset()
+            
         if args_cli.video:
             timestep += 1
             # Exit the play loop after recording one video
