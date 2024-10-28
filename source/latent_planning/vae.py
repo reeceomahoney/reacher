@@ -109,8 +109,8 @@ class VAE(nn.Module):
 
         loss = mse + self.prior_weight * prior_loss
 
-        print("mse: ", mse.mean())
-        print("prior_loss: ", prior_loss.mean())
+        # print("mse: ", mse.mean())
+        # print("prior_loss: ", prior_loss.mean())
 
         loss = loss.sum()  # torch can only store retain graph for scalars
         loss.backward(retain_graph=True)
