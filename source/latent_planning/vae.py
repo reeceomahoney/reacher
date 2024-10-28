@@ -168,7 +168,7 @@ class VAE(nn.Module):
         loss.backward()
         self.optimizer.step()
 
-        return loss, recon_loss, kl_loss
+        return loss, recon_loss.mean(), kl_loss.mean()
 
     def geco_step(self, err):
         err = err.mean()
