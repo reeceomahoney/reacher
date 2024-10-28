@@ -3,6 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 from torch.optim.adamw import AdamW
+from torch.distributions import Normal
 
 
 class VAE(nn.Module):
@@ -87,12 +88,8 @@ class VAE(nn.Module):
 
         # calculate losses
         mse = torch.mean((x_hat[:, -3:] - goal_ee_pos) ** 2, dim=-1)
-        d = z.shape[-1]
-        prior_loss = 0.5 * (
-            d * np.log(2 * math.pi)
-            + logvar.sum(dim=-1)
-            + ((z - mu) ** 2 / logvar.exp()).sum(dim=-1)
-        )  # -log p(z)
+        dist = Normal(mu, (0.5*logvar).exp())
+        prior_loss = -dist.log_prob(z).sum().mean()
 
         # update prior weight with geco
         with torch.no_grad():
