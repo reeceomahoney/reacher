@@ -1,9 +1,7 @@
-import math
-import numpy as np
 import torch
 import torch.nn as nn
-from torch.optim.adamw import AdamW
 from torch.distributions import Normal
+from torch.optim.adamw import AdamW
 
 
 class VAE(nn.Module):
@@ -15,13 +13,11 @@ class VAE(nn.Module):
         hidden_dims,
         learning_rate,
         goal=0.1,
-        beta_init=1.0,
         beta_min=1e-6,
         beta_max=10,
         alpha=0.99,
         geco_lr=1e-5,
         am_lr=0.03,
-        am_prior_weight=1.0,
         speedup=None,
         device="cpu",
     ):
@@ -54,22 +50,20 @@ class VAE(nn.Module):
         self.normalizer = normalizer
         self.latent_dim = latent_dim
         self.goal = float(goal)
-        self.beta = beta_init
+        self.beta = 1.0
         self.beta_min = beta_min
         self.beta_max = beta_max
         self.alpha = alpha
         self.geco_lr = float(geco_lr)
-        # self.am_lr = float(am_lr)
-        # self.am_prior_weight = am_prior_weight
         self.speedup = speedup
         self.err_ema = None
 
         # planning
-        self.am_lr = 0.03
+        self.am_lr = am_lr
         self.prior_weight = 1.0
+        self.prior_geco_lr = 0.01
         self.prior_goal = 0.9
         self.prior_ema = None
-        self.prior_geco_lr = 0.01
 
         self.device = device
         self.to(device)
@@ -80,6 +74,7 @@ class VAE(nn.Module):
 
     def act(self, x, goal_ee_pos):
         x = self.normalizer(x)
+        goal_ee_pos = self.normalizer.normalize_goal(goal_ee_pos)
         z, mu, logvar = self.encode(x)
 
         z = z.detach().requires_grad_(True)
@@ -88,8 +83,8 @@ class VAE(nn.Module):
 
         # calculate losses
         mse = torch.mean((x_hat[:, -3:] - goal_ee_pos) ** 2, dim=-1)
-        dist = Normal(mu, (0.5*logvar).exp())
-        prior_loss = -dist.log_prob(z).sum().mean()
+        dist = Normal(mu, (0.5 * logvar).exp())
+        prior_loss = -dist.log_prob(z).sum(dim=-1).mean()
 
         # update prior weight with geco
         with torch.no_grad():
@@ -141,6 +136,7 @@ class VAE(nn.Module):
         return recon_loss.item()
 
     def reset(self):
+        # TODO: vectorize this
         self.prior_weight = 1.0
 
     ##
