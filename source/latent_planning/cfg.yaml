@@ -16,7 +16,7 @@ video_interval: 2000
 algorithm:
   input_dim: 10
   latent_dim: 8
-  hidden_dims: [2048, 2048, 2048, 2048]
+  hidden_dims: [256, 256]
   learning_rate: 1e-4
   goal: 0.01
   geco_lr: 5e-3
