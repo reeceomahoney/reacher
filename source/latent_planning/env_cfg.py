@@ -256,8 +256,21 @@ class LatentPlanningEnvCfg_PLAY(LatentPlanningEnvCfg):
 class LatentPlanningEnvCfg_RECORD(LatentPlanningEnvCfg):
     def __post_init__(self):
         super().__post_init__()
+        # increase sim frequency
+        self.decimation = 10
+        self.sim.dt = 1.0 / 1000.0
         # reset every step for recording
-        self.episode_length_s = 1.0 / 50.0
+        self.episode_length_s = 1.0 / 100.0
+        # disable gravity
+        self.scene.robot.spawn.rigid_props.disable_gravity = True
+
+        # disable PD control
+        self.scene.robot.actuators["panda_shoulder"].stiffness = 0
+        self.scene.robot.actuators["panda_shoulder"].damping = 0
+        self.scene.robot.actuators["panda_forearm"].stiffness = 0
+        self.scene.robot.actuators["panda_forearm"].damping = 0
+        self.scene.robot.actuators["panda_hand"].stiffness = 0
+        self.scene.robot.actuators["panda_hand"].damping = 0
 
 
 ##
