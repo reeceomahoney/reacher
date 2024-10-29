@@ -97,7 +97,7 @@ def main(agent_cfg: DictConfig):
     env = RslRlVecEnvWrapper(env)
 
     # create runner from rsl-rl
-    runner = Runner(env, agent_cfg, log_dir=log_dir, device=agent_cfg["device"])
+    runner = Runner(env, agent_cfg, log_dir=log_dir, device=agent_cfg.device)
     # write git state to logs
     runner.add_git_repo_to_log(__file__)
     # load the checkpoint

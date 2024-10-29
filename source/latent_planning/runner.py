@@ -50,15 +50,15 @@ class Runner:
         self.current_learning_iteration = 0
         self.git_status_repos = []
 
-        # make model directory
-        os.makedirs(os.path.join(log_dir, "model"), exist_ok=True)
-
-        # initialize wandb
         if self.log_dir is not None:
+            # initialize wandb
             wandb.init(project=self.cfg.wandb_project, dir=log_dir)
             wandb.config.update({"runner_cfg": self.cfg})
             wandb.config.update({"env_cfg": asdict(self.env.cfg)})  # type: ignore
             wandb.config.update({"alg_cfg": self.alg_cfg})
+
+            # make model directory
+            os.makedirs(os.path.join(log_dir, "models"), exist_ok=True)
 
     def learn(self):
         obs, _ = self.env.get_observations()
@@ -140,18 +140,14 @@ class Runner:
 
                 self.log(locals())
                 if it % self.save_interval == 0:
-                    self.save(os.path.join(self.log_dir, "model", f"model_{it}.pt"))
+                    self.save(os.path.join(self.log_dir, "models", "model.pt"))
                 ep_infos.clear()
                 if it == start_iter:
                     # obtain all the diff files
                     store_code_state(self.log_dir, self.git_status_repos)
 
         if self.log_dir is not None:
-            self.save(
-                os.path.join(
-                    self.log_dir, "model", f"model_{self.current_learning_iteration}.pt"
-                )
-            )
+            self.save(os.path.join(self.log_dir, "models", "model.pt"))
 
     def log(self, locs: dict):
         self.tot_time += locs["iter_time"]
