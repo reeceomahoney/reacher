@@ -91,22 +91,22 @@ class RobotStateDataset(Dataset):
         np_train = np_train_val[:size_train, :]
         np_val = np_train_val[size_train:, :]
 
-        # normalise data
-        input_dim = np_train.shape[1]
-        mean_train = np_train.mean(axis=0).reshape((1, input_dim))
-        std_train = np_train.std(axis=0).reshape((1, input_dim))
+        # # normalise data
+        # input_dim = np_train.shape[1]
+        # mean_train = np_train.mean(axis=0).reshape((1, input_dim))
+        # std_train = np_train.std(axis=0).reshape((1, input_dim))
 
         # If all the values are the same, set them to 0 after normalisation.
         # std_train[std_train < EPSILON] = 1.0
 
-        np_train -= np.tile(mean_train, (size_train, 1))
-        np_train /= np.tile(std_train, (size_train, 1))
-
-        np_val -= np.tile(mean_train, (size_val, 1))
-        np_val /= np.tile(std_train, (size_val, 1))
-
-        np_test -= np.tile(mean_train, (size_test, 1))
-        np_test /= np.tile(std_train, (size_test, 1))
+        # np_train -= np.tile(mean_train, (size_train, 1))
+        # np_train /= np.tile(std_train, (size_train, 1))
+        #
+        # np_val -= np.tile(mean_train, (size_val, 1))
+        # np_val /= np.tile(std_train, (size_val, 1))
+        #
+        # np_test -= np.tile(mean_train, (size_test, 1))
+        # np_test /= np.tile(std_train, (size_test, 1))
 
         if self.train == 0:
             self.robot_data = torch.tensor(np_train, dtype=torch.float32)
@@ -118,8 +118,6 @@ class RobotStateDataset(Dataset):
         self.np_train = np_train
         self.np_val = np_val
         self.np_test = np_test
-        self.mean_train = mean_train
-        self.std_train = std_train
 
     def __len__(self):
         return self.robot_data.shape[0]
