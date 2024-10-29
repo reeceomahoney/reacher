@@ -37,7 +37,6 @@ simulation_app = app_launcher.app
 import gymnasium as gym
 import os
 import torch
-from datetime import datetime
 
 import hydra
 import latent_planning.env_cfg  # noqa: F401
