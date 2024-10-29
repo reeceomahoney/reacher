@@ -41,8 +41,9 @@ from datetime import datetime
 
 import hydra
 import latent_planning.env_cfg  # noqa: F401
+from hydra.core.hydra_config import HydraConfig
 from latent_planning.runner import Runner
-from omegaconf import DictConfig
+from omegaconf import DictConfig, OmegaConf
 
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
@@ -56,35 +57,29 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
 
-@hydra.main(config_path=".", config_name="cfg.yaml")
+@hydra.main(config_path=".", config_name="cfg.yaml", version_base=None)
 def main(agent_cfg: DictConfig):
     """Train latent planning agent."""
     # load env cfg
     task = "Isaac-Latent-Planning"
     env_cfg = parse_env_cfg(task, device=agent_cfg.device, num_envs=agent_cfg.num_envs)
 
-    # override configurations with non-hydra CLI arguments
-    env_cfg.seed = agent_cfg["seed"]
-    env_cfg.episode_length_s = agent_cfg["episode_length"]
+    # override env configs
+    env_cfg.seed = agent_cfg.seed
+    env_cfg.episode_length_s = agent_cfg.episode_length
 
     # specify directory for logging experiments
-    log_root_path = os.path.abspath(os.path.join("logs", "latent_planning"))
-    print(f"[INFO] Logging experiment in directory: {log_root_path}")
-    # specify directory for logging runs: {time-stamp}_{run_name}
-    log_dir = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    log_dir = os.path.join(log_root_path, log_dir)
+    log_dir = HydraConfig.get().runtime.output_dir
+    print(f"[INFO] Logging experiment in directory: {log_dir}")
 
     # create isaac environment
-    env = gym.make(
-        "Isaac-Latent-Planning",
-        cfg=env_cfg,
-        render_mode="rgb_array" if args_cli.video else None,
-    )
+    render_mode = "rgb_array" if args_cli.video else None
+    env = gym.make(task, cfg=env_cfg, render_mode=render_mode)
 
     # save resume path before creating a new log_dir
     if agent_cfg["resume"]:
         resume_path = get_checkpoint_path(
-            log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint
+            log_dir + "/../..", agent_cfg.load_run, agent_cfg.load_checkpoint
         )
 
     # wrap for video recording
@@ -113,6 +108,7 @@ def main(agent_cfg: DictConfig):
         runner.load(resume_path)
 
     # dump the configuration into log-directory
+    agent_cfg = OmegaConf.to_container(agent_cfg)  # type: ignore
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg)
     dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)

@@ -11,13 +11,12 @@ from collections import deque
 from dataclasses import asdict
 from tqdm import trange
 
+import wandb
 from latent_planning.dataset import get_dataloaders
 from latent_planning.normalizer import GaussianNormalizer
 from latent_planning.vae import VAE
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
-
-import wandb
 
 
 class Runner:
@@ -25,7 +24,7 @@ class Runner:
 
     def __init__(self, env: VecEnv, train_cfg, log_dir=None, device="cpu"):
         self.cfg = train_cfg
-        self.alg_cfg = train_cfg["algorithm"]
+        self.alg_cfg = train_cfg.algorithm
         self.device = device
         self.env = env
 
@@ -38,11 +37,11 @@ class Runner:
         self.num_steps_per_env = int(
             self.cfg["episode_length"] / (self.env.cfg.decimation * self.env.cfg.sim.dt)
         )
-        self.log_interval = float(self.cfg["log_interval"])
-        self.eval_interval = float(self.cfg["eval_interval"])
-        self.sim_interval = float(self.cfg["sim_interval"])
-        self.save_interval = float(self.cfg["save_interval"])
-        self.num_learning_iterations = float(self.cfg["num_learning_iterations"])
+        self.log_interval = self.cfg.log_interval
+        self.eval_interval = self.cfg.eval_interval
+        self.sim_interval = self.cfg.sim_interval
+        self.save_interval = self.cfg.save_interval
+        self.num_learning_iterations = self.cfg.num_learning_iterations
 
         # Log
         self.log_dir = log_dir
@@ -51,9 +50,12 @@ class Runner:
         self.current_learning_iteration = 0
         self.git_status_repos = []
 
+        # make model directory
+        os.makedirs(os.path.join(log_dir, "model"), exist_ok=True)
+
         # initialize wandb
         if self.log_dir is not None:
-            wandb.init(project=self.cfg["wandb_project"])
+            wandb.init(project=self.cfg.wandb_project, dir=log_dir)
             wandb.config.update({"runner_cfg": self.cfg})
             wandb.config.update({"env_cfg": asdict(self.env.cfg)})  # type: ignore
             wandb.config.update({"alg_cfg": self.alg_cfg})
@@ -138,7 +140,7 @@ class Runner:
 
                 self.log(locals())
                 if it % self.save_interval == 0:
-                    self.save(os.path.join(self.log_dir, f"model_{it}.pt"))
+                    self.save(os.path.join(self.log_dir, "model", f"model_{it}.pt"))
                 ep_infos.clear()
                 if it == start_iter:
                     # obtain all the diff files
@@ -147,7 +149,7 @@ class Runner:
         if self.log_dir is not None:
             self.save(
                 os.path.join(
-                    self.log_dir, f"model_{self.current_learning_iteration}.pt"
+                    self.log_dir, "model", f"model_{self.current_learning_iteration}.pt"
                 )
             )
 

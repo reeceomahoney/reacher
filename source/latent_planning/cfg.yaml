@@ -21,7 +21,7 @@ algorithm:
   goal: 0.01
   geco_lr: 5e-3
   am_lr: 0.03
-  num_envs: 32
+  num_envs: ${num_envs}
 
 dataset:
   data_directory: logs/latent_planning_record/hdf_dataset.hdf5
@@ -30,3 +30,6 @@ dataset:
   test_batch_size: 1024
   num_workers: 4
 
+hydra:
+  run:
+    dir: logs/latent_planning/${now:%b-%d}/${now:%H-%M-%S}
