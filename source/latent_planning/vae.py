@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 from torch.optim.adamw import AdamW
+from torch.optim.adam import Adam
 
 
 class VAE(nn.Module):
@@ -16,7 +17,7 @@ class VAE(nn.Module):
         goal=0.1,
         beta_min=1e-6,
         beta_max=10,
-        alpha=0.99,
+        alpha=0.95,
         geco_lr=1e-5,
         am_lr=0.03,
         prior_goal=0.9,
@@ -79,16 +80,20 @@ class VAE(nn.Module):
         goal_ee_pos = self.normalizer.normalize_goal(goal_ee_pos)
         z, mu, logvar = self.encode(x)
 
+        # create optimizer
         z = z.detach().requires_grad_(True)
-        z.retain_grad()
-        x_hat = self.decoder(z)
+        optimizer_am = Adam([z], lr=self.am_lr)
 
         # calculate losses
+        x_hat = self.decoder(z)
         mse = torch.mean((x_hat[:, -3:] - goal_ee_pos) ** 2, dim=-1)
         dist = Normal(mu, (0.5 * logvar).exp())
         # taking a mean here means interpreting the prior goal as dim-wise
-        # not 100% sure about this
         prior_loss = (-dist.log_prob(z)).mean(dim=-1)
+
+        # print(
+        #     f"mse: {mse.mean().item():.2f} prior_loss: {prior_loss.mean().item():.2f}"
+        # )
 
         # update prior weight with geco
         with torch.no_grad():
@@ -106,16 +111,13 @@ class VAE(nn.Module):
             )
 
         loss = mse + self.prior_weight * prior_loss
-
-        # print(
-        #     f"mse: {mse.mean().item():.2f} prior_loss: {prior_loss.mean().item():.2f}"
-        # )
-
         loss = loss.sum()  # torch can only store retain graph for scalars
-        loss.backward(retain_graph=True)
+
+        optimizer_am.zero_grad()
+        loss.backward()
+        optimizer_am.step()
 
         with torch.inference_mode():
-            z = z - self.am_lr * z.grad
             x_hat = self.decoder(z)
 
         x_hat = self.normalizer.inverse(x_hat)

@@ -239,6 +239,8 @@ class LatentPlanningEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 1.0 / 50.0
         self.episode_length_s = 12.0
         self.viewer.eye = (3.5, 3.5, 3.5)
+        # disable_gravity
+        self.scene.robot.spawn.rigid_props.disable_gravity = True
 
 
 @configclass
