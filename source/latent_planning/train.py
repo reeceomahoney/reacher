@@ -39,17 +39,15 @@ import os
 import torch
 from datetime import datetime
 
+import hydra
+import latent_planning.env_cfg  # noqa: F401
+from latent_planning.runner import Runner
 from omegaconf import DictConfig
 
-import latent_planning.env_cfg  # noqa: F401
-from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
-from latent_planning.runner import Runner
 
-import omni.isaac.lab_tasks  # noqa: F401
-from omni.isaac.lab_tasks.utils import get_checkpoint_path
-from omni.isaac.lab_tasks.utils.hydra import hydra_task_config
+from omni.isaac.lab_tasks.utils import get_checkpoint_path, parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -58,13 +56,15 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
 
-@hydra_task_config("Isaac-Latent-Planning", "cfg_entry_point")
-def main(env_cfg: ManagerBasedRLEnvCfg, agent_cfg: DictConfig):
+@hydra.main(config_path=".", config_name="cfg.yaml")
+def main(agent_cfg: DictConfig):
     """Train latent planning agent."""
+    # load env cfg
+    task = "Isaac-Latent-Planning"
+    env_cfg = parse_env_cfg(task, device=agent_cfg.device, num_envs=agent_cfg.num_envs)
+
     # override configurations with non-hydra CLI arguments
-    env_cfg.scene.num_envs = agent_cfg["num_envs"]
     env_cfg.seed = agent_cfg["seed"]
-    env_cfg.sim.device = agent_cfg["device"]
     env_cfg.episode_length_s = agent_cfg["episode_length"]
 
     # specify directory for logging experiments
