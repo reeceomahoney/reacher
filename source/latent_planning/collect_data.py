@@ -44,11 +44,10 @@ import os
 import torch
 import tqdm
 
-import latent_planning.env_cfg # noqa: F401
+import latent_planning.env_cfg  # noqa: F401
+from latent_planning.latent_planning_data_collector import LatentPlanningDataCollector
+
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
-from latent_planning.latent_planning_data_collector import (
-    LatentPlanningDataCollector,
-)
 
 import omni.isaac.lab_tasks  # noqa: F401
 from omni.isaac.lab_tasks.utils.parse_cfg import parse_env_cfg
@@ -104,7 +103,7 @@ def main():
             # check that simulation is stopped or not
             if env.unwrapped.sim.is_stopped():  # type: ignore
                 break
-            
+
             # -- dones
             collector_interface.add("dones", dones)  # type: ignore
 
