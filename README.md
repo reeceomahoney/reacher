@@ -9,3 +9,5 @@
 - [ ] add pretty table for dataset info
 - [ ] Add isaac paths into pyproject.toml
 - [ ] only save best model
+- [ ] clean up runner cfg loading
+- [ ] clean up vae init
