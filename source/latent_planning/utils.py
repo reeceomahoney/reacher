@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 
 
-def get_latest_run(base_path):
+def get_latest_run(base_path, resume=False):
     """
     Find the most recent directory in a nested structure like Oct-29/13-01-34/
     Returns the full path to the most recent time directory
@@ -31,4 +31,7 @@ def get_latest_run(base_path):
 
     # sort
     sorted_directories = sorted(all_dirs, key=lambda x: x[1], reverse=True)
-    return sorted_directories[0][0]
+    if resume:
+        return sorted_directories[1][0]
+    else:
+        return sorted_directories[0][0]

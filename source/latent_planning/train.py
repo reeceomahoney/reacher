@@ -79,7 +79,7 @@ def main(agent_cfg: DictConfig):
     # save resume path before creating a new log_dir
     log_root_path = os.path.abspath(os.path.join("logs", "latent_planning"))
     if agent_cfg["resume"]:
-        resume_path = get_latest_run(log_root_path)
+        resume_path = get_latest_run(log_root_path, resume=True)
 
     # wrap for video recording
     if args_cli.video:
