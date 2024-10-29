@@ -8,3 +8,4 @@
 - [x] change logdir structure to date/time
 - [ ] add pretty table for dataset info
 - [ ] Add isaac paths into pyproject.toml
+- [ ] only save best model
