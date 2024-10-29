@@ -43,11 +43,12 @@ import latent_planning.env_cfg  # noqa: F401
 from hydra.core.hydra_config import HydraConfig
 from latent_planning.runner import Runner
 from omegaconf import DictConfig, OmegaConf
+from utils import get_latest_run
 
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 
-from omni.isaac.lab_tasks.utils import get_checkpoint_path, parse_env_cfg
+from omni.isaac.lab_tasks.utils import parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -76,10 +77,9 @@ def main(agent_cfg: DictConfig):
     env = gym.make(task, cfg=env_cfg, render_mode=render_mode)
 
     # save resume path before creating a new log_dir
+    log_root_path = os.path.abspath(os.path.join("logs", "latent_planning"))
     if agent_cfg["resume"]:
-        resume_path = get_checkpoint_path(
-            log_dir + "/../..", agent_cfg.load_run, agent_cfg.load_checkpoint
-        )
+        resume_path = get_latest_run(log_root_path)
 
     # wrap for video recording
     if args_cli.video:
