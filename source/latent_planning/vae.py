@@ -64,7 +64,7 @@ class VAE(nn.Module):
         self.am_lr = am_lr
         self.prior_weight = torch.ones(num_envs, device=device)
         self.prior_geco_lr = 0.01
-        self.prior_goal = 0.9
+        self.prior_goal = prior_goal
         self.prior_ema = None
 
         self.device = device
