@@ -80,6 +80,8 @@ def main(agent_cfg: DictConfig):
     log_root_path = os.path.abspath(os.path.join("logs", "latent_planning"))
     if agent_cfg["resume"]:
         resume_path = get_latest_run(log_root_path, resume=True)
+        resume_path = os.path.join(resume_path, "models", "model.pt")
+        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
 
     # wrap for video recording
     if args_cli.video:
