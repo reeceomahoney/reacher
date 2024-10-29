@@ -47,15 +47,15 @@ class VAE(nn.Module):
         decoder_layers.append(nn.Linear(hidden_dims[0], input_dim))
         self.decoder = nn.Sequential(*decoder_layers)
 
-        self.optimizer = AdamW(self.parameters(), lr=float(learning_rate))
+        self.optimizer = AdamW(self.parameters(), lr=learning_rate)
         self.normalizer = normalizer
         self.latent_dim = latent_dim
-        self.goal = float(goal)
+        self.goal = goal
         self.beta = 1.0
         self.beta_min = beta_min
         self.beta_max = beta_max
         self.alpha = alpha
-        self.geco_lr = float(geco_lr)
+        self.geco_lr = geco_lr
         self.speedup = speedup
         self.err_ema = None
 
