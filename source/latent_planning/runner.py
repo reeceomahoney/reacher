@@ -12,7 +12,7 @@ from dataclasses import asdict
 from tqdm import trange
 
 import wandb
-from latent_planning.dataset import get_dataloaders, get_hung_dataset
+from latent_planning.dataset import get_dataloaders
 from latent_planning.normalizer import GaussianNormalizer
 from latent_planning.vae import VAE
 from rsl_rl.env import VecEnv
@@ -28,10 +28,9 @@ class Runner:
         self.device = device
         self.env = env
 
-        # self.train_loader, self.test_loader, all_obs = get_dataloaders(
-        #     **train_cfg["dataset"]
-        # )
-        self.train_loader, self.test_loader, all_obs = get_hung_dataset()
+        self.train_loader, self.test_loader, all_obs = get_dataloaders(
+            **train_cfg["dataset"]
+        )
         self.obs_normalizer = GaussianNormalizer(all_obs)
         self.alg = VAE(self.obs_normalizer, device=self.device, **self.alg_cfg)
 

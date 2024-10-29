@@ -25,7 +25,10 @@ algorithm:
   num_envs: ${num_envs}
 
 dataset:
-  data_directory: logs/latent_planning_record/hdf_dataset.hdf5
+  # data_directory: logs/latent_planning_record/hdf_dataset.hdf5
+  # dataset_type: isaac
+  data_directory: logs/hung
+  dataset_type: hung
   train_fraction: 0.98
   train_batch_size: 1024
   test_batch_size: 1024
