@@ -21,6 +21,7 @@ algorithm:
   goal: 0.01
   geco_lr: 5e-3
   am_lr: 0.03
+  prior_goal: 0.6
   num_envs: ${num_envs}
 
 dataset:

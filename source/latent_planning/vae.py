@@ -19,6 +19,7 @@ class VAE(nn.Module):
         alpha=0.99,
         geco_lr=1e-5,
         am_lr=0.03,
+        prior_goal=0.9,
         speedup=None,
         device="cpu",
     ):
