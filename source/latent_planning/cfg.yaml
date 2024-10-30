@@ -1,4 +1,4 @@
-num_learning_iterations: 1e7
+num_learning_iterations: 2e6
 num_envs: 32
 episode_length: 12
 seed: 42
