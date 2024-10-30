@@ -3,6 +3,8 @@ import torch.nn as nn
 from torch.distributions import Normal
 from torch.optim.adamw import AdamW
 
+from omni.isaac.lab.utils.math import quat_error_magnitude
+
 
 class VAE(nn.Module):
     def __init__(
@@ -74,8 +76,9 @@ class VAE(nn.Module):
     # Inference
     ##
 
-    def act(self, x, goal_ee_pos):
+    def act(self, x, goal_ee_state):
         x = self.normalizer(x)
+        goal_ee_pos, goal_ee_quat = torch.split(goal_ee_state, [3, 4], dim=-1)
         goal_ee_pos = self.normalizer.normalize_goal(goal_ee_pos)
         z, mu, logvar = self.encode(x)
 
@@ -86,6 +89,7 @@ class VAE(nn.Module):
         # calculate losses
         x_hat = self.decoder(z)
         mse = torch.mean((x_hat[:, -3:] - goal_ee_pos) ** 2, dim=-1)
+        orientation_loss = self.get_orientation_loss(x_hat, goal_ee_quat)
         dist = Normal(mu, (0.5 * logvar).exp())
         # taking a mean here means interpreting the prior goal as dim-wise
         prior_loss = (-dist.log_prob(z)).mean(dim=-1)
@@ -109,7 +113,7 @@ class VAE(nn.Module):
                 self.beta_min, self.beta_max
             )
 
-        loss = mse + self.prior_weight * prior_loss
+        loss = mse + orientation_loss + self.prior_weight * prior_loss
         loss = loss.sum()  # torch can only store retain graph for scalars
 
         optimizer_am.zero_grad()
@@ -148,6 +152,10 @@ class VAE(nn.Module):
             self.prior_weight[dones.bool()] = 1.0
         else:
             self.prior_weight = torch.ones_like(self.prior_weight)
+
+    def get_orientation_loss(self, x, goal_ee_quat):
+        curr_quat = self.normalizer.inverse(x)[:, 10:]
+        return quat_error_magnitude(curr_quat, goal_ee_quat)
 
     ##
     # Training

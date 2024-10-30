@@ -37,7 +37,7 @@ def get_dataloaders(
             data[k] = torch.from_numpy(v).transpose(0, 1)
 
         # build obs
-        obs = torch.cat((data["data/obs/joint_pos"], data["data/obs/ee_pos"]), dim=-1)
+        obs = torch.cat((data["data/obs/joint_pos"], data["data/obs/ee_state"]), dim=-1)
         obs = obs.reshape(-1, obs.shape[-1])
 
         # Build the datasets

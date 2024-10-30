@@ -84,9 +84,9 @@ class Runner:
 
             # Rollout
             if it % self.sim_interval == 0:
-                goal_ee_pos = self.get_goal_ee_pos()
+                goal_ee_state = self.get_goal_ee_state()
                 for _ in range(self.num_steps_per_env):
-                    actions = self.alg.act(obs, goal_ee_pos)
+                    actions = self.alg.act(obs, goal_ee_state)
                     obs, rewards, dones, infos = self.env.step(
                         actions.to(self.env.device)
                     )
@@ -219,5 +219,5 @@ class Runner:
     def add_git_repo_to_log(self, repo_file_path):
         self.git_status_repos.append(repo_file_path)
 
-    def get_goal_ee_pos(self):
-        return self.env.unwrapped.command_manager.get_command("ee_pose")[:, :3]
+    def get_goal_ee_state(self):
+        return self.env.unwrapped.command_manager.get_command("ee_pose")
