@@ -265,6 +265,7 @@ class LatentPlanningEnvCfg_RECORD(LatentPlanningEnvCfg):
         super().__post_init__()
         # increase sim frequency
         self.decimation = 10
+        self.sim.render_interval = self.decimation
         self.sim.dt = 1.0 / 1000.0
         # reset every step for recording
         self.episode_length_s = 1.0 / 100.0
