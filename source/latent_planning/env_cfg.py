@@ -68,15 +68,16 @@ def reset_joints_random(
     asset.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
 
 
-def ee_pos_w(
+def ee_pos_quat(
     env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
-    """Asset ee position in the environment frame."""
+    """Asset ee position and orientation in the environment frame."""
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
-    return (
-        asset.data.body_pos_w[:, asset_cfg.body_ids].squeeze() - env.scene.env_origins
-    )
+    pos_b = asset.data.body_pos_w[:, asset_cfg.body_ids].squeeze() - env.scene.env_origins
+    # using world frame to make maths easier
+    quat_w = asset.data.body_state_w[:, asset_cfg.body_ids, 3:7].squeeze()
+    return torch.cat([pos_b, quat_w], dim=-1)
 
 
 ##
@@ -106,7 +107,9 @@ class LatentPlanningSceneCfg(InteractiveSceneCfg):
     )
 
     # robots
-    robot: ArticulationCfg = FRANKA_PANDA_HIGH_PD_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = FRANKA_PANDA_HIGH_PD_CFG.replace(
+        prim_path="{ENV_REGEX_NS}/Robot"
+    )
 
     # lights
     light = AssetBaseCfg(
@@ -168,8 +171,8 @@ class ObservationsCfg:
             params={"asset_cfg": SceneEntityCfg("robot", joint_names="panda_joint.*")},
         )
         # joint_vel = ObsTerm(func=mdp.joint_vel_rel)
-        ee_pos = ObsTerm(
-            func=ee_pos_w,
+        ee_state = ObsTerm(
+            func=ee_pos_quat,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="panda_hand")},
         )
 
@@ -194,6 +197,14 @@ class RewardsCfg:
     # task terms
     end_effector_position_tracking = RewTerm(
         func=mdp.position_command_error,
+        weight=-1,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            "command_name": "ee_pose",
+        },
+    )
+    end_effector_orientation_tracking = RewTerm(
+        func=mdp.orientation_command_error,
         weight=-1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
