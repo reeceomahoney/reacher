@@ -2,7 +2,6 @@ import torch
 import torch.nn as nn
 from torch.distributions import Normal
 from torch.optim.adamw import AdamW
-from torch.optim.adam import Adam
 
 
 class VAE(nn.Module):
@@ -82,7 +81,7 @@ class VAE(nn.Module):
 
         # create optimizer
         z = z.detach().requires_grad_(True)
-        optimizer_am = Adam([z], lr=self.am_lr)
+        optimizer_am = AdamW([z], lr=self.am_lr)
 
         # calculate losses
         x_hat = self.decoder(z)
