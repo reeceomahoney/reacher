@@ -32,7 +32,7 @@ import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
 ##
 # Pre-defined configs
 ##
-from omni.isaac.lab_assets import FRANKA_PANDA_CFG  # isort: skip
+from omni.isaac.lab_assets import FRANKA_PANDA_HIGH_PD_CFG  # isort: skip
 
 ##
 # Custom functions
@@ -106,7 +106,7 @@ class LatentPlanningSceneCfg(InteractiveSceneCfg):
     )
 
     # robots
-    robot: ArticulationCfg = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = FRANKA_PANDA_HIGH_PD_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
 
     # lights
     light = AssetBaseCfg(
@@ -239,8 +239,6 @@ class LatentPlanningEnvCfg(ManagerBasedRLEnvCfg):
         self.sim.dt = 1.0 / 50.0
         self.episode_length_s = 12.0
         self.viewer.eye = (3.5, 3.5, 3.5)
-        # disable_gravity
-        self.scene.robot.spawn.rigid_props.disable_gravity = True
 
 
 @configclass
@@ -265,14 +263,11 @@ class LatentPlanningEnvCfg_RECORD(LatentPlanningEnvCfg):
         self.episode_length_s = 1.0 / 100.0
         # disable gravity
         self.scene.robot.spawn.rigid_props.disable_gravity = True
-
         # disable PD control
         self.scene.robot.actuators["panda_shoulder"].stiffness = 0
         self.scene.robot.actuators["panda_shoulder"].damping = 0
         self.scene.robot.actuators["panda_forearm"].stiffness = 0
         self.scene.robot.actuators["panda_forearm"].damping = 0
-        self.scene.robot.actuators["panda_hand"].stiffness = 0
-        self.scene.robot.actuators["panda_hand"].damping = 0
 
 
 ##
