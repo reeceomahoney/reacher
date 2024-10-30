@@ -91,8 +91,8 @@ def main(agent_cfg: DictConfig):
     # simulate environment
     while simulation_app.is_running():
         # agent stepping
-        goal_ee_pos = env.unwrapped.command_manager.get_command("ee_pose")[:, :3]
-        actions = runner.alg.act(obs, goal_ee_pos)
+        goal_ee_state = env.unwrapped.command_manager.get_command("ee_pose")
+        actions = runner.alg.act(obs, goal_ee_state)
         # env stepping
         obs, _, dones, _ = env.step(actions)
 
