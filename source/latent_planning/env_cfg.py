@@ -9,12 +9,7 @@ import torch
 
 import omni.isaac.lab.sim as sim_utils
 import omni.isaac.lab.utils.math as math_utils
-from omni.isaac.lab.assets import (
-    Articulation,
-    ArticulationCfg,
-    AssetBaseCfg,
-    RigidObject,
-)
+from omni.isaac.lab.assets import Articulation, ArticulationCfg, AssetBaseCfg, RigidObject
 from omni.isaac.lab.envs import ManagerBasedEnv, ManagerBasedRLEnvCfg
 from omni.isaac.lab.managers import ActionTermCfg as ActionTerm
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
@@ -68,16 +63,17 @@ def reset_joints_random(
     asset.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
 
 
-def ee_pos_quat(
+def ee_pos_rot(
     env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Asset ee position and orientation in the environment frame."""
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
-    pos_b = asset.data.body_pos_w[:, asset_cfg.body_ids].squeeze() - env.scene.env_origins
-    # using world frame to make maths easier
-    quat_w = asset.data.body_state_w[:, asset_cfg.body_ids, 3:7].squeeze()
-    return torch.cat([pos_b, quat_w], dim=-1)
+    pos = asset.data.body_pos_w[:, asset_cfg.body_ids].squeeze() - env.scene.env_origins
+    quat = asset.data.body_state_w[:, asset_cfg.body_ids, 3:7].squeeze()
+    rot_mat = math_utils.matrix_from_quat(quat)
+    ortho6d = rot_mat[..., :2].reshape(-1, 6)
+    return torch.cat([pos, ortho6d], dim=-1)
 
 
 ##
@@ -172,7 +168,7 @@ class ObservationsCfg:
         )
         # joint_vel = ObsTerm(func=mdp.joint_vel_rel)
         ee_state = ObsTerm(
-            func=ee_pos_quat,
+            func=ee_pos_rot,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="panda_hand")},
         )
 
