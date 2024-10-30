@@ -11,3 +11,4 @@
 - [ ] only save best model
 - [ ] clean up runner cfg loading
 - [ ] clean up vae init
+- [ ] abstract geco logic into separate class
