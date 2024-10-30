@@ -59,6 +59,8 @@ class Runner:
 
             # make model directory
             os.makedirs(os.path.join(log_dir, "models"), exist_ok=True)
+            # save git diffs
+            store_code_state(self.log_dir, self.git_status_repos)
 
     def learn(self):
         obs, _ = self.env.get_observations()
@@ -142,9 +144,6 @@ class Runner:
                 if it % self.save_interval == 0:
                     self.save(os.path.join(self.log_dir, "models", "model.pt"))
                 ep_infos.clear()
-                if it == start_iter:
-                    # obtain all the diff files
-                    store_code_state(self.log_dir, self.git_status_repos)
 
         if self.log_dir is not None:
             self.save(os.path.join(self.log_dir, "models", "model.pt"))
