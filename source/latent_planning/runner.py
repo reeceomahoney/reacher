@@ -177,7 +177,14 @@ class Runner:
             wandb.log(
                 {"Loss/test_recon_loss": locs["test_recon_loss"]}, step=locs["it"]
             )
-
+        if locs["it"] % self.sim_interval == 0:
+            wandb.log(
+                {
+                    "Train/mean_reward": statistics.mean(locs["rewbuffer"]),
+                    "Train/mean_episode_length": statistics.mean(locs["lenbuffer"]),
+                },
+                steps=locs["it"],
+            )
         wandb.log(
             {
                 "Loss/loss": locs["loss"],
@@ -185,8 +192,6 @@ class Runner:
                 "Loss/kl_loss": locs["kl_loss"],
                 "Loss/beta": self.alg.beta,
                 "Perf/iter_time": iter_time / self.log_interval,
-                "Train/mean_reward": statistics.mean(locs["rewbuffer"]),
-                "Train/mean_episode_length": statistics.mean(locs["lenbuffer"]),
             },
             step=locs["it"],
         )
