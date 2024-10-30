@@ -95,7 +95,9 @@ class VAE(nn.Module):
         prior_loss = (-dist.log_prob(z)).mean(dim=-1)
 
         # print(
-        #     f"mse: {mse.mean().item():.2f} prior_loss: {prior_loss.mean().item():.2f}"
+        #     f"mse: {mse.mean().item():.2f}\
+        #     ori: {orientation_loss.mean().item():.2f}\
+        #     prior_loss: {prior_loss.mean().item():.2f}"
         # )
 
         # update prior weight with geco
