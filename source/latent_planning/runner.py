@@ -50,7 +50,6 @@ class Runner:
         self.tot_timesteps = 0
         self.tot_time = 0
         self.current_learning_iteration = 0
-        self.git_status_repos = []
 
         if self.log_dir is not None:
             # initialize wandb
@@ -62,7 +61,7 @@ class Runner:
             # make model directory
             os.makedirs(os.path.join(log_dir, "models"), exist_ok=True)
             # save git diffs
-            store_code_state(self.log_dir, self.git_status_repos)
+            store_code_state(self.log_dir, [__file__])
 
     def learn(self):
         obs, _ = self.env.get_observations()
