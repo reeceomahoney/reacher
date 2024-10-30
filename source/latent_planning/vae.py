@@ -88,7 +88,7 @@ class VAE(nn.Module):
 
         # calculate losses
         x_hat = self.decoder(z)
-        mse = torch.mean((x_hat[:, -3:] - goal_ee_state) ** 2, dim=-1)
+        mse = torch.mean((x_hat[:, 7:] - goal_ee_state) ** 2, dim=-1)
         dist = Normal(mu, (0.5 * logvar).exp())
         # taking a mean here means interpreting the prior goal as dim-wise
         prior_loss = (-dist.log_prob(z)).mean(dim=-1)
