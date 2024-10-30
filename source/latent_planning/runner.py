@@ -221,9 +221,6 @@ class Runner:
     def eval_mode(self):
         self.alg.eval()
 
-    def add_git_repo_to_log(self, repo_file_path):
-        self.git_status_repos.append(repo_file_path)
-
     def get_goal_ee_state(self):
         goal = self.env.unwrapped.command_manager.get_command("ee_pose")
         root_quat_w = self.env.unwrapped.scene["robot"].data.root_state_w[:, 3:7]

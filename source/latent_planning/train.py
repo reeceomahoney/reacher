@@ -100,8 +100,6 @@ def main(agent_cfg: DictConfig):
 
     # create runner from rsl-rl
     runner = Runner(env, agent_cfg, log_dir=log_dir, device=agent_cfg.device)
-    # write git state to logs
-    runner.add_git_repo_to_log(__file__)
     # load the checkpoint
     if agent_cfg["resume"]:
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
