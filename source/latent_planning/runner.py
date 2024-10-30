@@ -182,7 +182,7 @@ class Runner:
                     "Train/mean_reward": statistics.mean(locs["rewbuffer"]),
                     "Train/mean_episode_length": statistics.mean(locs["lenbuffer"]),
                 },
-                steps=locs["it"],
+                step=locs["it"],
             )
         wandb.log(
             {
