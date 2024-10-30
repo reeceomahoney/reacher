@@ -18,6 +18,8 @@ from latent_planning.vae import VAE
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 
+from omni.isaac.lab.utils.math import quat_mul
+
 
 class Runner:
     """On-policy runner for training and evaluation."""
@@ -224,4 +226,7 @@ class Runner:
         self.git_status_repos.append(repo_file_path)
 
     def get_goal_ee_state(self):
-        return self.env.unwrapped.command_manager.get_command("ee_pose")
+        goal = self.env.unwrapped.command_manager.get_command("ee_pose")
+        root_quat_w = self.env.unwrapped.scene["robot"].data.root_state_w[:, 3:7]
+        goal[:, 3:7] = quat_mul(root_quat_w, goal[:, 3:7])
+        return goal
