@@ -78,8 +78,8 @@ class VAE(nn.Module):
 
     def act(self, x, goal_ee_state):
         x = self.normalizer(x)
-        goal_ee_pos, goal_ee_quat = torch.split(goal_ee_state, [3, 4], dim=-1)
-        goal_ee_pos = self.normalizer.normalize_goal(goal_ee_pos)
+        # goal state is 3d pos + 6d rotation
+        goal_ee_state = self.normalizer.normalize_goal(goal_ee_state)
         z, mu, logvar = self.encode(x)
 
         # create optimizer
@@ -88,15 +88,13 @@ class VAE(nn.Module):
 
         # calculate losses
         x_hat = self.decoder(z)
-        mse = torch.mean((x_hat[:, -3:] - goal_ee_pos) ** 2, dim=-1)
-        orientation_loss = self.get_orientation_loss(x_hat, goal_ee_quat)
+        mse = torch.mean((x_hat[:, -3:] - goal_ee_state) ** 2, dim=-1)
         dist = Normal(mu, (0.5 * logvar).exp())
         # taking a mean here means interpreting the prior goal as dim-wise
         prior_loss = (-dist.log_prob(z)).mean(dim=-1)
 
         # print(
         #     f"mse: {mse.mean().item():.2f}\
-        #     ori: {orientation_loss.mean().item():.2f}\
         #     prior_loss: {prior_loss.mean().item():.2f}"
         # )
 
@@ -115,7 +113,7 @@ class VAE(nn.Module):
                 self.beta_min, self.beta_max
             )
 
-        loss = mse + orientation_loss + self.prior_weight * prior_loss
+        loss = mse + self.prior_weight * prior_loss
         loss = loss.sum()  # torch can only store retain graph for scalars
 
         optimizer_am.zero_grad()

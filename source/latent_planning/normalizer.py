@@ -19,7 +19,7 @@ class GaussianNormalizer(nn.Module):
         return y * self._std + self._mean
 
     def normalize_goal(self, goal):
-        return (goal - self._mean[7:10]) / self._std[7:10]
+        return (goal - self._mean[7:]) / self._std[7:]
 
     @property
     def mean(self):

@@ -14,14 +14,14 @@ video_length: 200
 video_interval: 2000
 
 algorithm:
-  input_dim: 14
-  latent_dim: 10
+  input_dim: 16
+  latent_dim: 7
   hidden_dims: [512, 512, 512]
   learning_rate: 1e-4
   goal: 1e-3
   geco_lr: 5e-3
   am_lr: 0.03
-  prior_goal: 0.3
+  prior_goal: 0.9
   num_envs: ${num_envs}
 
 dataset:

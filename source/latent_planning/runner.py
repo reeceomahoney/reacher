@@ -18,7 +18,7 @@ from latent_planning.vae import VAE
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 
-from omni.isaac.lab.utils.math import quat_mul
+from omni.isaac.lab.utils.math import matrix_from_quat
 
 
 class Runner:
@@ -223,6 +223,6 @@ class Runner:
 
     def get_goal_ee_state(self):
         goal = self.env.unwrapped.command_manager.get_command("ee_pose")
-        root_quat_w = self.env.unwrapped.scene["robot"].data.root_state_w[:, 3:7]
-        goal[:, 3:7] = quat_mul(root_quat_w, goal[:, 3:7])
-        return goal
+        rot_mat = matrix_from_quat(goal[:, 3:7])
+        ortho6d = rot_mat[..., :2].reshape(-1, 6)
+        return torch.cat([goal[:, :3], ortho6d], dim=-1)
