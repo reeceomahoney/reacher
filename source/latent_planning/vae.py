@@ -68,6 +68,8 @@ class VAE(nn.Module):
         self.prior_geco_lr = 0.01
         self.prior_goal = prior_goal
         self.prior_ema = None
+        # weights for position and orientation losses
+        self.mse_weights = torch.tensor(3 * [1.0] + 6 * [1.0], device=device)
 
         self.device = device
         self.to(device)
@@ -88,7 +90,8 @@ class VAE(nn.Module):
 
         # calculate losses
         x_hat = self.decoder(z)
-        mse = torch.mean((x_hat[:, 7:] - goal_ee_state) ** 2, dim=-1)
+        mse = self.mse_weights * ((x_hat[:, 7:] - goal_ee_state) ** 2)
+        mse = torch.mean(mse, dim=-1)
         dist = Normal(mu, (0.5 * logvar).exp())
         # taking a mean here means interpreting the prior goal as dim-wise
         prior_loss = (-dist.log_prob(z)).mean(dim=-1)
