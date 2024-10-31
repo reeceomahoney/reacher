@@ -13,7 +13,7 @@ wandb_project: latent_planning
 video_length: 200
 video_interval: 2000
 
-algorithm:
+policy:
   input_dim: 16
   latent_dim: 7
   hidden_dims: [512, 512, 512]

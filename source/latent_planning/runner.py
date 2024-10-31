@@ -8,7 +8,6 @@ import statistics
 import time
 import torch
 from collections import deque
-from dataclasses import asdict
 from tqdm import trange
 
 import wandb
@@ -24,40 +23,29 @@ from omni.isaac.lab.utils.math import matrix_from_quat
 class Runner:
     """On-policy runner for training and evaluation."""
 
-    def __init__(self, env: VecEnv, train_cfg, log_dir=None, device="cpu"):
-        self.cfg = train_cfg
-        self.alg_cfg = train_cfg.algorithm
-        self.device = device
+    def __init__(self, env: VecEnv, agent_cfg, log_dir=None, device="cpu"):
         self.env = env
+        self.cfg = agent_cfg
+        self.device = device
 
+        # classes
         self.train_loader, self.test_loader, all_obs = get_dataloaders(
-            **train_cfg["dataset"]
+            **agent_cfg.dataset
         )
-        self.obs_normalizer = GaussianNormalizer(all_obs)
-        self.alg = VAE(self.obs_normalizer, device=self.device, **self.alg_cfg)
+        self.normalizer = GaussianNormalizer(all_obs)
+        self.policy = VAE(self.normalizer, device=self.device, **self.cfg.policy)
 
-        self.num_steps_per_env = int(
-            self.cfg["episode_length"] / (self.env.cfg.decimation * self.env.cfg.sim.dt)
-        )
-        self.log_interval = self.cfg.log_interval
-        self.eval_interval = self.cfg.eval_interval
-        self.sim_interval = self.cfg.sim_interval
-        self.save_interval = self.cfg.save_interval
-        self.num_learning_iterations = self.cfg.num_learning_iterations
-
-        # Log
+        # variables
         self.log_dir = log_dir
-        self.tot_timesteps = 0
-        self.tot_time = 0
+        self.num_steps_per_env = int(
+            self.cfg.episode_length / (self.env.cfg.decimation * self.env.cfg.sim.dt)
+        )
         self.current_learning_iteration = 0
 
+        # logging
         if self.log_dir is not None:
             # initialize wandb
-            wandb.init(project=self.cfg.wandb_project, dir=log_dir)
-            wandb.config.update({"runner_cfg": self.cfg})
-            wandb.config.update({"env_cfg": asdict(self.env.cfg)})  # type: ignore
-            wandb.config.update({"alg_cfg": self.alg_cfg})
-
+            wandb.init(project=self.cfg.wandb_project, dir=log_dir, config=self.cfg)
             # make model directory
             os.makedirs(os.path.join(log_dir, "models"), exist_ok=True)
             # save git diffs
@@ -66,7 +54,7 @@ class Runner:
     def learn(self):
         obs, _ = self.env.get_observations()
         obs = obs.to(self.device)
-        self.alg.reset()
+        self.policy.reset()
         self.train_mode()  # switch to train mode (for dropout for example)
 
         ep_infos = []
@@ -80,16 +68,16 @@ class Runner:
         )
 
         start_iter = self.current_learning_iteration
-        tot_iter = int(start_iter + self.num_learning_iterations)
+        tot_iter = int(start_iter + self.cfg.num_learning_iterations)
         generator = iter(self.train_loader)
         for it in trange(start_iter, tot_iter):
             start = time.time()
 
             # Rollout
-            if it % self.sim_interval == 0:
+            if it % self.cfg.sim_interval == 0:
                 goal_ee_state = self.get_goal_ee_state()
                 for _ in range(self.num_steps_per_env):
-                    actions = self.alg.act(obs, goal_ee_state)
+                    actions = self.policy.act(obs, goal_ee_state)
                     obs, rewards, dones, infos = self.env.step(
                         actions.to(self.env.device)
                     )
@@ -101,7 +89,7 @@ class Runner:
                     )
 
                     # reset prior loss weight
-                    self.alg.reset(dones)
+                    self.policy.reset(dones)
 
                     if self.log_dir is not None:
                         # rewards and dones
@@ -119,10 +107,10 @@ class Runner:
                         cur_episode_length[new_ids] = 0
 
             # evaluation
-            if it % self.eval_interval == 0:
+            if it % self.cfg.eval_interval == 0:
                 test_recon_loss = []
                 for batch in self.test_loader:
-                    test_recon_loss.append(self.alg.test(batch))
+                    test_recon_loss.append(self.policy.test(batch))
                 test_recon_loss = statistics.mean(test_recon_loss)
 
             # training
@@ -132,17 +120,17 @@ class Runner:
                 generator = iter(self.train_loader)
                 batch = next(generator)
 
-            loss, recon_loss, kl_loss = self.alg.update(batch)
+            loss, recon_loss, kl_loss = self.policy.update(batch)
 
             # logging
             self.current_learning_iteration = it
-            if self.log_dir is not None and it % self.log_interval == 0:
+            if self.log_dir is not None and it % self.cfg.log_interval == 0:
                 # timing
                 stop = time.time()
                 iter_time = stop - start
 
                 self.log(locals())
-                if it % self.save_interval == 0:
+                if it % self.cfg.save_interval == 0:
                     self.save(os.path.join(self.log_dir, "models", "model.pt"))
                 ep_infos.clear()
 
@@ -150,9 +138,6 @@ class Runner:
             self.save(os.path.join(self.log_dir, "models", "model.pt"))
 
     def log(self, locs: dict):
-        self.tot_time += locs["iter_time"]
-        iter_time = locs["iter_time"]
-
         if locs["ep_infos"]:
             for key in locs["ep_infos"][0]:
                 # get the mean of each ep info value
@@ -173,11 +158,11 @@ class Runner:
                 else:
                     wandb.log({"Episode/" + key, value}, step=locs["it"])
 
-        if locs["it"] % self.eval_interval == 0:
+        if locs["it"] % self.cfg.eval_interval == 0:
             wandb.log(
                 {"Loss/test_recon_loss": locs["test_recon_loss"]}, step=locs["it"]
             )
-        if locs["it"] % self.sim_interval == 0:
+        if locs["it"] % self.cfg.sim_interval == 0:
             wandb.log(
                 {
                     "Train/mean_reward": statistics.mean(locs["rewbuffer"]),
@@ -190,36 +175,35 @@ class Runner:
                 "Loss/loss": locs["loss"],
                 "Loss/recon_loss": locs["recon_loss"],
                 "Loss/kl_loss": locs["kl_loss"],
-                "Loss/beta": self.alg.beta,
-                "Perf/iter_time": iter_time / self.log_interval,
+                "Loss/beta": self.policy.beta,
+                "Perf/iter_time": locs["iter_time"] / self.cfg.log_interval,
             },
             step=locs["it"],
         )
 
     def save(self, path, infos=None):
         saved_dict = {
-            "model_state_dict": self.alg.state_dict(),
-            "optimizer_state_dict": self.alg.optimizer.state_dict(),
+            "model_state_dict": self.policy.state_dict(),
+            "optimizer_state_dict": self.policy.optimizer.state_dict(),
+            "norm_state_dict": self.normalizer.state_dict(),
             "iter": self.current_learning_iteration,
             "infos": infos,
         }
-        saved_dict["obs_norm_state_dict"] = self.obs_normalizer.state_dict()
         torch.save(saved_dict, path)
 
-    def load(self, path, load_optimizer=True):
+    def load(self, path):
         loaded_dict = torch.load(path, weights_only=True)
-        self.alg.load_state_dict(loaded_dict["model_state_dict"])
-        self.obs_normalizer.load_state_dict(loaded_dict["obs_norm_state_dict"])
-        if load_optimizer:
-            self.alg.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
+        self.policy.load_state_dict(loaded_dict["model_state_dict"])
+        self.normalizer.load_state_dict(loaded_dict["norm_state_dict"])
+        self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
         self.current_learning_iteration = loaded_dict["iter"]
         return loaded_dict["infos"]
 
     def train_mode(self):
-        self.alg.train()
+        self.policy.train()
 
     def eval_mode(self):
-        self.alg.eval()
+        self.policy.eval()
 
     def get_goal_ee_state(self):
         goal = self.env.unwrapped.command_manager.get_command("ee_pose")

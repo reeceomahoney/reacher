@@ -76,19 +76,12 @@ def main(agent_cfg: DictConfig):
     render_mode = "rgb_array" if args_cli.video else None
     env = gym.make(task, cfg=env_cfg, render_mode=render_mode)
 
-    # save resume path before creating a new log_dir
-    log_root_path = os.path.abspath(os.path.join("logs", "latent_planning"))
-    if agent_cfg["resume"]:
-        resume_path = get_latest_run(log_root_path, resume=True)
-        resume_path = os.path.join(resume_path, "models", "model.pt")
-        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-
     # wrap for video recording
     if args_cli.video:
         video_kwargs = {
             "video_folder": os.path.join(log_dir, "videos", "train"),
-            "step_trigger": lambda step: step % agent_cfg["video_interval"] == 0,
-            "video_length": agent_cfg["video_length"],
+            "step_trigger": lambda step: step % agent_cfg.video_interval == 0,
+            "video_length": agent_cfg.video_length,
             "disable_logger": True,
         }
         print("[INFO] Recording videos during training.")
@@ -100,8 +93,12 @@ def main(agent_cfg: DictConfig):
 
     # create runner from rsl-rl
     runner = Runner(env, agent_cfg, log_dir=log_dir, device=agent_cfg.device)
+
     # load the checkpoint
-    if agent_cfg["resume"]:
+    if agent_cfg.resume:
+        log_root_path = os.path.abspath(os.path.join("logs", "latent_planning"))
+        resume_path = get_latest_run(log_root_path, resume=True)
+        resume_path = os.path.join(resume_path, "models", "model.pt")
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
         # load previously trained model
         runner.load(resume_path)
