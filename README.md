@@ -7,7 +7,6 @@
 - [x] fix hydra loading
 - [x] change logdir structure to date/time
 - [x] clean up runner cfg loading
-- [ ] add pretty table for dataset info
 - [ ] Add isaac paths into pyproject.toml
 - [ ] clean up vae init
 - [ ] abstract geco logic into separate class
