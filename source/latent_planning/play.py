@@ -66,7 +66,9 @@ def main(agent_cfg: DictConfig):
 
     # override env configs
     env_cfg.seed = agent_cfg.seed
-    env_cfg.episode_length_s = agent_cfg.episode_length
+    ep_len = agent_cfg.episode_length
+    env_cfg.episode_length_s = ep_len
+    env_cfg.commands.ee_pose.resampling_time_range = (ep_len, ep_len)
 
     # create isaac environment
     render_mode = "rgb_array" if args_cli.video else None
