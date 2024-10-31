@@ -6,10 +6,16 @@
 import gymnasium as gym
 import math
 import torch
+from dataclasses import MISSING
 
 import omni.isaac.lab.sim as sim_utils
 import omni.isaac.lab.utils.math as math_utils
-from omni.isaac.lab.assets import Articulation, ArticulationCfg, AssetBaseCfg, RigidObject
+from omni.isaac.lab.assets import (
+    Articulation,
+    ArticulationCfg,
+    AssetBaseCfg,
+    RigidObject,
+)
 from omni.isaac.lab.envs import ManagerBasedEnv, ManagerBasedRLEnvCfg
 from omni.isaac.lab.managers import ActionTermCfg as ActionTerm
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
@@ -28,6 +34,7 @@ import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
 # Pre-defined configs
 ##
 from omni.isaac.lab_assets import FRANKA_PANDA_HIGH_PD_CFG  # isort: skip
+from latent_planning.robots import ANYMAL_D_Z1_CFG  # isort: skip
 
 ##
 # Custom functions
@@ -103,9 +110,7 @@ class LatentPlanningSceneCfg(InteractiveSceneCfg):
     )
 
     # robots
-    robot: ArticulationCfg = FRANKA_PANDA_HIGH_PD_CFG.replace(
-        prim_path="{ENV_REGEX_NS}/Robot"
-    )
+    robot: ArticulationCfg = MISSING
 
     # lights
     light = AssetBaseCfg(
@@ -125,7 +130,7 @@ class CommandsCfg:
 
     ee_pose = mdp.UniformPoseCommandCfg(
         asset_name="robot",
-        body_name="panda_hand",
+        body_name=MISSING,
         resampling_time_range=(12.0, 12.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
@@ -143,12 +148,7 @@ class CommandsCfg:
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    arm_action: ActionTerm = mdp.JointPositionActionCfg(
-        asset_name="robot",
-        joint_names=["panda_joint.*"],
-        scale=1.0,
-        use_default_offset=False,
-    )
+    arm_action: ActionTerm = MISSING
     gripper_action: ActionTerm | None = None
 
 
@@ -195,7 +195,7 @@ class RewardsCfg:
         func=mdp.position_command_error,
         weight=-1,
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            "asset_cfg": SceneEntityCfg("robot", body_names=MISSING),
             "command_name": "ee_pose",
         },
     )
@@ -203,7 +203,7 @@ class RewardsCfg:
         func=mdp.orientation_command_error,
         weight=-1,
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            "asset_cfg": SceneEntityCfg("robot", body_names=MISSING),
             "command_name": "ee_pose",
         },
     )
@@ -249,18 +249,33 @@ class LatentPlanningEnvCfg(ManagerBasedRLEnvCfg):
 
 
 @configclass
-class LatentPlanningEnvCfg_PLAY(LatentPlanningEnvCfg):
+class LatentFrankaEnvCfg(LatentPlanningEnvCfg):
     def __post_init__(self):
         super().__post_init__()
-        # make a smaller scene for play
-        self.scene.num_envs = 50
-        self.scene.env_spacing = 2.5
-        # disable randomization for play
-        self.observations.policy.enable_corruption = False
+        # robot
+        self.scene.robot = FRANKA_PANDA_HIGH_PD_CFG.replace(
+            prim_path="{ENV_REGEX_NS}/Robot"
+        )
+        # action
+        self.actions.arm_action = mdp.JointPositionActionCfg(
+            asset_name="robot",
+            joint_names=["panda_joint.*"],
+            scale=1.0,
+            use_default_offset=False,
+        )
+        # rewards
+        self.rewards.end_effector_position_tracking.params["asset_cfg"].body_names = [
+            "panda_hand"
+        ]
+        self.rewards.end_effector_orientation_tracking.params[
+            "asset_cfg"
+        ].body_names = ["panda_hand"]
+        # command
+        self.commands.ee_pose.body_name = "panda_hand"
 
 
 @configclass
-class LatentPlanningEnvCfg_RECORD(LatentPlanningEnvCfg):
+class LatentFrankaEnvCfg_RECORD(LatentFrankaEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         # increase sim frequency
@@ -283,31 +298,21 @@ class LatentPlanningEnvCfg_RECORD(LatentPlanningEnvCfg):
 ##
 
 gym.register(
-    id="Isaac-Latent-Planning",
+    id="Isaac-Latent-Franka",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": LatentPlanningEnvCfg,
+        "env_cfg_entry_point": LatentFrankaEnvCfg,
         "cfg_entry_point": "source/latent_planning/cfg.yaml",
     },
 )
 
 gym.register(
-    id="Isaac-Latent-Planning-Play",
+    id="Isaac-Latent-Franka-Record",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": LatentPlanningEnvCfg_PLAY,
-        "cfg_entry_point": "source/latent_planning/cfg.yaml",
-    },
-)
-
-gym.register(
-    id="Isaac-Latent-Planning-Record",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": LatentPlanningEnvCfg_RECORD,
+        "env_cfg_entry_point": LatentFrankaEnvCfg_RECORD,
         "cfg_entry_point": "source/latent_planning/cfg.yaml",
     },
 )
