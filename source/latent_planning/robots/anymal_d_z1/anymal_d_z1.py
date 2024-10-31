@@ -6,11 +6,11 @@ import omni.isaac.lab.sim as sim_utils
 from omni.isaac.lab.actuators import ImplicitActuatorCfg
 from omni.isaac.lab.assets.articulation import ArticulationCfg
 
-usd_path_anymal_c_arm = str(Path(__file__).parent.absolute()) + "/anymal_d_z1.usd"
+usd_path_anymal_d_z1 = str(Path(__file__).parent.absolute()) + "/anymal_d_z1.usd"
 
 ANYMAL_D_Z1_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
-        usd_path=usd_path_anymal_c_arm,
+        usd_path=usd_path_anymal_d_z1,
         activate_contact_sensors=True,
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
