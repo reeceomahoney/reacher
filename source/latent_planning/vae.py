@@ -93,11 +93,6 @@ class VAE(nn.Module):
         # taking a mean here means interpreting the prior goal as dim-wise
         prior_loss = (-dist.log_prob(z)).mean(dim=-1)
 
-        # print(
-        #     f"mse: {mse.mean().item():.2f}\
-        #     prior_loss: {prior_loss.mean().item():.2f}"
-        # )
-
         # update prior weight with geco
         with torch.no_grad():
             # update ema
@@ -125,6 +120,9 @@ class VAE(nn.Module):
 
         x_hat = self.normalizer.inverse(x_hat)
         joint_pos_target = x_hat[:, :7]
+
+        # self.log(locals())
+
         return joint_pos_target
 
     def encode(self, x):
@@ -196,3 +194,15 @@ class VAE(nn.Module):
             else:
                 factor = torch.exp(self.geco_lr * constraint)
             self.beta = (factor * self.beta).clamp(self.beta_min, self.beta_max)
+
+    ##
+    # Utils
+    ##
+
+    def log(locs: dict):
+        print(
+            f"""
+            mse: {locs["mse"].mean().item():.2f} 
+            prior_loss: {locs["prior_loss"].mean().item():.2f}
+            """
+        )
