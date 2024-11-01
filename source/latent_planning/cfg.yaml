@@ -16,7 +16,7 @@ video_interval: 2000
 policy:
   input_dim: 16
   latent_dim: 7
-  hidden_dims: [512, 512, 512]
+  hidden_dims: [2048, 2048, 2048, 2048]
   learning_rate: 1e-4
   goal: 1e-3
   geco_lr: 5e-3

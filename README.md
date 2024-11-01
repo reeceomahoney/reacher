@@ -12,3 +12,4 @@
 - [ ] abstract geco logic into separate class
 - [ ] use loader to init normalizer
 - [ ] separate env cfgs into separate files
+- [ ] handle first steps properly in runner
