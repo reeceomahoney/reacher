@@ -82,7 +82,8 @@ class VAE(nn.Module):
         x = self.normalizer(x)
         # goal state is 3d pos + 6d rotation
         goal_ee_state = self.normalizer.normalize_goal(goal_ee_state)
-        z, mu, logvar = self.encode(x)
+        with torch.no_grad():
+            z, mu, logvar = self.encode(x)
 
         # create optimizer
         z = z.detach().requires_grad_(True)
@@ -118,7 +119,7 @@ class VAE(nn.Module):
         loss.backward()
         optimizer_am.step()
 
-        with torch.inference_mode():
+        with torch.no_grad():
             x_hat = self.decoder(z)
 
         x_hat = self.normalizer.inverse(x_hat)
@@ -140,6 +141,7 @@ class VAE(nn.Module):
         x_hat = self.decoder(z)
         return x_hat, mu, logvar
 
+    @torch.no_grad()
     def test(self, batch):
         x_unnorm = batch[0].to(self.device)
         x = self.normalizer(x_unnorm)
