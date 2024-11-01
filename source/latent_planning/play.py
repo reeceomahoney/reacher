@@ -88,18 +88,27 @@ def main(agent_cfg: DictConfig):
 
     # reset environment
     obs, _ = env.get_observations()
-    runner.alg.reset()
-    timestep = 0
+    runner.policy.reset()
+    timestep, reward_sum = 0, 0
+    first_step = True
     # simulate environment
     while simulation_app.is_running():
         # agent stepping
         goal_ee_state = runner.get_goal_ee_state()
-        actions = runner.alg.act(obs, goal_ee_state)
+        actions = runner.policy.act(obs, goal_ee_state, first_step)
         # env stepping
-        obs, _, dones, _ = env.step(actions)
+        obs, rewards, dones, _ = env.step(actions)
+        reward_sum += rewards.mean().item()
 
-        # reset prior loss weight
-        runner.alg.reset(dones)
+        if first_step:
+            first_step = False
+
+        if dones.any():
+            print(f"Episode reward: {reward_sum}")
+            reward_sum = 0
+            first_step = True
+            # reset prior loss weight
+            runner.policy.reset(dones)
 
         if args_cli.video:
             timestep += 1

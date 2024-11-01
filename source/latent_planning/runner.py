@@ -76,8 +76,10 @@ class Runner:
             # Rollout
             if it % self.cfg.sim_interval == 0:
                 goal_ee_state = self.get_goal_ee_state()
+                # TODO: handle this properly
+                first_step = True
                 for _ in range(self.num_steps_per_env):
-                    actions = self.policy.act(obs, goal_ee_state)
+                    actions = self.policy.act(obs, goal_ee_state, first_step)
                     obs, rewards, dones, infos = self.env.step(
                         actions.to(self.env.device)
                     )
@@ -87,6 +89,9 @@ class Runner:
                         rewards.to(self.device),
                         dones.to(self.device),
                     )
+
+                    if first_step:
+                        first_step = False
 
                     # reset prior loss weight
                     self.policy.reset(dones)

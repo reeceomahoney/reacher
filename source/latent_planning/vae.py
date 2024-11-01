@@ -1,6 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
+from torch.optim.adam import Adam
 from torch.optim.adamw import AdamW
 
 from omni.isaac.lab.utils.math import quat_error_magnitude
@@ -68,8 +69,9 @@ class VAE(nn.Module):
         self.prior_geco_lr = 0.01
         self.prior_goal = prior_goal
         self.prior_ema = None
+        self.prior_dist = Normal(0, 1)
         # weights for position and orientation losses
-        self.mse_weights = torch.tensor(3 * [1.0] + 6 * [1.0], device=device)
+        self.mse_weights = torch.tensor(3 * [1.0] + 6 * [0.2], device=device)
 
         self.device = device
         self.to(device)
@@ -78,24 +80,23 @@ class VAE(nn.Module):
     # Inference
     ##
 
-    def act(self, x, goal_ee_state):
-        x = self.normalizer(x)
-        # goal state is 3d pos + 6d rotation
-        goal_ee_state = self.normalizer.normalize_goal(goal_ee_state)
-        with torch.no_grad():
-            z, mu, logvar = self.encode(x)
-
-        # create optimizer
-        z = z.detach().requires_grad_(True)
-        optimizer_am = AdamW([z], lr=self.am_lr)
+    def act(self, x: torch.Tensor, goal_ee_state: torch.Tensor, first_step: bool):
+        if first_step:
+            # encode initial observation
+            x = self.normalizer(x)
+            with torch.no_grad():
+                z = self.encode(x)[0]
+            self.z = z.detach().requires_grad_(True)
+            # create optimizer
+            self.optimizer_am = Adam([self.z], lr=self.am_lr)
+            # create goal state
+            self.goal_ee_state = self.normalizer.normalize_goal(goal_ee_state)
 
         # calculate losses
-        x_hat = self.decoder(z)
-        mse = self.mse_weights * ((x_hat[:, 7:] - goal_ee_state) ** 2)
+        x_hat = self.decoder(self.z)
+        mse = self.mse_weights * ((x_hat[:, 7:] - self.goal_ee_state) ** 2)
         mse = torch.mean(mse, dim=-1)
-        dist = Normal(mu, (0.5 * logvar).exp())
-        # taking a mean here means interpreting the prior goal as dim-wise
-        prior_loss = (-dist.log_prob(z)).mean(dim=-1)
+        prior_loss = (-self.prior_dist.log_prob(self.z)).mean(dim=-1)
 
         # update prior weight with geco
         with torch.no_grad():
@@ -115,12 +116,12 @@ class VAE(nn.Module):
         loss = mse + self.prior_weight * prior_loss
         loss = loss.sum()  # torch can only store retain graph for scalars
 
-        optimizer_am.zero_grad()
+        self.optimizer_am.zero_grad()
         loss.backward()
-        optimizer_am.step()
+        self.optimizer_am.step()
 
         with torch.no_grad():
-            x_hat = self.decoder(z)
+            x_hat = self.decoder(self.z)
 
         x_hat = self.normalizer.inverse(x_hat)
         joint_pos_target = x_hat[:, :7]
@@ -204,7 +205,7 @@ class VAE(nn.Module):
     # Utils
     ##
 
-    def log(locs: dict):
+    def log(self, locs: dict):
         print(
             f"""
             mse: {locs["mse"].mean().item():.2f} 
