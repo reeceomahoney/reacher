@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 from torch.distributions import Normal
-from torch.optim.adam import Adam
 from torch.optim.adamw import AdamW
 
 from omni.isaac.lab.utils.math import quat_error_magnitude
@@ -88,7 +87,7 @@ class VAE(nn.Module):
                 z = self.encode(x)[0]
             self.z = z.detach().requires_grad_(True)
             # create optimizer
-            self.optimizer_am = Adam([self.z], lr=self.am_lr)
+            self.optimizer_am = AdamW([self.z], lr=self.am_lr, weight_decay=0.0)
             # create goal state
             self.goal_ee_state = self.normalizer.normalize_goal(goal_ee_state)
 
