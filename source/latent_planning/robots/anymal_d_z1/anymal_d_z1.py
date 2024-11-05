@@ -46,7 +46,12 @@ ANYMAL_D_Z1_CFG = ArticulationCfg(
         },
     ),
     actuators={
-        "legs": ANYDRIVE_3_LSTM_ACTUATOR_CFG,
+        # "legs": ANYDRIVE_3_LSTM_ACTUATOR_CFG,
+        "legs": ImplicitActuatorCfg(
+            joint_names_expr=[".*HAA", ".*HFE", ".*KFE"],
+            stiffness=80.0,
+            damping=2.0,
+        ),
         "arm": ImplicitActuatorCfg(
             joint_names_expr=["z1.*"],
             velocity_limit=3.14,
