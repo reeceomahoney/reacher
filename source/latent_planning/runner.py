@@ -80,6 +80,10 @@ class Runner:
                 first_step = True
                 for _ in range(self.num_steps_per_env):
                     actions = self.policy.act(obs, goal_ee_state, first_step)
+                    leg_actions = torch.zeros(
+                        (actions.shape[0], 12), device=actions.device
+                    )
+                    actions = torch.cat([actions, leg_actions], dim=1)
                     obs, rewards, dones, infos = self.env.step(
                         actions.to(self.env.device)
                     )
