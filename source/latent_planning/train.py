@@ -39,7 +39,7 @@ import os
 import torch
 
 import hydra
-import latent_planning.env_cfg  # noqa: F401
+import latent_planning.envs  # noqa: F401
 from hydra.core.hydra_config import HydraConfig
 from latent_planning.runner import Runner
 from omegaconf import DictConfig, OmegaConf
@@ -61,7 +61,7 @@ torch.backends.cudnn.benchmark = False
 def main(agent_cfg: DictConfig):
     """Train latent planning agent."""
     # load env cfg
-    task = "Isaac-Latent-Franka"
+    task = "Isaac-Latent-z1"
     env_cfg = parse_env_cfg(task, device=agent_cfg.device, num_envs=agent_cfg.num_envs)
 
     # override env configs
