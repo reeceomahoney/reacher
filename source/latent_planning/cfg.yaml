@@ -25,7 +25,7 @@ policy:
   num_envs: ${num_envs}
 
 dataset:
-  data_directory: logs/latent_planning_record/z1_dataset.hdf5
+  data_directory: logs/latent_planning_record/anymal_z1_dataset.hdf5
   train_fraction: 0.98
   train_batch_size: 1024
   test_batch_size: 1024
