@@ -44,7 +44,7 @@ import os
 import torch
 import tqdm
 
-import latent_planning.env_cfg  # noqa: F401
+import latent_planning.envs  # noqa: F401
 from latent_planning.latent_planning_data_collector import LatentPlanningDataCollector
 
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
@@ -55,7 +55,7 @@ from omni.isaac.lab_tasks.utils.parse_cfg import parse_env_cfg
 
 def main():
     """Collect demonstrations from the environment using teleop interfaces."""
-    task = "Isaac-Latent-Franka-Record"
+    task = "Isaac-Latent-Z1-Record"
     env_cfg = parse_env_cfg(task, device=args_cli.device, num_envs=args_cli.num_envs)
 
     # we want to have the terms in the observations returned as a dictionary

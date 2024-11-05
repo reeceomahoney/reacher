@@ -38,13 +38,13 @@ Z1_CFG = ArticulationCfg(
             stiffness={"joint.*": 20.0},
             damping={"joint.*": 0.5},
         ),
-        "gripper": ImplicitActuatorCfg(
-            joint_names_expr=["jointGripper"],
-            velocity_limit=100.0,
-            effort_limit=0.0,
-            stiffness=0,
-            damping=0.0,
-        ),
+        # "gripper": ImplicitActuatorCfg(
+        #     joint_names_expr=["jointGripper"],
+        #     velocity_limit=100.0,
+        #     effort_limit=0.0,
+        #     stiffness=0,
+        #     damping=0.0,
+        # ),
     },
     soft_joint_pos_limit_factor=0.95,
 )
