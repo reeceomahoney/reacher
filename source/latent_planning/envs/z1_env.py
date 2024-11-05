@@ -26,17 +26,17 @@ class LatentZ1EnvCfg(LatentPlanningEnvCfg):
             "joint.*"
         ]
         self.observations.policy.ee_state.params["asset_cfg"].body_names = [
-            "gripperStator"
+            "gripperMover"
         ]
         # rewards
         self.rewards.end_effector_position_tracking.params["asset_cfg"].body_names = [
-            "gripperStator"
+            "gripperMover"
         ]
         self.rewards.end_effector_orientation_tracking.params[
             "asset_cfg"
-        ].body_names = ["gripperStator"]
+        ].body_names = ["gripperMover"]
         # command
-        self.commands.ee_pose.body_name = "gripperStator"
+        self.commands.ee_pose.body_name = "gripperMover"
 
 
 @configclass
