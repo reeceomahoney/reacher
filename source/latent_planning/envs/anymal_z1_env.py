@@ -1,30 +1,79 @@
 import gymnasium as gym
 import math
+import torch
 
-from latent_planning.envs.base_env import LatentPlanningEnvCfg
+from latent_planning.envs.base_env import LatentPlanningEnvCfg, reset_joints_random
 from latent_planning.robots import ANYMAL_D_Z1_CFG
 
+from omni.isaac.lab.assets import Articulation
+from omni.isaac.lab.envs import ManagerBasedEnv
+from omni.isaac.lab.managers import EventTermCfg as EventTerm
+from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.utils import configclass
 
 import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
 
 
+def reset_joints_default(
+    env: ManagerBasedEnv,
+    env_ids: torch.Tensor,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+):
+    """Reset the robot joints to a random position within its full range."""
+    # extract the used quantities (to enable type-hinting)
+    asset: Articulation = env.scene[asset_cfg.name]
+
+    # get default joint state for shape
+    joint_pos = asset.data.default_joint_pos[env_ids][:, asset_cfg.joint_ids].clone()
+    joint_vel = asset.data.default_joint_vel[env_ids][:, asset_cfg.joint_ids].clone()
+
+    # set into the physics simulation
+    asset.write_joint_state_to_sim(
+        joint_pos, joint_vel, joint_ids=asset_cfg.joint_ids, env_ids=env_ids
+    )
+
+
+@configclass
+class EventCfg:
+    """Configuration for events."""
+
+    reset_z1_joints = EventTerm(
+        func=reset_joints_random,
+        mode="reset",
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=["z1.*"])},
+    )
+    reset_anymal_joints = EventTerm(
+        func=reset_joints_default,
+        mode="reset",
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot", joint_names=[".*HAA", ".*HFE", ".*KFE"]
+            )
+        },
+    )
+
+
 @configclass
 class LatentAnymalZ1EnvCfg(LatentPlanningEnvCfg):
+    # MDP settings
+    events: EventCfg = EventCfg()
+
     def __post_init__(self):
         super().__post_init__()
+        # scene
+        self.scene.ground.init_state.pos = (0.0, 0.0, 0.0)
         self.scene.table = None
         # robot
         self.scene.robot = ANYMAL_D_Z1_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         # action
         self.actions.arm_action = mdp.JointPositionActionCfg(
             asset_name="robot",
-            joint_names=["joint.*"],
+            joint_names=["z1.*"],
             scale=1.0,
             use_default_offset=False,
         )
         # observation
-        self.observations.policy.joint_pos.params["asset_cfg"].joint_names = ["joint.*"]
+        self.observations.policy.joint_pos.params["asset_cfg"].joint_names = ["z1.*"]
         self.observations.policy.ee_state.params["asset_cfg"].body_names = [
             "gripperMover"
         ]
@@ -50,9 +99,6 @@ class LatentAnymalZ1EnvCfg(LatentPlanningEnvCfg):
                 yaw=(-math.pi, math.pi),
             ),
         )
-        # event
-        self.events.reset_robot_joints.params["asset_cfg"].joint_names = ["joint.*"]
-
 
 
 @configclass
@@ -81,7 +127,7 @@ gym.register(
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point":LatentAnymalZ1EnvCfg,
+        "env_cfg_entry_point": LatentAnymalZ1EnvCfg,
         "cfg_entry_point": "source/latent_planning/cfg.yaml",
     },
 )
@@ -91,7 +137,7 @@ gym.register(
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point":LatentAnymalZ1EnvCfg_RECORD,
+        "env_cfg_entry_point": LatentAnymalZ1EnvCfg_RECORD,
         "cfg_entry_point": "source/latent_planning/cfg.yaml",
     },
 )

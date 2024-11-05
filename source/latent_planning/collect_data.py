@@ -55,7 +55,7 @@ from omni.isaac.lab_tasks.utils.parse_cfg import parse_env_cfg
 
 def main():
     """Collect demonstrations from the environment using teleop interfaces."""
-    task = "Isaac-Latent-Z1-Record"
+    task = "Isaac-Latent-Anymal-Z1-Record"
     env_cfg = parse_env_cfg(task, device=args_cli.device, num_envs=args_cli.num_envs)
 
     # we want to have the terms in the observations returned as a dictionary
