@@ -44,11 +44,11 @@ def reset_joints_random(
     asset: Articulation = env.scene[asset_cfg.name]
 
     # get default joint state for shape
-    joint_pos = asset.data.default_joint_pos[env_ids].clone()
-    joint_vel = asset.data.default_joint_vel[env_ids].clone()
+    joint_pos = asset.data.default_joint_pos[env_ids][:, asset_cfg.joint_ids].clone()
+    joint_vel = asset.data.default_joint_vel[env_ids][:, asset_cfg.joint_ids].clone()
 
     # sample position
-    joint_pos_limits = asset.data.soft_joint_pos_limits[env_ids]
+    joint_pos_limits = asset.data.soft_joint_pos_limits[env_ids][:, asset_cfg.joint_ids]
     joint_pos = math_utils.sample_uniform(
         joint_pos_limits[..., 0],
         joint_pos_limits[..., 1],
@@ -60,7 +60,9 @@ def reset_joints_random(
     joint_vel = torch.zeros_like(joint_vel)
 
     # set into the physics simulation
-    asset.write_joint_state_to_sim(joint_pos, joint_vel, env_ids=env_ids)
+    asset.write_joint_state_to_sim(
+        joint_pos, joint_vel, joint_ids=asset_cfg.joint_ids, env_ids=env_ids
+    )
 
 
 def ee_pos_rot(
@@ -176,7 +178,11 @@ class ObservationsCfg:
 class EventCfg:
     """Configuration for events."""
 
-    reset_robot_joints = EventTerm(func=reset_joints_random, mode="reset")
+    reset_robot_joints = EventTerm(
+        func=reset_joints_random,
+        mode="reset",
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names=MISSING)},
+    )
 
 
 @configclass
