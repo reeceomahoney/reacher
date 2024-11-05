@@ -1,4 +1,5 @@
 import gymnasium as gym
+import math
 
 from latent_planning.envs.base_env import LatentPlanningEnvCfg
 from latent_planning.robots import Z1_CFG
@@ -22,9 +23,7 @@ class LatentZ1EnvCfg(LatentPlanningEnvCfg):
             use_default_offset=False,
         )
         # observation
-        self.observations.policy.joint_pos.params["asset_cfg"].joint_names = [
-            "joint.*"
-        ]
+        self.observations.policy.joint_pos.params["asset_cfg"].joint_names = ["joint.*"]
         self.observations.policy.ee_state.params["asset_cfg"].body_names = [
             "gripperMover"
         ]
@@ -36,7 +35,20 @@ class LatentZ1EnvCfg(LatentPlanningEnvCfg):
             "asset_cfg"
         ].body_names = ["gripperMover"]
         # command
-        self.commands.ee_pose.body_name = "gripperMover"
+        self.commands.ee_pose = mdp.UniformPoseCommandCfg(
+            asset_name="robot",
+            body_name="gripperMover",
+            resampling_time_range=(12.0, 12.0),
+            debug_vis=True,
+            ranges=mdp.UniformPoseCommandCfg.Ranges(
+                pos_x=(0.35, 0.65),
+                pos_y=(-0.2, 0.2),
+                pos_z=(0.1, 0.4),
+                roll=(0.0, math.pi / 2),
+                pitch=(0.0, math.pi / 2),
+                yaw=(-math.pi, math.pi),
+            ),
+        )
 
 
 @configclass
