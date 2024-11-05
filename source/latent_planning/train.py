@@ -61,7 +61,7 @@ torch.backends.cudnn.benchmark = False
 def main(agent_cfg: DictConfig):
     """Train latent planning agent."""
     # load env cfg
-    task = "Isaac-Latent-anymal-Z1"
+    task = "Isaac-Latent-Anymal-Z1"
     env_cfg = parse_env_cfg(task, device=agent_cfg.device, num_envs=agent_cfg.num_envs)
 
     # override env configs
