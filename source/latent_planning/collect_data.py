@@ -88,9 +88,7 @@ def main():
     with torch.inference_mode() and tqdm.tqdm(total=args_cli.num_timesteps) as pbar:
         while simulation_app.is_running():
             actions = torch.zeros(
-                (args_cli.num_envs, 7),
-                device=args_cli.device,
-                dtype=torch.float,
+                (args_cli.num_envs, 19), device=args_cli.device, dtype=torch.float
             )
 
             # -- obs
@@ -106,6 +104,8 @@ def main():
 
             # -- dones
             collector_interface.add("dones", dones)  # type: ignore
+
+            # env.unwrapped.scene["contact_forces"].data.net_forces_w[:, 17:22]
 
             timestep += 1
             pbar.update(1)
