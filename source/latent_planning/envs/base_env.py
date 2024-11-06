@@ -24,6 +24,7 @@ from omni.isaac.lab.managers import RewardTermCfg as RewTerm
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
 from omni.isaac.lab.scene import InteractiveSceneCfg
+from omni.isaac.lab.sensors import ContactSensorCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 
@@ -42,13 +43,13 @@ def reset_joints_random(
     """Reset the robot joints to a random position within its full range."""
     # extract the used quantities (to enable type-hinting)
     asset: Articulation = env.scene[asset_cfg.name]
-
+    idx = (env_ids[:, None], asset_cfg.joint_ids)
     # get default joint state for shape
-    joint_pos = asset.data.default_joint_pos[env_ids][:, asset_cfg.joint_ids].clone()
-    joint_vel = asset.data.default_joint_vel[env_ids][:, asset_cfg.joint_ids].clone()
+    joint_pos = asset.data.default_joint_pos[idx].clone()
+    joint_vel = asset.data.default_joint_vel[idx].clone()
 
     # sample position
-    joint_pos_limits = asset.data.soft_joint_pos_limits[env_ids][:, asset_cfg.joint_ids]
+    joint_pos_limits = asset.data.soft_joint_pos_limits[idx]
     joint_pos = math_utils.sample_uniform(
         joint_pos_limits[..., 0],
         joint_pos_limits[..., 1],
@@ -65,13 +66,32 @@ def reset_joints_random(
     )
 
 
+def reset_joints_default(
+    env: ManagerBasedEnv,
+    env_ids: torch.Tensor,
+    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
+):
+    """Reset selected joints to default values"""
+    # extract the used quantities (to enable type-hinting)
+    asset: Articulation = env.scene[asset_cfg.name]
+    idx = (env_ids[:, None], asset_cfg.joint_ids)
+    # get default joint state
+    joint_pos = asset.data.default_joint_pos[idx].clone()
+    joint_vel = asset.data.default_joint_vel[idx].clone()
+
+    # set into the physics simulation
+    asset.write_joint_state_to_sim(
+        joint_pos, joint_vel, joint_ids=asset_cfg.joint_ids, env_ids=env_ids
+    )
+
+
 def ee_pos_rot(
     env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
     """Asset ee position and orientation in the environment frame."""
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
-    pos = asset.data.body_pos_w[:, asset_cfg.body_ids].squeeze() - env.scene.env_origins
+    pos = asset.data.body_pos_w[:, asset_cfg.body_ids].squeeze() - asset.data.root_pos_w
     quat = asset.data.body_state_w[:, asset_cfg.body_ids, 3:7].squeeze()
     rot_mat = math_utils.matrix_from_quat(quat)
     ortho6d = rot_mat[..., :2].reshape(-1, 6)
@@ -112,6 +132,8 @@ class LatentPlanningSceneCfg(InteractiveSceneCfg):
         prim_path="/World/light",
         spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=2500.0),
     )
+
+    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*")
 
 
 ##

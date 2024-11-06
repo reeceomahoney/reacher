@@ -22,7 +22,7 @@ ANYMAL_D_Z1_CFG = ArticulationCfg(
             max_depenetration_velocity=1.0,
         ),
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-            enabled_self_collisions=True,
+            enabled_self_collisions=False,
             solver_position_iteration_count=4,
             solver_velocity_iteration_count=0,
             fix_root_link=True,
@@ -54,10 +54,8 @@ ANYMAL_D_Z1_CFG = ArticulationCfg(
         ),
         "arm": ImplicitActuatorCfg(
             joint_names_expr=["z1.*"],
-            velocity_limit=3.14,
-            effort_limit={"z1.*": 30.0},
-            stiffness={"z1.*": 20.0},
-            damping={"z1.*": 0.5},
+            stiffness=100.0,
+            damping=10.0,
         ),
         # "gripper": ImplicitActuatorCfg(
         #     joint_names_expr=["z1_jointGripper"],

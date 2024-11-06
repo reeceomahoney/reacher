@@ -1,7 +1,11 @@
 import gymnasium as gym
 import math
 
-from latent_planning.envs.base_env import LatentPlanningEnvCfg, reset_joints_random
+from latent_planning.envs.base_env import (
+    LatentPlanningEnvCfg,
+    reset_joints_default,
+    reset_joints_random,
+)
 from latent_planning.robots import ANYMAL_D_Z1_CFG
 
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
@@ -27,14 +31,12 @@ class EventCfg:
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=["z1.*"])},
     )
     reset_anymal_joints = EventTerm(
-        func=mdp.reset_joints_by_scale,
+        func=reset_joints_default,
         mode="reset",
         params={
             "asset_cfg": SceneEntityCfg(
                 "robot", joint_names=[".*HAA", ".*HFE", ".*KFE"]
-            ),
-            "position_range": (0.0, 0.0),
-            "velocity_range": (0.0, 0.0),
+            )
         },
     )
 
@@ -91,7 +93,7 @@ class LatentAnymalZ1EnvCfg(LatentPlanningEnvCfg):
             ranges=mdp.UniformPoseCommandCfg.Ranges(
                 pos_x=(0.35, 0.65),
                 pos_y=(-0.2, 0.2),
-                pos_z=(0.1, 0.4),
+                pos_z=(0.2, 0.5),
                 roll=(0.0, math.pi / 2),
                 pitch=(0.0, math.pi / 2),
                 yaw=(-math.pi, math.pi),
