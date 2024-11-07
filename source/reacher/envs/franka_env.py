@@ -1,6 +1,6 @@
 import gymnasium as gym
 
-from latent_planning.envs.base_env import LatentPlanningEnvCfg
+from reacher.envs.base_env import ReacherEnvCfg
 
 from omni.isaac.lab_assets import FRANKA_PANDA_HIGH_PD_CFG
 
@@ -10,7 +10,7 @@ import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
 
 
 @configclass
-class LatentFrankaEnvCfg(LatentPlanningEnvCfg):
+class ReacherFrankaEnvCfg(ReacherEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         # robot
@@ -43,7 +43,7 @@ class LatentFrankaEnvCfg(LatentPlanningEnvCfg):
 
 
 @configclass
-class LatentFrankaEnvCfg_RECORD(LatentFrankaEnvCfg):
+class ReacherFrankaEnvCfg_RECORD(ReacherFrankaEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         # increase sim frequency
@@ -66,21 +66,21 @@ class LatentFrankaEnvCfg_RECORD(LatentFrankaEnvCfg):
 ##
 
 gym.register(
-    id="Isaac-Latent-Franka",
+    id="Isaac-Reacher-Franka",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": LatentFrankaEnvCfg,
-        "cfg_entry_point": "source/latent_planning/cfg.yaml",
+        "env_cfg_entry_point": ReacherFrankaEnvCfg,
+        "cfg_entry_point": "source/reacher/cfg.yaml",
     },
 )
 
 gym.register(
-    id="Isaac-Latent-Franka-Record",
+    id="Isaac-Reacher-Franka-Record",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": LatentFrankaEnvCfg_RECORD,
-        "cfg_entry_point": "source/latent_planning/cfg.yaml",
+        "env_cfg_entry_point": ReacherFrankaEnvCfg_RECORD,
+        "cfg_entry_point": "source/reacher/cfg.yaml",
     },
 )

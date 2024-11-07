@@ -104,7 +104,7 @@ def ee_pos_rot(
 
 
 @configclass
-class LatentPlanningSceneCfg(InteractiveSceneCfg):
+class ReacherSceneCfg(InteractiveSceneCfg):
     """Configuration for the scene with a robotic arm."""
 
     # world
@@ -243,11 +243,11 @@ class TerminationsCfg:
 
 
 @configclass
-class LatentPlanningEnvCfg(ManagerBasedRLEnvCfg):
+class ReacherEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the reach end-effector pose tracking environment."""
 
     # Scene settings
-    scene: LatentPlanningSceneCfg = LatentPlanningSceneCfg(
+    scene: ReacherSceneCfg = ReacherSceneCfg(
         num_envs=4096, env_spacing=2.5
     )
     # Basic settings

@@ -11,9 +11,9 @@ from collections import deque
 from tqdm import trange
 
 import wandb
-from latent_planning.dataset import get_dataloaders
-from latent_planning.normalizer import GaussianNormalizer
-from latent_planning.vae import VAE
+from reacher.dataset import get_dataloaders
+from reacher.normalizer import GaussianNormalizer
+from reacher.vae import VAE
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 

@@ -44,8 +44,8 @@ import os
 import torch
 import tqdm
 
-import latent_planning.envs  # noqa: F401
-from latent_planning.latent_planning_data_collector import LatentPlanningDataCollector
+import reacher.envs  # noqa: F401
+from reacher.reacher_data_collector import LatentPlanningDataCollector
 
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 
@@ -66,7 +66,7 @@ def main():
     env = gym.make(task, cfg=env_cfg)
 
     # specify directory for logging experiments
-    log_dir = "./logs/latent_planning_record"
+    log_dir = "./logs/reacher_record"
     # dump the configuration into log-directory
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
     dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)

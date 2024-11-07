@@ -39,9 +39,9 @@ import os
 import torch
 
 import hydra
-import latent_planning.envs  # noqa: F401
+import reacher.envs  # noqa: F401
 from hydra.core.hydra_config import HydraConfig
-from latent_planning.runner import Runner
+from reacher.runner import Runner
 from omegaconf import DictConfig, OmegaConf
 from utils import get_latest_run
 
@@ -96,7 +96,7 @@ def main(agent_cfg: DictConfig):
 
     # load the checkpoint
     if agent_cfg.resume:
-        log_root_path = os.path.abspath(os.path.join("logs", "latent_planning"))
+        log_root_path = os.path.abspath(os.path.join("logs", "reacher"))
         resume_path = get_latest_run(log_root_path, resume=True)
         resume_path = os.path.join(resume_path, "models", "model.pt")
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")

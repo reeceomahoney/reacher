@@ -1,8 +1,8 @@
 import gymnasium as gym
 import math
 
-from latent_planning.envs.base_env import LatentPlanningEnvCfg
-from latent_planning.robots import Z1_CFG
+from reacher.envs.base_env import ReacherEnvCfg
+from reacher.robots import Z1_CFG
 
 from omni.isaac.lab.utils import configclass
 
@@ -10,7 +10,7 @@ import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
 
 
 @configclass
-class LatentZ1EnvCfg(LatentPlanningEnvCfg):
+class ReacherZ1EnvCfg(ReacherEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         # robot
@@ -52,7 +52,7 @@ class LatentZ1EnvCfg(LatentPlanningEnvCfg):
 
 
 @configclass
-class LatentZ1EnvCfg_RECORD(LatentZ1EnvCfg):
+class ReacherZ1EnvCfg_RECORD(ReacherZ1EnvCfg):
     def __post_init__(self):
         super().__post_init__()
         # increase sim frequency
@@ -73,21 +73,21 @@ class LatentZ1EnvCfg_RECORD(LatentZ1EnvCfg):
 ##
 
 gym.register(
-    id="Isaac-Latent-Z1",
+    id="Isaac-Reacher-Z1",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": LatentZ1EnvCfg,
-        "cfg_entry_point": "source/latent_planning/cfg.yaml",
+        "env_cfg_entry_point": ReacherZ1EnvCfg,
+        "cfg_entry_point": "source/reacher/cfg.yaml",
     },
 )
 
 gym.register(
-    id="Isaac-Latent-Z1-Record",
+    id="Isaac-Reacher-Z1-Record",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": LatentZ1EnvCfg_RECORD,
-        "cfg_entry_point": "source/latent_planning/cfg.yaml",
+        "env_cfg_entry_point": ReacherZ1EnvCfg_RECORD,
+        "cfg_entry_point": "source/reacher/cfg.yaml",
     },
 )

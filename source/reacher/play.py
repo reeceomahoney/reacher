@@ -43,8 +43,8 @@ import os
 import torch
 
 import hydra
-import latent_planning.envs  # noqa: F401
-from latent_planning.runner import Runner
+import reacher.envs  # noqa: F401
+from reacher.runner import Runner
 from omegaconf import DictConfig
 from utils import get_latest_run
 
@@ -61,7 +61,7 @@ torch.backends.cudnn.benchmark = False
 def main(agent_cfg: DictConfig):
     """Train latent planning agent."""
     # load env cfg
-    task = "Isaac-Latent-Anymal-Z1"
+    task = "Isaac-Reacher-Anymal-Z1"
     env_cfg = parse_env_cfg(task, device=agent_cfg.device, num_envs=agent_cfg.num_envs)
 
     # override env configs
@@ -81,7 +81,7 @@ def main(agent_cfg: DictConfig):
     runner = Runner(env, agent_cfg, device=agent_cfg.device)
 
     # load the checkpoint
-    log_root_path = os.path.abspath(os.path.join("logs", "latent_planning"))
+    log_root_path = os.path.abspath(os.path.join("logs", "reacher"))
     resume_path = os.path.join(get_latest_run(log_root_path), "models", "model.pt")
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(resume_path)

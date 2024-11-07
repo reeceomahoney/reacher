@@ -23,5 +23,5 @@ def print_h5_contents(file_path):
 
 
 # Usage
-file_path = "logs/latent_planning_record/hdf_dataset.hdf5"
+file_path = "logs/reacher_record/hdf_dataset.hdf5"
 print_h5_contents(file_path)
