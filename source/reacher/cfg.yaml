@@ -21,7 +21,7 @@ policy:
   goal: 1e-3
   geco_lr: 5e-3
   am_lr: 0.03
-  prior_goal: 0.9
+  prior_goal: 1.5
   num_envs: ${num_envs}
 
 dataset:
