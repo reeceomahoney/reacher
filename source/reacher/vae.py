@@ -156,10 +156,6 @@ class VAE(nn.Module):
         else:
             self.prior_weight = torch.ones_like(self.prior_weight)
 
-    def get_orientation_loss(self, x, goal_ee_quat):
-        curr_quat = self.normalizer.inverse(x)[:, 10:]
-        return quat_error_magnitude(curr_quat, goal_ee_quat)
-
     ##
     # Training
     ##
