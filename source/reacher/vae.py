@@ -3,8 +3,6 @@ import torch.nn as nn
 from torch.distributions import Normal
 from torch.optim.adamw import AdamW
 
-from omni.isaac.lab.utils.math import quat_error_magnitude
-
 
 class VAE(nn.Module):
     def __init__(
