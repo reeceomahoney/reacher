@@ -25,7 +25,7 @@ ANYMAL_D_Z1_CFG = ArticulationCfg(
             enabled_self_collisions=True,
             solver_position_iteration_count=4,
             solver_velocity_iteration_count=0,
-            fix_root_link=True,
+            # fix_root_link=True,
         ),
     ),
     init_state=ArticulationCfg.InitialStateCfg(

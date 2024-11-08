@@ -156,9 +156,9 @@ class ObservationsCfg:
             func=mdp.projected_gravity,
             noise=Unoise(n_min=-0.05, n_max=0.05),
         )
-        velocity_commands = ObsTerm(
-            func=mdp.generated_commands, params={"command_name": "base_velocity"}
-        )
+        # velocity_commands = ObsTerm(
+        #     func=mdp.generated_commands, params={"command_name": "base_velocity"}
+        # )
         joint_pos = ObsTerm(
             func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01)
         )
@@ -301,15 +301,15 @@ class RewardsCfg:
     dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
     dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
-    feet_air_time = RewTerm(
-        func=mdp.feet_air_time,
-        weight=0.125,
-        params={
-            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*FOOT"),
-            "command_name": "base_velocity",
-            "threshold": 0.5,
-        },
-    )
+    # feet_air_time = RewTerm(
+    #     func=mdp.feet_air_time,
+    #     weight=0.125,
+    #     params={
+    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*FOOT"),
+    #         "command_name": "base_velocity",
+    #         "threshold": 0.5,
+    #     },
+    # )
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=-1.0,
@@ -425,6 +425,42 @@ class ReacherRLEnvCfg_PLAY(ReacherRLEnvCfg):
         self.events.push_robot = None
 
 
+@configclass
+class ReacherRLFlatEnvCfg(ReacherRLEnvCfg):
+    def __post_init__(self):
+        # post init of parent
+        super().__post_init__()
+
+        # override rewards
+        self.rewards.flat_orientation_l2.weight = -5.0
+        self.rewards.dof_torques_l2.weight = -2.5e-5
+        # self.rewards.feet_air_time.weight = 0.5
+        # change terrain to flat
+        self.scene.terrain.terrain_type = "plane"
+        self.scene.terrain.terrain_generator = None
+        # no height scan
+        self.scene.height_scanner = None
+        self.observations.policy.height_scan = None
+        # no terrain curriculum
+        self.curriculum.terrain_levels = None
+
+
+class ReacherRLFlatEnvCfg_PLAY(ReacherRLFlatEnvCfg):
+    def __post_init__(self) -> None:
+        # post init of parent
+        super().__post_init__()
+
+        # make a smaller scene for play
+        self.scene.num_envs = 50
+        self.scene.env_spacing = 2.5
+        # disable randomization for play
+        self.observations.policy.enable_corruption = False
+        # remove random pushing event
+        self.events.base_external_force_torque = None
+        self.events.push_robot = None
+        self.scene.robot.spawn.rigid_props.disable_gravity = True
+
+
 gym.register(
     id="Isaac-Reacher-RL",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
@@ -442,5 +478,24 @@ gym.register(
     kwargs={
         "env_cfg_entry_point": ReacherRLEnvCfg_PLAY,
         "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherPPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="Isaac-Reacher-RL-Flat",
+    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": ReacherRLFlatEnvCfg,
+        "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherFlatPPORunnerCfg",
+    },
+)
+gym.register(
+    id="Isaac-Reacher-RL-Flat-Play",
+    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": ReacherRLFlatEnvCfg_PLAY,
+        "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherFlatPPORunnerCfg",
     },
 )
