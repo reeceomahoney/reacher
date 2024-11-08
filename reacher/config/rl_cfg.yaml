@@ -4,7 +4,7 @@ save_interval: 50
 experiment_name: anymal_d_z1_flat
 empirical_normalization: False
 logger: wandb
-wandb_project: reacher
+wandb_project: reacher_rl
 device: cuda
 seed: 42
 num_envs: 4096
@@ -32,4 +32,4 @@ algorithm:
 
 hydra:
   run:
-    dir: logs/reacher/${now:%b-%d}/${now:%H-%M-%S}
+    dir: logs/reacher_rl/${now:%b-%d}/${now:%H-%M-%S}
