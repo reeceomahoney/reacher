@@ -3,14 +3,12 @@
 #
 # SPDX-License-Identifier: BSD-3-Clause
 
-import gymnasium as gym
 import math
-import torch
 from dataclasses import MISSING
 
 import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg, RigidObject
-from omni.isaac.lab.envs import ManagerBasedRLEnv, ManagerBasedRLEnvCfg
+from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
+from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
@@ -23,22 +21,14 @@ from omni.isaac.lab.sensors import ContactSensorCfg, RayCasterCfg, patterns
 from omni.isaac.lab.terrains import TerrainImporterCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
-from omni.isaac.lab.utils.math import (
-    combine_frame_transforms,
-    quat_error_magnitude,
-    quat_mul,
-)
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
-from reacher.envs.base_env import ee_pos_rot
 
-import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
-import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as manip_mdp
+import reacher.tasks.reacher_rl.mdp as mdp
 
 ##
 # Pre-defined configs
 ##
 from omni.isaac.lab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: skip
-from reacher.robots import ANYMAL_D_Z1_CFG  # isort: skip
 
 
 ##
@@ -46,47 +36,6 @@ from reacher.robots import ANYMAL_D_Z1_CFG  # isort: skip
 ##
 
 
-def position_command_error(
-    env: ManagerBasedRLEnv,
-    command_name: str,
-    asset_cfg: SceneEntityCfg,
-    sigma: float = 0.1,
-) -> torch.Tensor:
-    """Penalize tracking of the position error using L2-norm.
-
-    The function computes the position error between the desired position (from the command) and the
-    current position of the asset's body (in world frame). The position error is computed as the L2-norm
-    of the difference between the desired and current positions.
-    """
-    # extract the asset (to enable type hinting)
-    asset: RigidObject = env.scene[asset_cfg.name]
-    command = env.command_manager.get_command(command_name)
-    # obtain the desired and current positions
-    des_pos_b = command[:, :3]
-    des_pos_w, _ = combine_frame_transforms(
-        asset.data.root_state_w[:, :3], asset.data.root_state_w[:, 3:7], des_pos_b
-    )
-    curr_pos_w = asset.data.body_state_w[:, asset_cfg.body_ids[0], :3]  # type: ignore
-    return torch.exp(-((torch.norm(curr_pos_w - des_pos_w, dim=1) / sigma) ** 2))
-
-
-def orientation_command_error(
-    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg
-) -> torch.Tensor:
-    """Penalize tracking orientation error using shortest path.
-
-    The function computes the orientation error between the desired orientation (from the command) and the
-    current orientation of the asset's body (in world frame). The orientation error is computed as the shortest
-    path between the desired and current orientations.
-    """
-    # extract the asset (to enable type hinting)
-    asset: RigidObject = env.scene[asset_cfg.name]
-    command = env.command_manager.get_command(command_name)
-    # obtain the desired and current orientations
-    des_quat_b = command[:, 3:7]
-    des_quat_w = quat_mul(asset.data.root_state_w[:, 3:7], des_quat_b)
-    curr_quat_w = asset.data.body_state_w[:, asset_cfg.body_ids[0], 3:7]  # type: ignore
-    return torch.exp(-quat_error_magnitude(curr_quat_w, des_quat_w))
 
 
 @configclass
@@ -146,7 +95,7 @@ class MySceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     """Command specifications for the MDP."""
 
-    ee_pose = manip_mdp.UniformPoseCommandCfg(
+    ee_pose = mdp.UniformPoseCommandCfg(
         asset_name="robot",
         body_name="gripperMover",
         resampling_time_range=(10.0, 10.0),
@@ -222,7 +171,7 @@ class ObservationsCfg:
             params={"asset_cfg": SceneEntityCfg("robot", joint_names=["z1.*"])},
         )
         ee_state = ObsTerm(
-            func=ee_pos_rot,
+            func=mdp.ee_pos_rot,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="gripperMover")},
         )
         actions = ObsTerm(func=mdp.last_action)
@@ -329,7 +278,7 @@ class RewardsCfg:
     #     params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
     # )
     end_effector_position_tracking = RewTerm(
-        func=position_command_error,
+        func=mdp.position_command_error,
         weight=1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
@@ -337,7 +286,7 @@ class RewardsCfg:
         },
     )
     end_effector_orientation_tracking = RewTerm(
-        func=orientation_command_error,
+        func=mdp.orientation_command_error,
         weight=1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
@@ -442,110 +391,3 @@ class LocomotionVelocityRoughEnvCfg(ManagerBasedRLEnvCfg):
                 self.scene.terrain.terrain_generator.curriculum = False
 
 
-@configclass
-class ReacherRLEnvCfg(LocomotionVelocityRoughEnvCfg):
-    def __post_init__(self):
-        # post init of parent
-        super().__post_init__()
-        # switch robot to anymal-d
-        self.scene.robot = ANYMAL_D_Z1_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-
-
-@configclass
-class ReacherRLEnvCfg_PLAY(ReacherRLEnvCfg):
-    def __post_init__(self):
-        # post init of parent
-        super().__post_init__()
-
-        # make a smaller scene for play
-        self.scene.num_envs = 50
-        self.scene.env_spacing = 2.5
-        # spawn the robot randomly in the grid (instead of their terrain levels)
-        self.scene.terrain.max_init_terrain_level = None
-        # reduce the number of terrains to save memory
-        if self.scene.terrain.terrain_generator is not None:
-            self.scene.terrain.terrain_generator.num_rows = 5
-            self.scene.terrain.terrain_generator.num_cols = 5
-            self.scene.terrain.terrain_generator.curriculum = False
-
-        # disable randomization for play
-        self.observations.policy.enable_corruption = False
-        # remove random pushing event
-        self.events.base_external_force_torque = None
-        self.events.push_robot = None
-
-
-@configclass
-class ReacherRLFlatEnvCfg(ReacherRLEnvCfg):
-    def __post_init__(self):
-        # post init of parent
-        super().__post_init__()
-
-        # override rewards
-        self.rewards.flat_orientation_l2.weight = -5.0
-        self.rewards.dof_torques_l2.weight = -2.5e-5
-        # self.rewards.feet_air_time.weight = 0.5
-        # change terrain to flat
-        self.scene.terrain.terrain_type = "plane"
-        self.scene.terrain.terrain_generator = None
-        # no height scan
-        self.scene.height_scanner = None
-        self.observations.policy.height_scan = None
-        # no terrain curriculum
-        self.curriculum.terrain_levels = None
-
-
-class ReacherRLFlatEnvCfg_PLAY(ReacherRLFlatEnvCfg):
-    def __post_init__(self) -> None:
-        # post init of parent
-        super().__post_init__()
-
-        # make a smaller scene for play
-        self.scene.num_envs = 50
-        self.scene.env_spacing = 2.5
-        # disable randomization for play
-        self.observations.policy.enable_corruption = False
-        # remove random pushing event
-        self.events.base_external_force_torque = None
-        self.events.push_robot = None
-        self.scene.robot.spawn.rigid_props.disable_gravity = True
-
-
-gym.register(
-    id="Isaac-Reacher-RL",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": ReacherRLEnvCfg,
-        "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherPPORunnerCfg",
-    },
-)
-
-gym.register(
-    id="Isaac-Reacher-RL-Play",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": ReacherRLEnvCfg_PLAY,
-        "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherPPORunnerCfg",
-    },
-)
-
-gym.register(
-    id="Isaac-Reacher-RL-Flat",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": ReacherRLFlatEnvCfg,
-        "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherFlatPPORunnerCfg",
-    },
-)
-gym.register(
-    id="Isaac-Reacher-RL-Flat-Play",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
-    disable_env_checker=True,
-    kwargs={
-        "env_cfg_entry_point": ReacherRLFlatEnvCfg_PLAY,
-        "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherFlatPPORunnerCfg",
-    },
-)

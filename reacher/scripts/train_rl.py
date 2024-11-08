@@ -74,7 +74,7 @@ from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 from rsl_rl.runners import OnPolicyRunner
 
-import reacher.envs  # noqa: F401
+import reacher.tasks  # noqa: F401
 from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
@@ -88,7 +88,7 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
 
-@hydra.main(config_path="../config/", config_name="rl_cfg.yaml", version_base=None)
+@hydra.main(config_path="../tasks/reacher_rl/config", config_name="rl_cfg.yaml", version_base=None)
 def main(agent_cfg: DictConfig):
     """Train with RSL-RL agent."""
     env_cfg = parse_env_cfg(
