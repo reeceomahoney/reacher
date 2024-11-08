@@ -15,9 +15,9 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
 @configclass
 class ReacherPPORunnerCfg(RslRlOnPolicyRunnerCfg):
     num_steps_per_env = 24
-    max_iterations = 1500
+    max_iterations = 2000
     save_interval = 50
-    experiment_name = "anymal_b_rough"
+    experiment_name = "anymal_d_z1_rough"
     empirical_normalization = False
     logger = "wandb"
     policy = RslRlPpoActorCriticCfg(
@@ -47,7 +47,4 @@ class ReacherFlatPPORunnerCfg(ReacherPPORunnerCfg):
     def __post_init__(self):
         super().__post_init__()
 
-        self.max_iterations = 300
-        self.experiment_name = "anymal_b_flat"
-        self.policy.actor_hidden_dims = [128, 128, 128]
-        self.policy.critic_hidden_dims = [128, 128, 128]
+        self.experiment_name = "anymal_d_z1_flat"

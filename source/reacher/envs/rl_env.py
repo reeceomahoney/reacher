@@ -344,6 +344,7 @@ class RewardsCfg:
             "command_name": "ee_pose",
         },
     )
+    alive_bonus = RewTerm(func=mdp.is_alive, weight=5)
     # -- penalties
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
