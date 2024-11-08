@@ -8,7 +8,7 @@ log_interval: 1e3
 eval_interval: 1e4
 sim_interval: 5e4
 save_interval: 1e4
-wandb_project: reacher
+wandb_project: reacher_rl
 
 video_length: 200
 video_interval: 2000
@@ -33,4 +33,4 @@ dataset:
 
 hydra:
   run:
-    dir: logs/reacher/${now:%b-%d}/${now:%H-%M-%S}
+    dir: logs/reacher_rl/${now:%b-%d}/${now:%H-%M-%S}
