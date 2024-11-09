@@ -91,7 +91,7 @@ def main(agent_cfg: DictConfig):
     # specify directory for logging experiments
     log_root_path = os.path.join("logs", "reacher_rl")
     log_root_path = os.path.abspath(log_root_path)
-    resume_path = os.path.join(get_latest_run(log_root_path), "models", "model.pt")
+    resume_path = get_latest_run(log_root_path)
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
 
     # create isaac environment

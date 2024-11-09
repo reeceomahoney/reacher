@@ -26,12 +26,11 @@ def get_latest_run(base_path, resume=False):
             except ValueError:
                 continue
 
-    if not all_dirs:
-        return None
-
     # sort
     sorted_directories = sorted(all_dirs, key=lambda x: x[1], reverse=True)
-    if resume:
-        return sorted_directories[1][0]
-    else:
-        return sorted_directories[0][0]
+    target_dir = sorted_directories[1][0] if resume else sorted_directories[0][0]
+    
+    # get latest model
+    model_files = list(target_dir.glob("model_*.pt"))
+    latest_model_file = max(model_files, key=lambda x: x.stat().st_mtime)
+    return latest_model_file

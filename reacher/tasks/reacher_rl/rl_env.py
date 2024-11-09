@@ -36,8 +36,6 @@ from omni.isaac.lab.terrains.config.rough import ROUGH_TERRAINS_CFG  # isort: sk
 ##
 
 
-
-
 @configclass
 class MySceneCfg(InteractiveSceneCfg):
     """Configuration for the terrain scene with a legged robot."""
@@ -279,10 +277,11 @@ class RewardsCfg:
     # )
     end_effector_position_tracking = RewTerm(
         func=mdp.position_command_error,
-        weight=1,
+        weight=5,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
             "command_name": "ee_pose",
+            "sigma": 1,
         },
     )
     end_effector_orientation_tracking = RewTerm(
@@ -389,5 +388,3 @@ class LocomotionVelocityRoughEnvCfg(ManagerBasedRLEnvCfg):
         else:
             if self.scene.terrain.terrain_generator is not None:
                 self.scene.terrain.terrain_generator.curriculum = False
-
-
