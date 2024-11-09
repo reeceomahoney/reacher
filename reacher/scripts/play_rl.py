@@ -33,7 +33,7 @@ parser.add_argument(
     help="Disable fabric and use USD I/O operations.",
 )
 parser.add_argument(
-    "--num_envs", type=int, default=None, help="Number of environments to simulate."
+    "--num_envs", type=int, default=16, help="Number of environments to simulate."
 )
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 # append RSL-RL cli arguments
@@ -63,7 +63,7 @@ import hydra
 from omegaconf import DictConfig, OmegaConf
 from rsl_rl.runners import OnPolicyRunner
 
-import reacher.envs  # noqa: F401
+import reacher.tasks  # noqa: F401
 from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from omni.isaac.lab.utils.dict import print_dict
 from reacher.utils.utils import get_latest_run
@@ -76,7 +76,7 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
 )
 
 
-@hydra.main(config_path="../config/", config_name="rl_cfg.yaml", version_base=None)
+@hydra.main(config_path="../tasks/reacher_rl/config", config_name="rl_cfg.yaml", version_base=None)
 def main(agent_cfg: DictConfig):
     """Play with RSL-RL agent."""
     # parse configuration
