@@ -170,8 +170,11 @@ class ObservationsCfg:
             params={"asset_cfg": SceneEntityCfg("robot", joint_names=["z1.*"])},
         )
         ee_state = ObsTerm(
-            func=mdp.ee_pos_rot,
+            func=reacher_mdp.ee_pos_rot,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="gripperMover")},
+        )
+        ee_commands = ObsTerm(
+            func=mdp.generated_commands, params={"command_name": "ee_pose"}
         )
         actions = ObsTerm(func=mdp.last_action)
         height_scan = ObsTerm(
