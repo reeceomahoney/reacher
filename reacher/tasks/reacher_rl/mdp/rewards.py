@@ -70,10 +70,10 @@ def ee_tracking_error(
 
     # desired ee position
     command = env.command_manager.get_command(command_name)
-    des_pos_w = command[:, :3] + env.scene.env_origins
-    # des_pos_w, _ = combine_frame_transforms(
-    #     asset.data.root_state_w[:, :3], asset.data.root_state_w[:, 3:7], des_pos_b
-    # )
+    des_pos_w = command[:, :3]
+    des_pos_w, _ = combine_frame_transforms(
+        asset.data.root_state_w[:, :3], asset.data.root_state_w[:, 3:7], des_pos_b
+    )
     # desired ee orientation
     des_quat_b = command[:, 3:7]
     des_quat_w = quat_mul(asset.data.root_state_w[:, 3:7], des_quat_b)
@@ -82,7 +82,7 @@ def ee_tracking_error(
 
     # compute the error
     pos_error = torch.norm(curr_pos_w - des_pos_w, dim=1)
-    orientation_error = 0*torch.norm(curr_ortho6d_w - des_ortho6d_w, dim=1)
+    orientation_error = torch.norm(curr_ortho6d_w - des_ortho6d_w, dim=1)
 
     reward = torch.exp(-(pos_error / 2 + orientation_error / 8))
     return reward
