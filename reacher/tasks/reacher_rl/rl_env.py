@@ -100,29 +100,14 @@ class CommandsCfg:
         resampling_time_range=(10.0, 10.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
-            pos_x=(-1.0, 1.0),
-            pos_y=(-1.0, 1.0),
+            pos_x=(-3.0, 3.0),
+            pos_y=(-3.0, 3.0),
             pos_z=(0.2, 0.5),
             roll=(0.0, math.pi / 2),
             pitch=(0.0, math.pi / 2),
             yaw=(-math.pi, math.pi),
         ),
     )
-    # base_velocity = mdp.UniformVelocityCommandCfg(
-    #     asset_name="robot",
-    #     resampling_time_range=(10.0, 10.0),
-    #     rel_standing_envs=0.02,
-    #     rel_heading_envs=1.0,
-    #     heading_command=True,
-    #     heading_control_stiffness=0.5,
-    #     debug_vis=True,
-    #     ranges=mdp.UniformVelocityCommandCfg.Ranges(
-    #         lin_vel_x=(-1.0, 1.0),
-    #         lin_vel_y=(-1.0, 1.0),
-    #         ang_vel_z=(-1.0, 1.0),
-    #         heading=(-math.pi, math.pi),
-    #     ),
-    # )
 
 
 @configclass
@@ -153,9 +138,6 @@ class ObservationsCfg:
             func=mdp.projected_gravity,
             noise=Unoise(n_min=-0.05, n_max=0.05),
         )
-        # velocity_commands = ObsTerm(
-        #     func=mdp.generated_commands, params={"command_name": "base_velocity"}
-        # )
         joint_pos = ObsTerm(
             func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01)
         )
@@ -269,16 +251,6 @@ class RewardsCfg:
     """Reward terms for the MDP."""
 
     # -- task
-    # track_lin_vel_xy_exp = RewTerm(
-    #     func=mdp.track_lin_vel_xy_exp,
-    #     weight=1.0,
-    #     params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
-    # )
-    # track_ang_vel_z_exp = RewTerm(
-    #     func=mdp.track_ang_vel_z_exp,
-    #     weight=0.5,
-    #     params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
-    # )
     end_effector_position_tracking = RewTerm(
         func=reacher_mdp.position_command_error,
         weight=1,
@@ -290,28 +262,18 @@ class RewardsCfg:
     )
     end_effector_orientation_tracking = RewTerm(
         func=reacher_mdp.orientation_command_error,
-        weight=1,
+        weight=0.2,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
             "command_name": "ee_pose",
         },
     )
-    # alive_bonus = RewTerm(func=mdp.is_alive, weight=5)
     # -- penalties
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
     dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
-    # feet_air_time = RewTerm(
-    #     func=mdp.feet_air_time,
-    #     weight=0.125,
-    #     params={
-    #         "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*FOOT"),
-    #         "command_name": "base_velocity",
-    #         "threshold": 0.5,
-    #     },
-    # )
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=-1.0,
