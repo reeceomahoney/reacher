@@ -82,7 +82,7 @@ def ee_tracking_error(
 
     # compute the error
     pos_error = torch.norm(curr_pos_w - des_pos_w, dim=1)
-    orientation_error = torch.norm(curr_ortho6d_w - des_ortho6d_w, dim=1)
+    orientation_error = 0*torch.norm(curr_ortho6d_w - des_ortho6d_w, dim=1)
 
-    reward = torch.exp(-(pos_error/2 + orientation_error/8))
+    reward = torch.exp(-(pos_error / 2 + orientation_error / 8))
     return reward
