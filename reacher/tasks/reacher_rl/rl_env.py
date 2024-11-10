@@ -7,6 +7,7 @@ import math
 from dataclasses import MISSING
 
 import omni.isaac.lab.sim as sim_utils
+import reacher.tasks.reacher_rl.mdp as reacher_mdp
 from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
 from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
@@ -24,7 +25,6 @@ from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
-import reacher.tasks.reacher_rl.mdp as reacher_mdp
 
 ##
 # Pre-defined configs
@@ -142,15 +142,6 @@ class ObservationsCfg:
             func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01)
         )
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
-        # arm
-        arm_joint_pos = ObsTerm(
-            func=mdp.joint_pos,
-            params={"asset_cfg": SceneEntityCfg("robot", joint_names=["z1.*"])},
-        )
-        arm_joint_vel = ObsTerm(
-            func=mdp.joint_vel_rel,
-            params={"asset_cfg": SceneEntityCfg("robot", joint_names=["z1.*"])},
-        )
         ee_state = ObsTerm(
             func=reacher_mdp.ee_pos_rot,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="gripperMover")},
