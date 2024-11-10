@@ -23,7 +23,8 @@ from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-import reacher.tasks.reacher_rl.mdp as mdp
+import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
+import reacher.tasks.reacher_rl.mdp as reacher_mdp
 
 ##
 # Pre-defined configs
@@ -276,23 +277,23 @@ class RewardsCfg:
     #     params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
     # )
     end_effector_position_tracking = RewTerm(
-        func=mdp.position_command_error,
+        func=reacher_mdp.position_command_error,
         weight=1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
             "command_name": "ee_pose",
-            "sigma": 0.1,
+            "sigma": 1,
         },
     )
     end_effector_orientation_tracking = RewTerm(
-        func=mdp.orientation_command_error,
+        func=reacher_mdp.orientation_command_error,
         weight=1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
             "command_name": "ee_pose",
         },
     )
-    alive_bonus = RewTerm(func=mdp.is_alive, weight=5)
+    # alive_bonus = RewTerm(func=mdp.is_alive, weight=5)
     # -- penalties
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
