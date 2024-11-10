@@ -99,8 +99,8 @@ class CommandsCfg:
         resampling_time_range=(10.0, 10.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
-            pos_x=(-3.0, 3.0),
-            pos_y=(-3.0, 3.0),
+            pos_x=(-1.0, 1.0),
+            pos_y=(-1.0, 1.0),
             pos_z=(0.2, 0.5),
             roll=(0.0, math.pi / 2),
             pitch=(0.0, math.pi / 2),
@@ -277,7 +277,7 @@ class RewardsCfg:
     # )
     end_effector_position_tracking = RewTerm(
         func=mdp.position_command_error,
-        weight=5,
+        weight=1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
             "command_name": "ee_pose",
