@@ -5,6 +5,7 @@ from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.utils.math import (
     combine_frame_transforms,
+    matrix_from_quat,
     quat_error_magnitude,
     quat_mul,
 )
@@ -51,3 +52,37 @@ def orientation_command_error(
     des_quat_w = quat_mul(asset.data.root_state_w[:, 3:7], des_quat_b)
     curr_quat_w = asset.data.body_state_w[:, asset_cfg.body_ids[0], 3:7]  # type: ignore
     return torch.exp(-quat_error_magnitude(curr_quat_w, des_quat_w))
+
+
+def ee_tracking_error(
+    env: ManagerBasedRLEnv, command_name: str, asset_cfg: SceneEntityCfg
+) -> torch.Tensor:
+    """Penalize tracking of the end-effector position and orentation error."""
+    # extract the asset (to enable type hinting)
+    asset: RigidObject = env.scene[asset_cfg.name]
+
+    # current ee position
+    curr_pos_w = asset.data.body_pos_w[:, asset_cfg.body_ids].squeeze(1)
+    # current ee orientation
+    quat = asset.data.body_state_w[:, asset_cfg.body_ids, 3:7]
+    rot_mat = matrix_from_quat(quat)
+    curr_ortho6d_w = rot_mat[..., :2].reshape(-1, 6)
+
+    # desired ee position
+    command = env.command_manager.get_command(command_name)
+    des_pos_b = command[:, :3]
+    des_pos_w, _ = combine_frame_transforms(
+        asset.data.root_state_w[:, :3], asset.data.root_state_w[:, 3:7], des_pos_b
+    )
+    # desired ee orientation
+    des_quat_b = command[:, 3:7]
+    des_quat_w = quat_mul(asset.data.root_state_w[:, 3:7], des_quat_b)
+    des_rot_mat = matrix_from_quat(des_quat_w)
+    des_ortho6d_w = des_rot_mat[..., :2].reshape(-1, 6)
+
+    # compute the error
+    pos_error = torch.norm(curr_pos_w - des_pos_w, dim=1)
+    orientation_error = torch.norm(curr_ortho6d_w - des_ortho6d_w, dim=1)
+
+    reward = torch.exp(-(pos_error/2 + orientation_error/8))
+    return reward

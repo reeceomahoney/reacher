@@ -251,18 +251,9 @@ class RewardsCfg:
     """Reward terms for the MDP."""
 
     # -- task
-    end_effector_position_tracking = RewTerm(
-        func=reacher_mdp.position_command_error,
+    ee_tracking = RewTerm(
+        func=reacher_mdp.ee_tracking_error,
         weight=1,
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
-            "command_name": "ee_pose",
-            "sigma": 1,
-        },
-    )
-    end_effector_orientation_tracking = RewTerm(
-        func=reacher_mdp.orientation_command_error,
-        weight=0.2,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
             "command_name": "ee_pose",
