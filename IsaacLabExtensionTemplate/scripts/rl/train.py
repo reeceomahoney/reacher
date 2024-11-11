@@ -88,7 +88,7 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
 
-@hydra.main(config_path="../exts/reacher/reacher/tasks/reacher_rl/config", config_name="rl_cfg.yaml", version_base=None)
+@hydra.main(config_path="../../exts/reacher/reacher/tasks/reacher_rl/config", config_name="rl_cfg.yaml", version_base=None)
 def main(agent_cfg: DictConfig):
     """Train with RSL-RL agent."""
     env_cfg = parse_env_cfg(
