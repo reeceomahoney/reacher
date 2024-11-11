@@ -1,56 +1,24 @@
-[tool.poetry]
-name = "reacher"
-version = "0.1.0"
-description = ""
-authors = ["Reece O'Mahoney <reeceo@robots.ox.ac.uk>"]
-readme = "README.md"
-
-[tool.poetry.dependencies]
-python = "3.10.15"
-torch = {version = "2.4.0", source = "pytorch"}
-isaacsim-rl = {version = "^4.2.0.2", source = "nvidia"}
-isaacsim-replicator = {version = "^4.2.0.2", source = "nvidia"}
-isaacsim-extscache-physics = {version = "^4.2.0.2", source = "nvidia"}
-isaacsim-extscache-kit-sdk = {version = "^4.2.0.2", source = "nvidia"}
-isaacsim-extscache-kit = {version = "^4.2.0.2", source = "nvidia"}
-isaacsim-app = {version = "^4.2.0.2", source = "nvidia"}
-
-[[tool.poetry.source]]
-name = "pytorch"
-url = "https://download.pytorch.org/whl/cu121"
-priority = "supplemental"
-
-
-[[tool.poetry.source]]
-name = "nvidia"
-url = "https://pypi.nvidia.com"
-priority = "supplemental"
-
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools", "toml"]
+build-backend = "setuptools.build_meta"
 
 [tool.isort]
 
-py_version = 310
+atomic = true
+profile = "black"
 line_length = 120
+py_version = 310
+skip_glob = ["docs/*", "logs/*"]
 group_by_package = true
 
-# Files to skip
-skip_glob = ["docs/*", "logs/*", "_isaac_sim/*", ".vscode/*"]
-
-# Order of imports
 sections = [
     "FUTURE",
     "STDLIB",
     "THIRDPARTY",
-    "ASSETS_FIRSTPARTY",
+    "ISAACLABPARTY",
     "FIRSTPARTY",
-    "EXTRA_FIRSTPARTY",
     "LOCALFOLDER",
 ]
-
-# Extra standard libraries considered as part of python (permissive licenses
 extra_standard_library = [
     "numpy",
     "h5py",
@@ -68,9 +36,9 @@ extra_standard_library = [
     "toml",
     "trimesh",
     "tqdm",
+    "psutil",
 ]
-# Imports from Isaac Sim and Omniverse
-known_third_party = [
+known_thirdparty = [
     "omni.isaac.core",
     "omni.replicator.isaac",
     "omni.replicator.core",
@@ -80,21 +48,20 @@ known_third_party = [
     "carb",
     "Semantics",
 ]
-# Imports from this repository
-known_first_party = "omni.isaac.lab"
-known_assets_firstparty = "omni.isaac.lab_assets"
-known_extra_firstparty = [
-    "omni.isaac.lab_tasks"
+known_isaaclabparty = [
+    "omni.isaac.lab",
+    "omni.isaac.lab_tasks",
+    "omni.isaac.lab_assets"
 ]
-# Imports from the local folder
+
+# Modify the following to include the package names of your first-party code
+known_firstparty = "reacher"
 known_local_folder = "config"
 
 [tool.pyright]
 
-include = ["source/extensions", "source/standalone"]
 exclude = [
     "**/__pycache__",
-    "**/_isaac_sim",
     "**/docs",
     "**/logs",
     ".git",
