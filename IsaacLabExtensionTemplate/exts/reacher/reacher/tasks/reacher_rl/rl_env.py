@@ -142,7 +142,7 @@ class ObservationsCfg:
         )
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
         ee_state = ObsTerm(
-            func=mdp.ee_pos_rot,
+            func=mdp.ee_pose_l,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="gripperMover")},
         )
         ee_commands = ObsTerm(
