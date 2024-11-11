@@ -1,8 +1,9 @@
+"""Package containing task implementations for various robotic environments."""
+
 import os
 import toml
 
 from omni.isaac.lab_tasks.utils import import_packages
-from .reacher_rl.config import *
 
 ##
 # Register Gym environments.
