@@ -13,7 +13,7 @@ import sys
 from omni.isaac.lab.app import AppLauncher
 
 # local imports
-from reacher.utils import cli_args  # isort: skip
+import cli_args  # isort: skip
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
@@ -76,7 +76,7 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
 )
 
 
-@hydra.main(config_path="../tasks/reacher_rl/config", config_name="rl_cfg.yaml", version_base=None)
+@hydra.main(config_path="../../exts/reacher/reacher/tasks/reacher_rl/config", config_name="rl_cfg.yaml", version_base=None)
 def main(agent_cfg: DictConfig):
     """Play with RSL-RL agent."""
     # parse configuration

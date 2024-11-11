@@ -93,12 +93,12 @@ class MySceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     """Command specifications for the MDP."""
 
-    ee_pose = mdp.UniformPoseCommandCfg(
+    ee_pose = mdp.UniformWorldPoseCommandCfg(
         asset_name="robot",
         body_name="gripperMover",
         resampling_time_range=(10.0, 10.0),
         debug_vis=True,
-        ranges=mdp.UniformPoseCommandCfg.Ranges(
+        ranges=mdp.UniformWorldPoseCommandCfg.Ranges(
             pos_x=(-1.0, 1.0),
             pos_y=(-1.0, 1.0),
             pos_z=(0.2, 0.5),
