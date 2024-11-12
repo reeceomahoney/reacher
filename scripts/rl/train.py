@@ -10,11 +10,10 @@
 import argparse
 import sys
 
-from omni.isaac.lab.app import AppLauncher
-
 # local imports
 import cli_args
 
+from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
@@ -74,14 +73,13 @@ from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 from rsl_rl.runners import OnPolicyRunner
 
-import reacher.tasks  # noqa: F401
-from reacher.tasks.utils.utils import ReacherEnvWrapper
 from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
-
 from omni.isaac.lab_tasks.utils import get_checkpoint_path, parse_env_cfg
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
+
+import reacher.tasks  # noqa: F401
+from reacher.tasks.utils.utils import ReacherEnvWrapper
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -89,7 +87,11 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
 
-@hydra.main(config_path="../../reacher/reacher/tasks/reacher_rl/config", config_name="rl_cfg.yaml", version_base=None)
+@hydra.main(
+    config_path="../../reacher/reacher/tasks/reacher_rl/config",
+    config_name="rl_cfg.yaml",
+    version_base=None,
+)
 def main(agent_cfg: DictConfig):
     """Train with RSL-RL agent."""
     env_cfg = parse_env_cfg(
