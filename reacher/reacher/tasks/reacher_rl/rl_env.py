@@ -7,6 +7,7 @@ import math
 from dataclasses import MISSING
 
 import omni.isaac.lab.sim as sim_utils
+import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
 from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
 from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
@@ -23,7 +24,6 @@ from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
 import reacher.tasks.reacher_rl.mdp as reacher_mdp
 
 ##
@@ -94,20 +94,36 @@ class MySceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     """Command specifications for the MDP."""
 
-    ee_pose = reacher_mdp.UniformWorldPoseCommandCfg(
+    base_velocity = mdp.UniformVelocityCommandCfg(
         asset_name="robot",
-        body_name="gripperMover",
         resampling_time_range=(10.0, 10.0),
+        rel_standing_envs=0.02,
+        rel_heading_envs=1.0,
+        heading_command=True,
+        heading_control_stiffness=0.5,
         debug_vis=True,
-        ranges=mdp.UniformWorldPoseCommandCfg.Ranges(
-            pos_x=(-3.0, 3.0),
-            pos_y=(-3.0, 3.0),
-            pos_z=(0.6, 1.0),
-            roll=(0.0, math.pi / 2),
-            pitch=(0.0, math.pi / 2),
-            yaw=(-math.pi, math.pi),
+        ranges=mdp.UniformVelocityCommandCfg.Ranges(
+            lin_vel_x=(-1.0, 1.0),
+            lin_vel_y=(-1.0, 1.0),
+            ang_vel_z=(-1.0, 1.0),
+            heading=(-math.pi, math.pi),
         ),
     )
+
+    # ee_pose = reacher_mdp.UniformWorldPoseCommandCfg(
+    #     asset_name="robot",
+    #     body_name="gripperMover",
+    #     resampling_time_range=(10.0, 10.0),
+    #     debug_vis=True,
+    #     ranges=mdp.UniformWorldPoseCommandCfg.Ranges(
+    #         pos_x=(-3.0, 3.0),
+    #         pos_y=(-3.0, 3.0),
+    #         pos_z=(0.6, 1.0),
+    #         roll=(0.0, math.pi / 2),
+    #         pitch=(0.0, math.pi / 2),
+    #         yaw=(-math.pi, math.pi),
+    #     ),
+    # )
 
 
 @configclass
@@ -146,8 +162,11 @@ class ObservationsCfg:
             func=reacher_mdp.ee_pose_l,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="gripperMover")},
         )
-        ee_commands = ObsTerm(
-            func=mdp.generated_commands, params={"command_name": "ee_pose"}
+        # ee_commands = ObsTerm(
+        #     func=mdp.generated_commands, params={"command_name": "ee_pose"}
+        # )
+        velocity_commands = ObsTerm(
+            func=mdp.generated_commands, params={"command_name": "base_velocity"}
         )
         actions = ObsTerm(func=mdp.last_action)
         height_scan = ObsTerm(
@@ -242,20 +261,39 @@ class RewardsCfg:
     """Reward terms for the MDP."""
 
     # -- task
-    ee_tracking = RewTerm(
-        func=reacher_mdp.ee_tracking_error,
-        weight=1,
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
-            "command_name": "ee_pose",
-        },
+    track_lin_vel_xy_exp = RewTerm(
+        func=mdp.track_lin_vel_xy_exp,
+        weight=1.0,
+        params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
     )
+    track_ang_vel_z_exp = RewTerm(
+        func=mdp.track_ang_vel_z_exp,
+        weight=0.5,
+        params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
+    )
+    # ee_tracking = RewTerm(
+    #     func=reacher_mdp.ee_tracking_error,
+    #     weight=1,
+    #     params={
+    #         "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
+    #         "command_name": "ee_pose",
+    #     },
+    # )
     # -- penalties
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
     dof_torques_l2 = RewTerm(func=mdp.joint_torques_l2, weight=-1.0e-5)
     dof_acc_l2 = RewTerm(func=mdp.joint_acc_l2, weight=-2.5e-7)
     action_rate_l2 = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
+    feet_air_time = RewTerm(
+        func=mdp.feet_air_time,
+        weight=0.125,
+        params={
+            "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*FOOT"),
+            "command_name": "base_velocity",
+            "threshold": 0.5,
+        },
+    )
     undesired_contacts = RewTerm(
         func=mdp.undesired_contacts,
         weight=-1.0,

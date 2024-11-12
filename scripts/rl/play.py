@@ -76,7 +76,7 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
 )
 
 
-@hydra.main(config_path="../../exts/reacher/reacher/tasks/reacher_rl/config", config_name="rl_cfg.yaml", version_base=None)
+@hydra.main(config_path="../../reacher/reacher/tasks/reacher_rl/config", config_name="rl_cfg.yaml", version_base=None)
 def main(agent_cfg: DictConfig):
     """Play with RSL-RL agent."""
     # parse configuration
