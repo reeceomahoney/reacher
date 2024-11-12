@@ -53,7 +53,7 @@ def orientation_command_error(
     curr_quat_w = asset.data.body_state_w[:, asset_cfg.body_ids[0], 3:7]  # type: ignore
     return torch.exp(-quat_error_magnitude(curr_quat_w, des_quat_w))
 
-def ee_position__error_tanh(
+def ee_position_error_tanh(
     env: ManagerBasedRLEnv, std: float, command_name: str
 ) -> torch.Tensor:
     """Reward position tracking with tanh kernel."""
