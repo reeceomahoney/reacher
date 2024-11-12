@@ -66,7 +66,7 @@ from rsl_rl.runners import OnPolicyRunner
 import reacher.tasks  # noqa: F401
 from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from omni.isaac.lab.utils.dict import print_dict
-from reacher.utils.utils import get_latest_run
+from reacher.tasks.utils.utils import get_latest_run
 
 from omni.isaac.lab_tasks.utils import parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
