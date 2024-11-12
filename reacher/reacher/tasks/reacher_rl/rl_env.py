@@ -299,16 +299,16 @@ class RewardsCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
             "command_name": "ee_pose",
-            "sigma": 1,
+            "std": 1,
         },
     )
-    end_effector_position_tracking_fine_grained = RewTerm(
-        func=reacher_mdp.ee_position_error_tanh,
+    ee_tracking_fine_grained = RewTerm(
+        func=reacher_mdp.ee_position_error,
         weight=0.5,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
-            "std": 0.1,
             "command_name": "ee_pose",
+            "std": 0.1,
         },
     )
 

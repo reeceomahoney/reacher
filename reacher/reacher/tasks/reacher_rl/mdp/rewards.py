@@ -15,7 +15,7 @@ def ee_position_error(
     env: ManagerBasedRLEnv,
     command_name: str,
     asset_cfg: SceneEntityCfg,
-    sigma: float = 0.1,
+    std: float = 0.1,
 ) -> torch.Tensor:
     """Penalize tracking of the position error using L2-norm.
 
@@ -32,7 +32,7 @@ def ee_position_error(
         asset.data.root_state_w[:, :3], asset.data.root_state_w[:, 3:7], des_pos_b
     )
     curr_pos_w = asset.data.body_state_w[:, asset_cfg.body_ids[0], :3]
-    return torch.exp(-((torch.norm(curr_pos_w - des_pos_w, dim=1) / sigma) ** 2))
+    return torch.exp(-((torch.norm(curr_pos_w - des_pos_w, dim=1) / std) ** 2))
 
 
 def orientation_command_error(
@@ -52,15 +52,6 @@ def orientation_command_error(
     des_quat_w = quat_mul(asset.data.root_state_w[:, 3:7], des_quat_b)
     curr_quat_w = asset.data.body_state_w[:, asset_cfg.body_ids[0], 3:7]  # type: ignore
     return torch.exp(-quat_error_magnitude(curr_quat_w, des_quat_w))
-
-def ee_position_error_tanh(
-    env: ManagerBasedRLEnv, std: float, command_name: str
-) -> torch.Tensor:
-    """Reward position tracking with tanh kernel."""
-    command = env.command_manager.get_command(command_name)
-    des_pos_b = command[:, :3]
-    distance = torch.norm(des_pos_b, dim=1)
-    return 1 - torch.tanh(distance / std)
 
 
 def ee_tracking_error(
