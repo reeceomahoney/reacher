@@ -67,12 +67,13 @@ from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab_tasks.utils import parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
+    RslRlVecEnvWrapper,
     export_policy_as_jit,
     export_policy_as_onnx,
 )
 
 import reacher.tasks  # noqa: F401
-from reacher.tasks.utils.utils import ReacherEnvWrapper, get_latest_run
+from reacher.tasks.utils.utils import get_latest_run
 
 
 @hydra.main(
@@ -118,7 +119,7 @@ def main(agent_cfg: DictConfig):
         env = multi_agent_to_single_agent(env)
 
     # wrap around environment for rsl-rl
-    env = ReacherEnvWrapper(env, 12)
+    env = RslRlVecEnvWrapper(env)
 
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model

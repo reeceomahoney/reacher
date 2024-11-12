@@ -77,9 +77,9 @@ from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 from omni.isaac.lab_tasks.utils import get_checkpoint_path, parse_env_cfg
+from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
 import reacher.tasks  # noqa: F401
-from reacher.tasks.utils.utils import ReacherEnvWrapper
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -147,7 +147,7 @@ def main(agent_cfg: DictConfig):
         env = multi_agent_to_single_agent(env)
 
     # wrap around environment for rsl-rl
-    env = ReacherEnvWrapper(env, 12)
+    env = RslRlVecEnvWrapper(env)
 
     # create runner from rsl-rl
     agent_cfg_dict = OmegaConf.to_container(agent_cfg)
