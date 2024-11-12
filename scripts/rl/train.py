@@ -75,6 +75,7 @@ from omegaconf import DictConfig, OmegaConf
 from rsl_rl.runners import OnPolicyRunner
 
 import reacher.tasks  # noqa: F401
+from reacher.tasks.utils.utils import ReacherEnvWrapper
 from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
@@ -144,7 +145,7 @@ def main(agent_cfg: DictConfig):
         env = multi_agent_to_single_agent(env)
 
     # wrap around environment for rsl-rl
-    env = RslRlVecEnvWrapper(env)
+    env = ReacherEnvWrapper(env, 12)
 
     # create runner from rsl-rl
     agent_cfg_dict = OmegaConf.to_container(agent_cfg)

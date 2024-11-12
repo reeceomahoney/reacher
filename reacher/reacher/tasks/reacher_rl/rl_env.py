@@ -9,7 +9,11 @@ from dataclasses import MISSING
 import omni.isaac.lab.sim as sim_utils
 import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
 from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
+from omni.isaac.lab.controllers.differential_ik_cfg import DifferentialIKControllerCfg
 from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
+from omni.isaac.lab.envs.mdp.actions.actions_cfg import (
+    DifferentialInverseKinematicsActionCfg,
+)
 from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
@@ -110,28 +114,44 @@ class CommandsCfg:
         ),
     )
 
-    # ee_pose = reacher_mdp.UniformWorldPoseCommandCfg(
-    #     asset_name="robot",
-    #     body_name="gripperMover",
-    #     resampling_time_range=(10.0, 10.0),
-    #     debug_vis=True,
-    #     ranges=mdp.UniformWorldPoseCommandCfg.Ranges(
-    #         pos_x=(-3.0, 3.0),
-    #         pos_y=(-3.0, 3.0),
-    #         pos_z=(0.6, 1.0),
-    #         roll=(0.0, math.pi / 2),
-    #         pitch=(0.0, math.pi / 2),
-    #         yaw=(-math.pi, math.pi),
-    #     ),
-    # )
+    ee_pose = mdp.UniformPoseCommandCfg(
+        asset_name="robot",
+        body_name="gripperMover",
+        resampling_time_range=(10.0, 10.0),
+        debug_vis=True,
+        ranges=mdp.UniformPoseCommandCfg.Ranges(
+            pos_x=(-1.0, 1.0),
+            pos_y=(-1.0, 1.0),
+            pos_z=(0.6, 1.0),
+            roll=(0.0, 0.0),
+            pitch=(0.0, 0.0),
+            yaw=(0.0, 0.0),
+            # yaw=(-math.pi, math.pi),
+        ),
+    )
 
 
 @configclass
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    joint_pos = mdp.JointPositionActionCfg(
-        asset_name="robot", joint_names=[".*"], scale=0.5, use_default_offset=True
+    leg_action = mdp.JointPositionActionCfg(
+        asset_name="robot",
+        joint_names=[".*HAA", ".*HFE", ".*KFE"],
+        scale=0.5,
+        use_default_offset=True,
+    )
+    arm_action = DifferentialInverseKinematicsActionCfg(
+        asset_name="robot",
+        joint_names=["z1.*"],
+        body_name="gripperMover",
+        controller=DifferentialIKControllerCfg(
+            command_type="position", use_relative_mode=False, ik_method="dls"
+        ),
+        scale=1.0,
+        body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(
+            pos=[0.0, 0.0, 0.0]
+        ),
     )
 
 
@@ -159,15 +179,17 @@ class ObservationsCfg:
         )
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
         ee_state = ObsTerm(
-            func=reacher_mdp.ee_pose_l,
+            func=reacher_mdp.ee_pose,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="gripperMover")},
         )
-        # ee_commands = ObsTerm(
-        #     func=mdp.generated_commands, params={"command_name": "ee_pose"}
-        # )
+        # commands
         velocity_commands = ObsTerm(
             func=mdp.generated_commands, params={"command_name": "base_velocity"}
         )
+        ee_commands = ObsTerm(
+            func=mdp.generated_commands, params={"command_name": "ee_pose"}
+        )
+        # other terms
         actions = ObsTerm(func=mdp.last_action)
         height_scan = ObsTerm(
             func=mdp.height_scan,
