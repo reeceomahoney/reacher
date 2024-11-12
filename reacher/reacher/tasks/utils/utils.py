@@ -1,8 +1,6 @@
 import re
 from datetime import datetime
 from pathlib import Path
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
-from omni.isaac.lab.envs import DirectRLEnv, ManagerBasedRLEnv
 
 
 def get_latest_run(base_path, resume=False):
@@ -42,10 +40,3 @@ def get_latest_run(base_path, resume=False):
     model_files = list(target_dir.glob("model_*.pt"))
     latest_model_file = max(model_files, key=extract_model_number)
     return latest_model_file
-
-
-class ReacherEnvWrapper(RslRlVecEnvWrapper):
-    def __init__(self, env: ManagerBasedRLEnv | DirectRLEnv):
-        super().__init__(env)
-
-        self.num_obs
