@@ -302,6 +302,16 @@ class RewardsCfg:
             "sigma": 1,
         },
     )
+    end_effector_position_tracking_fine_grained = RewTerm(
+        func=reacher_mdp.ee_position_error_tanh,
+        weight=0.5,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
+            "std": 0.1,
+            "command_name": "ee_pose",
+        },
+    )
+
     # -- penalties
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)
