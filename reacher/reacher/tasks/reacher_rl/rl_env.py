@@ -23,7 +23,8 @@ from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-import reacher.tasks.reacher_rl.mdp as mdp
+import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
+import reacher.tasks.reacher_rl.mdp as reacher_mdp
 
 ##
 # Pre-defined configs
@@ -93,7 +94,7 @@ class MySceneCfg(InteractiveSceneCfg):
 class CommandsCfg:
     """Command specifications for the MDP."""
 
-    ee_pose = mdp.UniformWorldPoseCommandCfg(
+    ee_pose = reacher_mdp.UniformWorldPoseCommandCfg(
         asset_name="robot",
         body_name="gripperMover",
         resampling_time_range=(10.0, 10.0),
@@ -142,7 +143,7 @@ class ObservationsCfg:
         )
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
         ee_state = ObsTerm(
-            func=mdp.ee_pose_l,
+            func=reacher_mdp.ee_pose_l,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="gripperMover")},
         )
         ee_commands = ObsTerm(
@@ -242,7 +243,7 @@ class RewardsCfg:
 
     # -- task
     ee_tracking = RewTerm(
-        func=mdp.ee_tracking_error,
+        func=reacher_mdp.ee_tracking_error,
         weight=1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
