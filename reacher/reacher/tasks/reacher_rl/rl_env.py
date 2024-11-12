@@ -299,6 +299,7 @@ class RewardsCfg:
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
             "command_name": "ee_pose",
+            "sigma": 1,
         },
     )
     # -- penalties
