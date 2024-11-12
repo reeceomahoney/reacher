@@ -135,24 +135,24 @@ class CommandsCfg:
 class ActionsCfg:
     """Action specifications for the MDP."""
 
-    leg_action = mdp.JointPositionActionCfg(
+    joint_pos = mdp.JointPositionActionCfg(
         asset_name="robot",
-        joint_names=[".*HAA", ".*HFE", ".*KFE"],
+        joint_names=[".*"],
         scale=0.5,
         use_default_offset=True,
     )
-    arm_action = DifferentialInverseKinematicsActionCfg(
-        asset_name="robot",
-        joint_names=["z1.*"],
-        body_name="gripperMover",
-        controller=DifferentialIKControllerCfg(
-            command_type="position", use_relative_mode=False, ik_method="dls"
-        ),
-        scale=1.0,
-        body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(
-            pos=[0.0, 0.0, 0.0]
-        ),
-    )
+    # arm_action = DifferentialInverseKinematicsActionCfg(
+    #     asset_name="robot",
+    #     joint_names=["z1.*"],
+    #     body_name="gripperMover",
+    #     controller=DifferentialIKControllerCfg(
+    #         command_type="position", use_relative_mode=False, ik_method="dls"
+    #     ),
+    #     scale=1.0,
+    #     body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(
+    #         pos=[0.0, 0.0, 0.0]
+    #     ),
+    # )
 
 
 @configclass
@@ -293,14 +293,14 @@ class RewardsCfg:
         weight=0.5,
         params={"command_name": "base_velocity", "std": math.sqrt(0.25)},
     )
-    # ee_tracking = RewTerm(
-    #     func=reacher_mdp.ee_tracking_error,
-    #     weight=1,
-    #     params={
-    #         "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
-    #         "command_name": "ee_pose",
-    #     },
-    # )
+    ee_tracking = RewTerm(
+        func=reacher_mdp.ee_position_error,
+        weight=1,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
+            "command_name": "ee_pose",
+        },
+    )
     # -- penalties
     lin_vel_z_l2 = RewTerm(func=mdp.lin_vel_z_l2, weight=-2.0)
     ang_vel_xy_l2 = RewTerm(func=mdp.ang_vel_xy_l2, weight=-0.05)

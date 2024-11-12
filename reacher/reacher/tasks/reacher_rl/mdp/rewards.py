@@ -11,7 +11,7 @@ from omni.isaac.lab.utils.math import (
 )
 
 
-def position_command_error(
+def ee_position_error(
     env: ManagerBasedRLEnv,
     command_name: str,
     asset_cfg: SceneEntityCfg,
@@ -31,7 +31,7 @@ def position_command_error(
     des_pos_w, _ = combine_frame_transforms(
         asset.data.root_state_w[:, :3], asset.data.root_state_w[:, 3:7], des_pos_b
     )
-    curr_pos_w = asset.data.body_state_w[:, asset_cfg.body_ids[0], :3]  # type: ignore
+    curr_pos_w = asset.data.body_state_w[:, asset_cfg.body_ids[0], :3]
     return torch.exp(-((torch.norm(curr_pos_w - des_pos_w, dim=1) / sigma) ** 2))
 
 
