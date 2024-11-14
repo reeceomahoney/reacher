@@ -9,11 +9,7 @@ from dataclasses import MISSING
 import omni.isaac.lab.sim as sim_utils
 import omni.isaac.lab_tasks.manager_based.locomotion.velocity.mdp as mdp
 from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
-from omni.isaac.lab.controllers.differential_ik_cfg import DifferentialIKControllerCfg
 from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
-from omni.isaac.lab.envs.mdp.actions.actions_cfg import (
-    DifferentialInverseKinematicsActionCfg,
-)
 from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
@@ -141,18 +137,6 @@ class ActionsCfg:
         scale=0.5,
         use_default_offset=True,
     )
-    # arm_action = DifferentialInverseKinematicsActionCfg(
-    #     asset_name="robot",
-    #     joint_names=["z1.*"],
-    #     body_name="gripperMover",
-    #     controller=DifferentialIKControllerCfg(
-    #         command_type="position", use_relative_mode=False, ik_method="dls"
-    #     ),
-    #     scale=1.0,
-    #     body_offset=DifferentialInverseKinematicsActionCfg.OffsetCfg(
-    #         pos=[0.0, 0.0, 0.0]
-    #     ),
-    # )
 
 
 @configclass
