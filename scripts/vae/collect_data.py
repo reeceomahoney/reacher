@@ -45,7 +45,7 @@ import torch
 import tqdm
 
 import reacher.envs  # noqa: F401
-from reacher.reacher_data_collector import LatentPlanningDataCollector
+from reacher.tasks.utils.data_collector import DataCollector
 
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 
@@ -72,7 +72,7 @@ def main():
     dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
 
     # create data-collector
-    collector_interface = LatentPlanningDataCollector(
+    collector_interface = DataCollector(
         directory_path=log_dir,
         filename=args_cli.filename,
     )

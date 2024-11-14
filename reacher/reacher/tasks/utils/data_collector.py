@@ -16,7 +16,7 @@ import torch
 import omni.log
 
 
-class LatentPlanningDataCollector:
+class DataCollector:
     """Data collection interface for robomimic.
 
     This class implements a data collector interface for saving simulation states to disk.
