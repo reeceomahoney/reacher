@@ -8,13 +8,13 @@ log_interval: 1e3
 eval_interval: 1e4
 sim_interval: 5e4
 save_interval: 1e4
-wandb_project: reacher_rl
+wandb_project: reacher
 
 video_length: 200
 video_interval: 2000
 
 policy:
-  input_dim: 16
+  input_dim: 85
   latent_dim: 7
   hidden_dims: [512, 512, 512]
   learning_rate: 1e-4
@@ -25,7 +25,7 @@ policy:
   num_envs: ${num_envs}
 
 dataset:
-  data_directory: logs/reacher_record/anymal_z1_dataset.hdf5
+  data_directory: logs/reacher_rl_record/hdf_dataset.hdf5
   train_fraction: 0.98
   train_batch_size: 1024
   test_batch_size: 1024

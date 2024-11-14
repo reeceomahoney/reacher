@@ -10,14 +10,15 @@ import torch
 from collections import deque
 from tqdm import trange
 
-import wandb
-from reacher.dataset import get_dataloaders
-from reacher.normalizer import GaussianNormalizer
-from reacher.vae import VAE
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 
 from omni.isaac.lab.utils.math import matrix_from_quat
+
+import wandb
+from reacher.tasks.utils.dataset import get_dataloaders
+from reacher.tasks.utils.normalizer import GaussianNormalizer
+from reacher.tasks.utils.vae import VAE
 
 
 class Runner:
@@ -41,6 +42,8 @@ class Runner:
             self.cfg.episode_length / (self.env.cfg.decimation * self.env.cfg.sim.dt)
         )
         self.current_learning_iteration = 0
+        # flag whether to simulate or not
+        self.sim = False
 
         # logging
         if self.log_dir is not None:
@@ -74,7 +77,7 @@ class Runner:
             start = time.time()
 
             # Rollout
-            if it % self.cfg.sim_interval == 0:
+            if it % self.cfg.sim_interval == 0 and self.sim:
                 goal_ee_state = self.get_goal_ee_state()
                 # TODO: handle this properly
                 first_step = True
@@ -171,7 +174,7 @@ class Runner:
             wandb.log(
                 {"Loss/test_recon_loss": locs["test_recon_loss"]}, step=locs["it"]
             )
-        if locs["it"] % self.cfg.sim_interval == 0:
+        if locs["it"] % self.cfg.sim_interval == 0 and self.sim:
             wandb.log(
                 {
                     "Train/mean_reward": statistics.mean(locs["rewbuffer"]),

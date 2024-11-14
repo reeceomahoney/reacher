@@ -13,10 +13,10 @@ class GaussianNormalizer(nn.Module):
         self.register_buffer("_std", std)
 
     def forward(self, x):
-        return (x - self._mean) / self._std
+        return (x - self._mean) / (self._std + 1e-6)
 
     def inverse(self, y):
-        return y * self._std + self._mean
+        return y * (self._std + 1e-6) + self._mean
 
     def normalize_goal(self, goal):
         return (goal - self._mean[7:]) / self._std[7:]

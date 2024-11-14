@@ -16,7 +16,7 @@ def get_dataloaders(
 ):
     # build path
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    dataset_path = current_dir + "/../../" + data_directory
+    dataset_path = current_dir + "/../../../../" + data_directory
     log.info(f"Loading data from {data_directory}")
 
     data = {}
@@ -34,7 +34,8 @@ def get_dataloaders(
         data[k] = torch.from_numpy(v).transpose(0, 1)
 
     # build obs
-    obs = torch.cat((data["data/obs/joint_pos"], data["data/obs/ee_state"]), dim=-1)
+    # obs = torch.cat((data["data/obs/joint_pos"], data["data/obs/ee_state"]), dim=-1)
+    obs = data["data/obs"]
     obs = obs.reshape(-1, obs.shape[-1])
 
     # Build the datasets
