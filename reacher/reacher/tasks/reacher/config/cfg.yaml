@@ -14,7 +14,7 @@ video_length: 200
 video_interval: 2000
 
 policy:
-  input_dim: 85
+  input_dim: 81
   latent_dim: 64
   hidden_dims: [2048, 2048, 2048, 2048]
   learning_rate: 1e-4
