@@ -29,3 +29,7 @@ def ee_pose_l(
     rot_mat = matrix_from_quat(quat)
     ortho6d = rot_mat[..., :2].reshape(-1, 6)
     return torch.cat([pos, ortho6d], dim=-1)
+
+def position_commands(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
+    """The generated command from command term in the command manager with the given name."""
+    return env.command_manager.get_command(command_name)[:, :3]

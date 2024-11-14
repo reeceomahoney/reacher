@@ -171,7 +171,7 @@ class ObservationsCfg:
             func=mdp.generated_commands, params={"command_name": "base_velocity"}
         )
         ee_commands = ObsTerm(
-            func=mdp.generated_commands, params={"command_name": "ee_pose"}
+            func=reacher_mdp.position_commands, params={"command_name": "ee_pose"}
         )
         # other terms
         actions = ObsTerm(func=mdp.last_action)
