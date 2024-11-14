@@ -175,8 +175,7 @@ def main(agent_cfg: DictConfig):
                 obs, _, dones, _ = env.step(actions)
 
             # collect data
-            _obs = torch.cat([obs[:, :62], obs[:, 66:]], dim=-1)
-            collector_interface.add("obs", _obs)
+            collector_interface.add("obs", obs)
             collector_interface.add("dones", dones)
 
             timestep += 1

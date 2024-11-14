@@ -42,8 +42,11 @@ def get_latest_run(base_path, resume=False):
 
     # get latest model
     model_files = list(target_dir.glob("model_*.pt"))
-    latest_model_file = max(model_files, key=extract_model_number)
-    return latest_model_file
+    if model_files:
+        latest_model_file = max(model_files, key=extract_model_number)
+        return latest_model_file
+    else:
+        return target_dir
 
 
 class ReacherEnvWrapper(RslRlVecEnvWrapper):

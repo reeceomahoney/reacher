@@ -43,13 +43,14 @@ import os
 import torch
 
 import hydra
-import reacher.envs  # noqa: F401
-from reacher.runner import Runner
 from omegaconf import DictConfig
-from utils import get_latest_run
 
 from omni.isaac.lab_tasks.utils import parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
+
+import reacher.tasks  # noqa: F401
+from reacher.tasks.utils.runner import Runner
+from reacher.tasks.utils.utils import get_latest_run
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -57,11 +58,15 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
 
-@hydra.main(config_path=".", config_name="cfg.yaml", version_base=None)
+@hydra.main(
+    config_path="../../reacher/reacher/tasks/reacher/config",
+    config_name="cfg.yaml",
+    version_base=None,
+)
 def main(agent_cfg: DictConfig):
     """Train latent planning agent."""
     # load env cfg
-    task = "Isaac-Reacher-Anymal-Z1"
+    task = "Isaac-Reacher-RL-Flat"
     env_cfg = parse_env_cfg(task, device=agent_cfg.device, num_envs=agent_cfg.num_envs)
 
     # override env configs
