@@ -33,4 +33,4 @@ dataset:
 
 hydra:
   run:
-    dir: logs/reacher_rl/${now:%b-%d}/${now:%H-%M-%S}
+    dir: logs/reacher/${now:%b-%d}/${now:%H-%M-%S}
