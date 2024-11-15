@@ -18,16 +18,6 @@ keywords = ["extension", "template", "isaaclab"]
 "omni.isaac.lab" = {}
 "omni.isaac.lab_assets" = {}
 "omni.isaac.lab_tasks" = {}
-# NOTE: Add additional dependencies here
 
 [[python.module]]
-name = "reacher"
-
-[isaaclab_settings]
-# TODO: Uncomment and list any apt dependencies here.
-#       If none, leave it commented out.
-# apt_deps = ["example_package"]
-# TODO: Uncomment and provide path to a ros_ws
-#       with rosdeps to be installed. If none,
-#       leave it commented out.
-# ros_ws = "path/from/extension_root/to/ros_ws"
+name = "isaac_ext"
