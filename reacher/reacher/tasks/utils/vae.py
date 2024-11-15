@@ -166,6 +166,7 @@ class VAE(nn.Module):
 
         recon_loss = torch.mean((x - x_hat) ** 2)
         kl_loss = -0.5 * torch.mean(1 + logvar - mu**2 - logvar.exp())
+        kl_loss = kl_loss.clamp(0, 100)
 
         self.geco_step(recon_loss)
 
