@@ -79,7 +79,7 @@ from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 from omni.isaac.lab_tasks.utils import get_checkpoint_path, parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
-import reacher.tasks  # noqa: F401
+import isaac_ext.tasks  # noqa: F401
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -88,7 +88,7 @@ torch.backends.cudnn.benchmark = False
 
 
 @hydra.main(
-    config_path="../../reacher/reacher/tasks/reacher_rl/config",
+    config_path="../../isaac_ext/isaac_ext/tasks/reacher_rl/config",
     config_name="rl_cfg.yaml",
     version_base=None,
 )
