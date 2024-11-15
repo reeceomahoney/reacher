@@ -24,7 +24,7 @@ from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR, ISAACLAB_NUCLEUS_DIR
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-import reacher.tasks.reacher_rl.mdp as reacher_mdp
+import isaac_ext.tasks.reacher_rl.mdp as reacher_mdp
 
 ##
 # Pre-defined configs

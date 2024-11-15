@@ -45,11 +45,11 @@ import torch
 import hydra
 from omegaconf import DictConfig
 
-import reacher.tasks  # noqa: F401
-from reacher.tasks.utils.dataset import get_dataloaders
-from reacher.tasks.utils.normalizer import GaussianNormalizer
-from reacher.tasks.utils.utils import get_latest_run
-from reacher.tasks.utils.vae import VAE
+import isaac_ext.tasks  # noqa: F401
+from vae.dataset import get_dataloaders
+from vae.normalizer import GaussianNormalizer
+from vae.utils import get_latest_run
+from vae.vae import VAE
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -58,7 +58,7 @@ torch.backends.cudnn.benchmark = False
 
 
 @hydra.main(
-    config_path="../../reacher/reacher/tasks/reacher/config",
+    config_path="../../isaac_ext/isaac_ext/tasks/reacher/config",
     config_name="cfg.yaml",
     version_base=None,
 )

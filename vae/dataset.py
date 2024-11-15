@@ -16,7 +16,7 @@ def get_dataloaders(
 ):
     # build path
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    dataset_path = current_dir + "/../../../../" + data_directory
+    dataset_path = current_dir + "/../" + data_directory
     log.info(f"Loading data from {data_directory}")
 
     data = {}

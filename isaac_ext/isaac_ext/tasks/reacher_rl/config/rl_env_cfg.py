@@ -1,6 +1,6 @@
 from omni.isaac.lab.utils import configclass
-from reacher.assets import ANYMAL_D_Z1_CFG
-from reacher.tasks.reacher_rl.rl_env import LocomotionVelocityRoughEnvCfg
+from isaac_ext.assets import ANYMAL_D_Z1_CFG
+from isaac_ext.tasks.reacher_rl.rl_env import LocomotionVelocityRoughEnvCfg
 
 
 @configclass
