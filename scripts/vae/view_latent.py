@@ -23,7 +23,7 @@ args_cli, hydra_args = parser.parse_known_args()
 # always enable cameras to record video
 if args_cli.video:
     args_cli.enable_cameras = True
-# args_cli.headless = True
+args_cli.headless = True
 
 # clear out sys.argv for Hydra
 sys.argv = [sys.argv[0]] + hydra_args
