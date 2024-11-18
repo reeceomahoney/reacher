@@ -2,17 +2,17 @@ import math
 
 import torch
 import torch.nn as nn
-from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 from locodiff.samplers import get_sampler, get_sigmas_exponential, rand_log_logistic
 from locodiff.wrappers import CFGWrapper
+from torch.optim.lr_scheduler import CosineAnnealingLR
+from torch.optim.adamw import AdamW
 
 
-class Agent(nn.Module):
+class DiffusionPolicy(nn.Module):
     def __init__(
         self,
         model,
-        noise_scheduler: DDPMScheduler,
         obs_dim: int,
         action_dim: int,
         T: int,
@@ -25,6 +25,7 @@ class Agent(nn.Module):
         sigma_max: float,
         cond_lambda: int,
         cond_mask_prob: float,
+        learning_rate: float,
         device,
     ):
         super().__init__()
@@ -34,8 +35,6 @@ class Agent(nn.Module):
             model = CFGWrapper(model, cond_lambda, cond_mask_prob)
         self.model = model
         self.sampler = get_sampler(sampler_type)
-
-        self.noise_scheduler = noise_scheduler
         self.device = device
 
         # dims
@@ -53,8 +52,10 @@ class Agent(nn.Module):
         self.sigma_max = sigma_max
         self.cond_mask_prob = cond_mask_prob
 
-        # ddpm
-        self.noise_scheduler = noise_scheduler
+        # optimizer and lr scheduler
+        optim_groups = self.model.get_optim_groups()
+        self.optimizer = AdamW(optim_groups, lr=learning_rate)
+        self.lr_scheduler = CosineAnnealingLR(self.optimizer)
 
     def __call__(self, data_dict: dict, **kwargs) -> tuple:
         self.eval()

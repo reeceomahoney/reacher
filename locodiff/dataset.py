@@ -1,7 +1,7 @@
+import h5py
 import logging
-import os
-
 import numpy as np
+import os
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
@@ -27,11 +27,30 @@ class ExpertDataset(Dataset):
         self.reward_fn = reward_fn
         self.device = device
 
+        # build path
         current_dir = os.path.dirname(os.path.realpath(__file__))
-        dataset_path = current_dir + "/../data/processed/" + data_directory + ".npy"
+        dataset_path = current_dir + "/../" + data_directory
         log.info(f"Loading data from {data_directory}")
 
-        self.data = self.load_and_process_data(dataset_path)
+        data = {}
+        # load data
+        with h5py.File(dataset_path, "r") as f:
+
+            def load_dataset(name, obj):
+                if isinstance(obj, h5py.Dataset):
+                    data[name] = obj[:]
+
+            f.visititems(load_dataset)
+
+        # (B, T, D)
+        for k, v in data.items():
+            data[k] = torch.from_numpy(v).transpose(0, 1)
+
+        # build obs
+        obs = torch.cat((data["data/root_pos"], data["data/obs"]), dim=-1)
+        actions = data["data/actions"]
+        dones = data["data/dones"]
+        self.data = self.process_data(obs, actions, dones)
 
         obs_size = list(self.data["obs"].shape)
         action_size = list(self.data["action"].shape)
@@ -41,43 +60,22 @@ class ExpertDataset(Dataset):
     # Initialization
     # --------------
 
-    def load_and_process_data(self, dataset_path):
-        data = np.load(dataset_path, allow_pickle=True).item()
-
-        obs = data["obs"][..., :33]
-        actions = data["action"]
-        vel_cmds = data["vel_cmd"]
-        skills = data["skill"]
-        terminals = data["terminal"]
-
+    def process_data(self, obs, actions, dones):
         # Find episode ends
-        terminals_flat = terminals.reshape(-1)
-        split_indices = np.where(terminals_flat == 1)[0]
+        dones_flat = dones.reshape(-1)
+        split_indices = np.where(dones_flat == 1)[0]
 
         # Split the sequences at episode ends
         obs_splits = self.split_eps(obs, split_indices)
         actions_splits = self.split_eps(actions, split_indices)
-        vel_cmds_splits = self.split_eps(vel_cmds, split_indices)
-        skills_splits = self.split_eps(skills, split_indices)
 
+        # add padding to make all sequences the same length
         max_len = max(split.shape[0] for split in obs_splits)
-
         obs = self.add_padding(obs_splits, max_len, temporal=True)
         actions = self.add_padding(actions_splits, max_len, temporal=True)
-        vel_cmds = self.add_padding(vel_cmds_splits, max_len, temporal=False)
-        skills = self.add_padding(skills_splits, max_len, temporal=False)
-
         masks = self.create_masks(obs_splits, max_len)
 
-        processed_data = {
-            "obs": obs,
-            "action": actions,
-            # "vel_cmd": vel_cmds,
-            "skill": skills,
-            "mask": masks,
-        }
-
-        return processed_data
+        return {"obs": obs, "action": actions, "mask": masks}
 
     # -------
     # Getters
@@ -225,10 +223,9 @@ def get_dataloaders_and_scaler(
 
         # Build the scaler
         x_data = train_set.get_all_obs()
-        y_data = train_set.get_all_actions()
-        # y_data = torch.cat(
-        #     [train_set.get_all_obs(), train_set.get_all_actions()], dim=-1
-        # )
+        y_data = torch.cat(
+            [train_set.get_all_obs(), train_set.get_all_actions()], dim=-1
+        )
         scaler = Scaler(x_data, y_data, scaling, device)
 
         # Build the dataloaders

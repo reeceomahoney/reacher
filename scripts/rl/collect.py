@@ -176,6 +176,7 @@ def main(agent_cfg: DictConfig):
 
             # collect data
             collector_interface.add("obs", obs)
+            collector_interface.add("actions", actions)
             collector_interface.add("dones", dones)
             # root pos
             root_pos = env.unwrapped.scene["robot"].data.root_pos_w

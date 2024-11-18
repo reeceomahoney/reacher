@@ -1,118 +1,162 @@
 import logging
 import matplotlib.pyplot as plt
 import os
-import sys
-from typing import Callable, Tuple
-
+import statistics
+import time
 import torch
 import torch.nn as nn
-import wandb
-from hydra.core.hydra_config import HydraConfig
-from torch.utils.data import DataLoader
+from collections import deque
 from tqdm import tqdm, trange
 
+from rsl_rl.env import VecEnv
+from rsl_rl.utils import store_code_state
+
 import locodiff.utils as utils
-from env.env import RaisimEnv
+import wandb
+from locodiff.policy import DiffusionPolicy
+from locodiff.utils import ExponentialMovingAverage
+from locodiff.wrappers import ScalingWrapper
+from locodiff.dataset import get_dataloaders_and_scaler
 
 # A logger for this file
 log = logging.getLogger(__name__)
 
 
 class DiffusionRunner:
-
-    def __init__(
-        self,
-        model,
-        wrapper: Callable,
-        agent: Callable,
-        optimizer: Callable,
-        lr_scheduler: Callable,
-        dataset_fn: Tuple[DataLoader, DataLoader, utils.Scaler],
-        env: RaisimEnv,
-        ema_helper: Callable,
-        wandb_project: str,
-        wandb_mode: str,
-        train_steps: int,
-        eval_every: int,
-        sim_every: int,
-        device: str,
-        use_ema: bool,
-        obs_dim: int,
-        action_dim: int,
-        skill_dim: int,
-        T: int,
-        T_cond: int,
-        T_action: int,
-        num_envs: int,
-        sampling_steps: int,
-        cond_mask_prob: float,
-        return_horizon: int,
-        reward_fn: str,
-    ):
-        # debug mode
-        if sys.gettrace() is not None:
-            self.output_dir = "/tmp"
-            sim_every = 10
-        else:
-            self.output_dir = HydraConfig.get().runtime.output_dir
-
-        # agent
-        self.agent = agent(model=wrapper(model=model))
-
-        # optimizer and lr scheduler
-        optim_groups = self.agent.get_optim_groups()
-        self.optimizer = optimizer(optim_groups)
-        self.lr_scheduler = lr_scheduler(self.optimizer)
-
-        # dataloader and scaler
-        self.train_loader, self.test_loader, self.scaler = dataset_fn
-
-        # env
+    def __init__(self, env: VecEnv, agent_cfg, log_dir=None, device="cpu"):
         self.env = env
-
-        # ema
-        self.ema_helper = ema_helper(self.agent.get_params())
-        self.use_ema = use_ema
-
-        # training
-        self.train_steps = int(train_steps)
-        self.eval_every = int(eval_every)
-        self.sim_every = int(sim_every)
+        self.cfg = agent_cfg
         self.device = device
 
-        # dims
-        self.obs_dim = obs_dim
-        self.action_dim = action_dim
-        self.T = T
-        self.T_cond = T_cond
-        self.T_action = T_action
+        # classes
+        self.train_loader, self.test_loader, self.normalizer = get_dataloaders_and_scaler(
+            **agent_cfg.dataset
+        )
+        self.policy = ScalingWrapper(
+            model=DiffusionPolicy(self.normalizer, device=self.device, **self.cfg.policy),
+            sigma_data=agent_cfg.sigma_data
+        )
 
-        self.obs_hist = torch.zeros((num_envs, T_cond, obs_dim), device=device)
-        self.skill_hist = torch.zeros((num_envs, T_cond, skill_dim), device=device)
+        # ema
+        self.ema_helper = ExponentialMovingAverage(
+            self.policy.parameters, agent_cfg.decay
+        )
+        self.use_ema = agent_cfg.use_ema
 
-        # diffusion
-        self.sampling_steps = sampling_steps
-        self.cond_mask_prob = cond_mask_prob
+        # training
 
-        # reward
-        self.return_horizon = return_horizon
-        self.reward_fn = reward_fn
+        # variables
+        self.log_dir = log_dir
+        self.num_steps_per_env = int(
+            self.cfg.episode_length / (self.env.cfg.decimation * self.env.cfg.sim.dt)
+        )
+        self.current_learning_iteration = 0
+        # flag whether to simulate or not
+        self.sim = False
 
         # logging
-        os.makedirs(self.output_dir + "/model", exist_ok=True)
-        wandb.init(
-            project=wandb_project,
-            mode=wandb_mode,
-            dir=self.output_dir,
-            config=wandb.config,
-        )
-        self.eval_keys = ["total_mse", "first_mse", "last_mse"]
-        if self.cond_mask_prob > 0:
-            self.eval_keys.append("output_divergence")
+        if self.log_dir is not None:
+            # initialize wandb
+            wandb.init(project=self.cfg.wandb_project, dir=log_dir, config=self.cfg)
+            # make model directory
+            os.makedirs(os.path.join(log_dir, "models"), exist_ok=True)
+            # save git diffs
+            store_code_state(self.log_dir, [__file__])
 
     ############
     # Training #
     ############
+
+    def learn(self):
+        obs, _ = self.env.get_observations()
+        obs = obs.to(self.device)
+        self.policy.reset()
+        self.train_mode()  # switch to train mode (for dropout for example)
+
+        ep_infos = []
+        rewbuffer = deque()
+        lenbuffer = deque()
+        cur_reward_sum = torch.zeros(
+            self.env.num_envs, dtype=torch.float, device=self.device
+        )
+        cur_episode_length = torch.zeros(
+            self.env.num_envs, dtype=torch.float, device=self.device
+        )
+
+        start_iter = self.current_learning_iteration
+        tot_iter = int(start_iter + self.cfg.num_learning_iterations)
+        generator = iter(self.train_loader)
+        for it in trange(start_iter, tot_iter):
+            start = time.time()
+
+            # Rollout
+            if it % self.cfg.sim_interval == 0 and self.sim:
+                goal_ee_state = self.get_goal_ee_state()
+                for _ in range(self.num_steps_per_env):
+                    actions = self.policy.act(obs, goal_ee_state)
+                    leg_actions = torch.zeros(
+                        (actions.shape[0], 12), device=actions.device
+                    )
+
+                    actions = torch.cat([actions, leg_actions], dim=1)
+                    obs, rewards, dones, infos = self.env.step(
+                        actions.to(self.env.device)
+                    )
+                    # move device
+                    obs, rewards, dones = (
+                        obs.to(self.device),
+                        rewards.to(self.device),
+                        dones.to(self.device),
+                    )
+
+                    # reset prior loss weight
+                    self.policy.reset(dones)
+
+                    if self.log_dir is not None:
+                        # rewards and dones
+                        ep_infos.append(infos["log"])
+                        cur_reward_sum += rewards
+                        cur_episode_length += 1
+                        new_ids = (dones > 0).nonzero(as_tuple=False)
+                        rewbuffer.extend(
+                            cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist()
+                        )
+                        lenbuffer.extend(
+                            cur_episode_length[new_ids][:, 0].cpu().numpy().tolist()
+                        )
+                        cur_reward_sum[new_ids] = 0
+                        cur_episode_length[new_ids] = 0
+
+            # evaluation
+            if it % self.cfg.eval_interval == 0:
+                test_recon_loss = []
+                for batch in self.test_loader:
+                    test_recon_loss.append(self.policy.test(batch))
+                test_recon_loss = statistics.mean(test_recon_loss)
+
+            # training
+            try:
+                batch = next(generator)
+            except StopIteration:
+                generator = iter(self.train_loader)
+                batch = next(generator)
+
+            loss, recon_loss, kl_loss = self.policy.update(batch)
+
+            # logging
+            self.current_learning_iteration = it
+            if self.log_dir is not None and it % self.cfg.log_interval == 0:
+                # timing
+                stop = time.time()
+                iter_time = stop - start
+
+                self.log(locals())
+                if it % self.cfg.save_interval == 0:
+                    self.save(os.path.join(self.log_dir, "models", "model.pt"))
+                ep_infos.clear()
+
+        if self.log_dir is not None:
+            self.save(os.path.join(self.log_dir, "models", "model.pt"))
 
     def train(self):
         """
@@ -371,9 +415,15 @@ class DiffusionRunner:
         # self.plot_returns(returns)
 
         return returns.unsqueeze(-1)
-    
+
     def plot_returns(self, returns):
         plt.figure(figsize=(10, 5))
         plt.hist(returns.cpu().numpy(), bins=20)
         plt.show()
         exit()
+
+    def train_mode(self):
+        self.policy.train()
+
+    def eval_mode(self):
+        self.policy.eval()
