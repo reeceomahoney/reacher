@@ -78,13 +78,13 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
     export_policy_as_onnx,
 )
 
-import reacher.tasks  # noqa: F401
-from reacher.tasks.utils.data_collector import DataCollector
-from reacher.tasks.utils.utils import get_latest_run
+import isaac_ext.tasks  # noqa: F401
+from vae.data_collector import DataCollector
+from vae.utils import get_latest_run
 
 
 @hydra.main(
-    config_path="../../reacher/reacher/tasks/reacher_rl/config",
+    config_path="../../isaac_ext/isaac_ext/tasks/reacher_rl/config",
     config_name="rl_cfg.yaml",
     version_base=None,
 )
@@ -177,6 +177,9 @@ def main(agent_cfg: DictConfig):
             # collect data
             collector_interface.add("obs", obs)
             collector_interface.add("dones", dones)
+            # root pos
+            root_pos = env.unwrapped.scene["robot"].data.root_pos_w
+            collector_interface.add("root_pos", root_pos)
 
             timestep += 1
             pbar.update(1)
