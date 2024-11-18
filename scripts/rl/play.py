@@ -72,12 +72,12 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
     export_policy_as_onnx,
 )
 
-import reacher.tasks  # noqa: F401
-from reacher.tasks.utils.utils import get_latest_run
+import isaac_ext.tasks  # noqa: F401
+from vae.utils import get_latest_run
 
 
 @hydra.main(
-    config_path="../../reacher/reacher/tasks/reacher_rl/config",
+    config_path="../../isaac_ext/isaac_ext/tasks/reacher_rl/config",
     config_name="rl_cfg.yaml",
     version_base=None,
 )
