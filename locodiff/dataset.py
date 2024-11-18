@@ -49,8 +49,8 @@ class ExpertDataset(Dataset):
         # build obs
         obs = torch.cat((data["data/root_pos"], data["data/obs"]), dim=-1)
         actions = data["data/actions"]
-        dones = data["data/dones"]
-        self.data = self.process_data(obs, actions, dones)
+        first_steps = data["data/first_steps"]
+        self.data = self.process_data(obs, actions, first_steps)
 
         obs_size = list(self.data["obs"].shape)
         action_size = list(self.data["action"].shape)
@@ -60,12 +60,14 @@ class ExpertDataset(Dataset):
     # Initialization
     # --------------
 
-    def process_data(self, obs, actions, dones):
-        # Find episode ends
-        dones_flat = dones.reshape(-1)
-        split_indices = np.where(dones_flat == 1)[0]
+    def process_data(self, obs, actions, first_steps):
+        # add first step flages to episode starts
+        first_steps[:, 0] = 1
+        # find episode ends
+        first_steps_flat = first_steps.reshape(-1)
+        split_indices = torch.where(first_steps_flat == 1)[0]
 
-        # Split the sequences at episode ends
+        # split the sequences at episode ends
         obs_splits = self.split_eps(obs, split_indices)
         actions_splits = self.split_eps(actions, split_indices)
 
@@ -111,44 +113,45 @@ class ExpertDataset(Dataset):
     # ----------------
 
     def split_eps(self, x, split_indices):
-        return np.split(x.reshape(-1, x.shape[-1]), split_indices)
+        x = torch.tensor_split(x.reshape(-1, x.shape[-1]), split_indices.tolist())
+        # remove first empty split
+        return x[1:]
 
     def add_padding(self, splits, max_len, temporal):
         x = []
 
         # Make all sequences the same length
         for split in splits:
-            pad = np.pad(split, ((0, max_len - split.shape[0]), (0, 0)))
-            reshaped_split = pad.reshape(-1, max_len, split.shape[1])
-            x.append(reshaped_split)
-        x = np.stack(x).squeeze(axis=1)
+            padded_split = torch.nn.functional.pad(split, (0,0, 0, max_len - split.shape[0]))
+            x.append(padded_split)
+        x = torch.stack(x)
 
         if temporal:
             # Add initial padding to handle episode starts
-            x_pad = np.zeros_like(x[:, : self.T_cond - 1, :])
-            x = np.concatenate([x_pad, x], axis=1)
+            x_pad = torch.zeros_like(x[:, : self.T_cond - 1, :])
+            x = torch.cat([x_pad, x], dim=1)
         else:
             # For non-temporal data, e.g. skills, just take the first timestep
             x = x[:, 0]
 
-        return torch.from_numpy(x).to(self.device).float()
+        return x.to(self.device)
 
     def create_masks(self, splits, max_len):
         masks = []
 
         # Create masks to indicate the padding values
         for split in splits:
-            mask = np.concatenate(
-                [np.ones(split.shape[0]), np.zeros(max_len - split.shape[0])]
+            mask = torch.concatenate(
+                [torch.ones(split.shape[0]), torch.zeros(max_len - split.shape[0])]
             )
             masks.append(mask)
-        masks = np.stack(masks)
+        masks = torch.stack(masks)
 
         # Add initial padding to handle episode starts
-        masks_pad = np.ones((masks.shape[0], self.T_cond - 1))
-        masks = np.concatenate([masks_pad, masks], axis=1)
+        masks_pad = torch.ones((masks.shape[0], self.T_cond - 1))
+        masks = torch.cat([masks_pad, masks], dim=1)
 
-        return torch.from_numpy(masks).to(self.device).float()
+        return masks.to(self.device)
 
 
 class SlicerWrapper(Dataset):

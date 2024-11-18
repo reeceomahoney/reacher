@@ -164,6 +164,7 @@ def main(agent_cfg: DictConfig):
 
     # reset environment
     obs, _ = env.get_observations()
+    dones = torch.zeros(env.num_envs, dtype=torch.bool)
     timestep = 0
     # simulate environment
     with tqdm(total=args_cli.num_timesteps) as pbar:
@@ -171,16 +172,16 @@ def main(agent_cfg: DictConfig):
             with torch.inference_mode():
                 # agent stepping
                 actions = policy(obs)
+                # collect data
+                collector_interface.add("obs", obs)
+                collector_interface.add("actions", actions)
+                root_pos = env.unwrapped.scene["robot"].data.root_pos_w
+                collector_interface.add("root_pos", root_pos)
+                # dones indicate first step in episode to make data splitting easier
+                collector_interface.add("first_steps", dones)
                 # env stepping
                 obs, _, dones, _ = env.step(actions)
 
-            # collect data
-            collector_interface.add("obs", obs)
-            collector_interface.add("actions", actions)
-            collector_interface.add("dones", dones)
-            # root pos
-            root_pos = env.unwrapped.scene["robot"].data.root_pos_w
-            collector_interface.add("root_pos", root_pos)
 
             timestep += 1
             pbar.update(1)
