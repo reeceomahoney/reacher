@@ -18,7 +18,7 @@ from env.env import RaisimEnv
 log = logging.getLogger(__name__)
 
 
-class Workspace:
+class DiffusionRunner:
 
     def __init__(
         self,
