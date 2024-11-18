@@ -1,6 +1,5 @@
 import h5py
 import logging
-import numpy as np
 import os
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
@@ -14,17 +13,11 @@ class ExpertDataset(Dataset):
     def __init__(
         self,
         data_directory: str,
-        obs_dim: int,
         T_cond: int,
-        return_horizon: int,
-        reward_fn: str,
         device="cpu",
     ):
         self.data_directory = data_directory
-        self.obs_dim = obs_dim
         self.T_cond = T_cond
-        self.return_horizon = return_horizon
-        self.reward_fn = reward_fn
         self.device = device
 
         # build path
@@ -122,7 +115,9 @@ class ExpertDataset(Dataset):
 
         # Make all sequences the same length
         for split in splits:
-            padded_split = torch.nn.functional.pad(split, (0,0, 0, max_len - split.shape[0]))
+            padded_split = torch.nn.functional.pad(
+                split, (0, 0, 0, max_len - split.shape[0])
+            )
             x.append(padded_split)
         x = torch.stack(x)
 
@@ -155,15 +150,15 @@ class ExpertDataset(Dataset):
 
 
 class SlicerWrapper(Dataset):
-    def __init__(self, dataset: Subset, T_cond: int, T: int, return_horizon: int):
+    def __init__(self, dataset: Subset, T_cond: int, T: int):
         self.dataset = dataset
         self.T_cond = T_cond
         self.T = T
-        self.slices = self._create_slices(T_cond, T, return_horizon)
+        self.slices = self._create_slices(T_cond, T)
 
-    def _create_slices(self, T_cond, T, return_horizon):
+    def _create_slices(self, T_cond, T):
         slices = []
-        window = T_cond + T + return_horizon - 1
+        window = T_cond + T - 1
         for i in range(len(self.dataset)):
             length = len(self.dataset[i]["obs"])
             if length >= window:
@@ -194,8 +189,6 @@ class SlicerWrapper(Dataset):
 
 def get_dataloaders_and_scaler(
     data_directory: str,
-    obs_dim: int,
-    action_dim: int,
     T_cond: int,
     T: int,
     train_fraction: float,
@@ -203,48 +196,43 @@ def get_dataloaders_and_scaler(
     train_batch_size: int,
     test_batch_size: int,
     num_workers: int,
-    return_horizon: int,
-    reward_fn: str,
     scaling: str,
     evaluating: bool,
 ):
-    if evaluating:
-        # Build a dummy scaler for evaluation
-        x_data = torch.zeros((2, obs_dim), device=device)
-        y_data = torch.zeros((2, action_dim), device=device)
-        scaler = Scaler(x_data, y_data, scaling, device)
+    # if evaluating:
+    #     # Build a dummy scaler for evaluation
+    #     x_data = torch.zeros((2, obs_dim), device=device)
+    #     y_data = torch.zeros((2, act_dim), device=device)
+    #     scaler = Scaler(x_data, y_data, scaling, device)
+    #
+    #     train_dataloader, test_dataloader = None, None
+    # else:
 
-        train_dataloader, test_dataloader = None, None
-    else:
-        # Build the datasets
-        dataset = ExpertDataset(
-            data_directory, obs_dim, T_cond, return_horizon, reward_fn
-        )
-        train, val = random_split(dataset, [train_fraction, 1 - train_fraction])
-        train_set = SlicerWrapper(train, T_cond, T, return_horizon)
-        test_set = SlicerWrapper(val, T_cond, T, return_horizon)
+    # Build the datasets
+    dataset = ExpertDataset(data_directory, T_cond)
+    train, val = random_split(dataset, [train_fraction, 1 - train_fraction])
+    train_set = SlicerWrapper(train, T_cond, T)
+    test_set = SlicerWrapper(val, T_cond, T)
 
-        # Build the scaler
-        x_data = train_set.get_all_obs()
-        y_data = torch.cat(
-            [train_set.get_all_obs(), train_set.get_all_actions()], dim=-1
-        )
-        scaler = Scaler(x_data, y_data, scaling, device)
+    # Build the scaler
+    x_data = train_set.get_all_obs()
+    y_data = torch.cat([train_set.get_all_obs(), train_set.get_all_actions()], dim=-1)
+    scaler = Scaler(x_data, y_data, scaling, device)
 
-        # Build the dataloaders
-        train_dataloader = DataLoader(
-            train_set,
-            batch_size=train_batch_size,
-            shuffle=True,
-            num_workers=num_workers,
-            pin_memory=True,
-        )
-        test_dataloader = DataLoader(
-            test_set,
-            batch_size=test_batch_size,
-            shuffle=True,
-            num_workers=num_workers,
-            pin_memory=True,
-        )
+    # Build the dataloaders
+    train_dataloader = DataLoader(
+        train_set,
+        batch_size=train_batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        pin_memory=True,
+    )
+    test_dataloader = DataLoader(
+        test_set,
+        batch_size=test_batch_size,
+        shuffle=True,
+        num_workers=num_workers,
+        pin_memory=True,
+    )
 
     return train_dataloader, test_dataloader, scaler

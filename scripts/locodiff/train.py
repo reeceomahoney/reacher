@@ -102,10 +102,10 @@ def main(agent_cfg: DictConfig):
     env_cfg.scene.num_envs = (
         args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
     )
-    agent_cfg.max_iterations = (
+    agent_cfg.num_iters = (
         args_cli.max_iterations
         if args_cli.max_iterations is not None
-        else agent_cfg.max_iterations
+        else agent_cfg.num_iters
     )
 
     # set the environment seed
@@ -123,6 +123,8 @@ def main(agent_cfg: DictConfig):
     env = gym.make(
         args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
     )
+    agent_cfg.obs_dim = env.observation_space["policy"].shape[-1]
+    agent_cfg.act_dim = env.action_space.shape[-1]
 
     # save resume path before creating a new log_dir
     if agent_cfg.resume:
@@ -168,9 +170,7 @@ def main(agent_cfg: DictConfig):
     dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), agent_cfg_dict)
 
     # run training
-    runner.learn(
-        num_learning_iterations=agent_cfg.max_iterations, init_at_random_ep_len=True
-    )
+    runner.learn()
 
     # close the simulator
     env.close()

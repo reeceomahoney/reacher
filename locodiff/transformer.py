@@ -12,7 +12,6 @@ class DiffusionTransformer(nn.Module):
     def __init__(
         self,
         obs_dim,
-        skill_dim,
         act_dim,
         d_model,
         nhead,
@@ -42,7 +41,6 @@ class DiffusionTransformer(nn.Module):
         self.sigma_emb = nn.Linear(1, self.d_model)
         self.vel_cmd_emb = nn.Linear(3, self.d_model)
         self.return_emb = nn.Linear(1, self.d_model)
-        self.skill_emb = nn.Linear(skill_dim, self.d_model)
 
         self.drop = nn.Dropout(dropout)
 

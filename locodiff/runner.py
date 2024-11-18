@@ -13,37 +13,39 @@ from rsl_rl.utils import store_code_state
 
 import locodiff.utils as utils
 import wandb
+from locodiff.dataset import get_dataloaders_and_scaler
 from locodiff.policy import DiffusionPolicy
+from locodiff.transformer import DiffusionTransformer
 from locodiff.utils import ExponentialMovingAverage
 from locodiff.wrappers import ScalingWrapper
-from locodiff.dataset import get_dataloaders_and_scaler
 
 # A logger for this file
 log = logging.getLogger(__name__)
 
 
 class DiffusionRunner:
-    def __init__(self, env: VecEnv, agent_cfg, log_dir=None, device="cpu"):
+    def __init__(
+        self, env: VecEnv, agent_cfg, log_dir: str | None = None, device="cpu"
+    ):
         self.env = env
         self.cfg = agent_cfg
         self.device = device
 
         # classes
-        self.train_loader, self.test_loader, self.normalizer = get_dataloaders_and_scaler(
-            **agent_cfg.dataset
+        self.train_loader, self.test_loader, self.normalizer = (
+            get_dataloaders_and_scaler(**self.cfg.dataset)
         )
-        self.policy = ScalingWrapper(
-            model=DiffusionPolicy(self.normalizer, device=self.device, **self.cfg.policy),
-            sigma_data=agent_cfg.sigma_data
+        model = ScalingWrapper(
+            model=DiffusionTransformer(**self.cfg.model),
+            sigma_data=agent_cfg.policy.sigma_data,
         )
+        self.policy = DiffusionPolicy(model, self.normalizer, **self.cfg.policy)
 
         # ema
         self.ema_helper = ExponentialMovingAverage(
-            self.policy.parameters, agent_cfg.decay
+            self.policy.get_params(), self.cfg.ema_decay, self.cfg.device
         )
         self.use_ema = agent_cfg.use_ema
-
-        # training
 
         # variables
         self.log_dir = log_dir
@@ -51,8 +53,6 @@ class DiffusionRunner:
             self.cfg.episode_length / (self.env.cfg.decimation * self.env.cfg.sim.dt)
         )
         self.current_learning_iteration = 0
-        # flag whether to simulate or not
-        self.sim = False
 
         # logging
         if self.log_dir is not None:
@@ -84,55 +84,51 @@ class DiffusionRunner:
         )
 
         start_iter = self.current_learning_iteration
-        tot_iter = int(start_iter + self.cfg.num_learning_iterations)
+        tot_iter = int(start_iter + self.cfg.num_iters)
         generator = iter(self.train_loader)
         for it in trange(start_iter, tot_iter):
             start = time.time()
 
             # Rollout
-            if it % self.cfg.sim_interval == 0 and self.sim:
-                goal_ee_state = self.get_goal_ee_state()
-                for _ in range(self.num_steps_per_env):
-                    actions = self.policy.act(obs, goal_ee_state)
-                    leg_actions = torch.zeros(
-                        (actions.shape[0], 12), device=actions.device
-                    )
-
-                    actions = torch.cat([actions, leg_actions], dim=1)
-                    obs, rewards, dones, infos = self.env.step(
-                        actions.to(self.env.device)
-                    )
-                    # move device
-                    obs, rewards, dones = (
-                        obs.to(self.device),
-                        rewards.to(self.device),
-                        dones.to(self.device),
-                    )
-
-                    # reset prior loss weight
-                    self.policy.reset(dones)
-
-                    if self.log_dir is not None:
-                        # rewards and dones
-                        ep_infos.append(infos["log"])
-                        cur_reward_sum += rewards
-                        cur_episode_length += 1
-                        new_ids = (dones > 0).nonzero(as_tuple=False)
-                        rewbuffer.extend(
-                            cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist()
+            if it % self.cfg.sim_interval == 0:
+                with torch.inference_mode():
+                    self.eval_mode()
+                    for _ in range(self.num_steps_per_env):
+                        actions = self.policy.act({"obs": obs})
+                        obs, rewards, dones, infos = self.env.step(actions)
+                        # move device
+                        obs, rewards, dones = (
+                            obs.to(self.device),
+                            rewards.to(self.device),
+                            dones.to(self.device),
                         )
-                        lenbuffer.extend(
-                            cur_episode_length[new_ids][:, 0].cpu().numpy().tolist()
-                        )
-                        cur_reward_sum[new_ids] = 0
-                        cur_episode_length[new_ids] = 0
+
+                        # reset prior loss weight
+                        self.policy.reset(dones)
+
+                        if self.log_dir is not None:
+                            # rewards and dones
+                            ep_infos.append(infos["log"])
+                            cur_reward_sum += rewards
+                            cur_episode_length += 1
+                            new_ids = (dones > 0).nonzero(as_tuple=False)
+                            rewbuffer.extend(
+                                cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist()
+                            )
+                            lenbuffer.extend(
+                                cur_episode_length[new_ids][:, 0].cpu().numpy().tolist()
+                            )
+                            cur_reward_sum[new_ids] = 0
+                            cur_episode_length[new_ids] = 0
 
             # evaluation
             if it % self.cfg.eval_interval == 0:
-                test_recon_loss = []
-                for batch in self.test_loader:
-                    test_recon_loss.append(self.policy.test(batch))
-                test_recon_loss = statistics.mean(test_recon_loss)
+                with torch.inference_mode():
+                    self.eval_mode()
+                    test_recon_loss = []
+                    for batch in self.test_loader:
+                        test_recon_loss.append(self.policy.test(batch))
+                    test_recon_loss = statistics.mean(test_recon_loss)
 
             # training
             try:
@@ -141,6 +137,7 @@ class DiffusionRunner:
                 generator = iter(self.train_loader)
                 batch = next(generator)
 
+            self.train_mode()
             loss, recon_loss, kl_loss = self.policy.update(batch)
 
             # logging
@@ -291,10 +288,6 @@ class DiffusionRunner:
 
         return pred_action
 
-    def reset(self, done):
-        self.obs_hist[done] = 0
-        self.skill_hist[done] = 0
-
     ######################
     # Saving and Loading #
     ######################
@@ -333,94 +326,6 @@ class DiffusionRunner:
         torch.save(
             {k: getattr(self.scaler, k) for k in scaler_state}, model_dir + "/scaler.pt"
         )
-
-    ###################
-    # Data Processing #
-    ###################
-
-    @torch.no_grad()
-    def process_batch(self, batch: dict) -> dict:
-        batch = self.dict_to_device(batch)
-
-        raw_obs = batch["obs"]
-        raw_action = batch.get("action", None)
-        skill = batch["skill"]
-
-        vel_cmd = batch.get("vel_cmd", None)
-        if vel_cmd is None:
-            vel_cmd = self.sample_vel_cmd(raw_obs.shape[0])
-
-        returns = batch.get("return", None)
-        if returns is None:
-            returns = self.compute_returns(raw_obs, vel_cmd)
-
-        obs = self.scaler.scale_input(raw_obs[:, : self.T_cond])
-
-        if raw_action is None:
-            action = None
-        else:
-            action = self.scaler.scale_output(
-                torch.cat(
-                    [
-                        # raw_obs[:, self.T_cond - 1 : self.T_cond + self.T - 1],
-                        raw_action[:, self.T_cond - 1 : self.T_cond + self.T - 1],
-                    ],
-                    dim=-1,
-                )
-            )
-
-        processed_batch = {
-            "obs": obs,
-            "action": action,
-            "vel_cmd": vel_cmd,
-            "skill": skill,
-            "return": returns,
-        }
-
-        return processed_batch
-
-    def update_history(self, batch):
-        self.obs_hist[:, :-1] = self.obs_hist[:, 1:].clone()
-        self.obs_hist[:, -1] = batch["obs"]
-        batch["obs"] = self.obs_hist.clone()
-        return batch
-
-    def dict_to_device(self, batch):
-        return {k: v.clone().to(self.device) for k, v in batch.items()}
-
-    def sample_vel_cmd(self, batch_size):
-        # vel_cmd = torch.randint(0, 2, (batch_size, 1), device=self.device).float()
-        # return vel_cmd * 2 - 1
-        vel_limits = [0.8, 0.5, 1.0]
-        vel_cmd = torch.rand(batch_size, 3, device=self.device)
-
-        for i in range(3):
-            vel_cmd[i] = vel_cmd[i] * 2 * vel_limits[i] - vel_limits[i]
-
-        return vel_cmd
-
-    def compute_returns(self, obs, vel_cmd):
-        rewards = utils.reward_function(obs, vel_cmd, self.reward_fn)
-        rewards = (
-            rewards[:, self.T_cond - 1 : self.T_cond + self.return_horizon - 1] - 1
-        )
-
-        gammas = torch.tensor([0.99**i for i in range(self.return_horizon)]).to(
-            self.device
-        )
-        returns = (rewards * gammas).sum(dim=-1)
-        returns = torch.exp(returns / 50)
-        returns = (returns - returns.min()) / (returns.max() - returns.min())
-
-        # self.plot_returns(returns)
-
-        return returns.unsqueeze(-1)
-
-    def plot_returns(self, returns):
-        plt.figure(figsize=(10, 5))
-        plt.hist(returns.cpu().numpy(), bins=20)
-        plt.show()
-        exit()
 
     def train_mode(self):
         self.policy.train()

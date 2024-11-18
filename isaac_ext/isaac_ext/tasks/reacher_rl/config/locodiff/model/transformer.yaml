@@ -1,7 +1,5 @@
-_target_: locodiff.transformer.DiffusionTransformer
 obs_dim: ${obs_dim}
-skill_dim: ${skill_dim}
-act_dim: ${action_dim}
+act_dim: ${act_dim}
 d_model: 128
 nhead: 4
 num_layers: 2

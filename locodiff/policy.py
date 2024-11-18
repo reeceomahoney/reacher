@@ -1,20 +1,20 @@
 import math
-
 import torch
 import torch.nn as nn
+from torch.optim.adamw import AdamW
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from locodiff.samplers import get_sampler, get_sigmas_exponential, rand_log_logistic
 from locodiff.wrappers import CFGWrapper
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from torch.optim.adamw import AdamW
 
 
 class DiffusionPolicy(nn.Module):
     def __init__(
         self,
         model,
+        normalizer,
         obs_dim: int,
-        action_dim: int,
+        act_dim: int,
         T: int,
         T_cond: int,
         num_envs: int,
@@ -25,7 +25,9 @@ class DiffusionPolicy(nn.Module):
         sigma_max: float,
         cond_lambda: int,
         cond_mask_prob: float,
-        learning_rate: float,
+        lr: float,
+        betas: tuple,
+        num_iters: int,
         device,
     ):
         super().__init__()
@@ -35,11 +37,13 @@ class DiffusionPolicy(nn.Module):
             model = CFGWrapper(model, cond_lambda, cond_mask_prob)
         self.model = model
         self.sampler = get_sampler(sampler_type)
+        self.normalizer = normalizer
         self.device = device
+        self.obs_hist = torch.zeros((num_envs, T_cond, obs_dim), device=device)
 
         # dims
         self.obs_dim = obs_dim
-        self.action_dim = action_dim
+        self.act_dim = act_dim
         self.T = T
         self.T_cond = T_cond
         self.num_envs = num_envs
@@ -54,39 +58,32 @@ class DiffusionPolicy(nn.Module):
 
         # optimizer and lr scheduler
         optim_groups = self.model.get_optim_groups()
-        self.optimizer = AdamW(optim_groups, lr=learning_rate)
-        self.lr_scheduler = CosineAnnealingLR(self.optimizer)
+        self.optimizer = AdamW(optim_groups, lr=lr, betas=betas)
+        self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
 
-    def __call__(self, data_dict: dict, **kwargs) -> tuple:
-        self.eval()
+    def act(self, data: dict) -> tuple:
+        data = self.process(data)
 
-        if data_dict["action"] is None:
+        if data["action"] is None:
             batch_size = self.num_envs
         else:
-            batch_size = data_dict["action"].shape[0]
+            batch_size = data["action"].shape[0]
 
-        noise = torch.randn((batch_size, self.T, self.action_dim)).to(
-            self.device
+        noise = torch.randn((batch_size, self.T, self.act_dim)).to(self.device)
+        noise = noise * self.sigma_max
+        sigmas = get_sigmas_exponential(
+            self.sampling_steps, self.sigma_min, self.sigma_max, self.device
         )
-        if self.sampler_type == "ddpm":
-            self.noise_scheduler.set_timesteps(self.sampling_steps)
-            kwargs = {"noise_scheduler": self.noise_scheduler}
-        else:
-            noise = noise * self.sigma_max
-            sigmas = get_sigmas_exponential(
-                self.sampling_steps, self.sigma_min, self.sigma_max, self.device
-            )
-            kwargs = {"sigmas": sigmas}
-        x_0 = self.sampler(self.model, noise, data_dict, **kwargs)
+        x_0 = self.sampler(self.model, noise, data, sigmas=sigmas)
 
         if self.cond_mask_prob > 0:
-            data_dict["return"] = torch.ones_like(data_dict["return"])
-            x_0_max_return = self.sampler(self.model, noise, data_dict, **kwargs)
+            data["return"] = torch.ones_like(data["return"])
+            x_0_max_return = self.sampler(self.model, noise, data, sigmas=sigmas)
             return x_0, x_0_max_return
         else:
             return x_0
 
-    def loss(self, data_dict) -> torch.Tensor:
+    def update(self, data_dict) -> torch.Tensor:
         self.train()
 
         action = data_dict["action"]
@@ -103,6 +100,12 @@ class DiffusionPolicy(nn.Module):
 
         return loss
 
+    def reset(self, dones=None):
+        if dones is not None:
+            self.obs_hist[dones.bool()] = 0
+        else:
+            self.obs_hist.zero_()
+
     @torch.no_grad()
     def make_sample_density(self, size):
         """
@@ -117,5 +120,37 @@ class DiffusionPolicy(nn.Module):
     def get_params(self):
         return self.model.get_params()
 
-    def get_optim_groups(self):
-        return self.model.get_optim_groups()
+    @torch.no_grad()
+    def process(self, data: dict) -> dict:
+        data = self.dict_to_device(data)
+        raw_action = data.get("action", None)
+
+        if raw_action is None:
+            # inference
+            data = self.update_history(data)
+            raw_obs = data["obs"]
+            action = None
+        else:
+            # training
+            raw_obs = data["obs"]
+            action = self.normalizer.scale_output(
+                torch.cat(
+                    [
+                        raw_obs[:, self.T_cond - 1 : self.T_cond + self.T - 1],
+                        raw_action[:, self.T_cond - 1 : self.T_cond + self.T - 1],
+                    ],
+                    dim=-1,
+                )
+            )
+        obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
+
+        return {"obs": obs, "action": action}
+
+    def update_history(self, x):
+        self.obs_hist[:, :-1] = self.obs_hist[:, 1:].clone()
+        self.obs_hist[:, -1] = x["obs"]
+        x["obs"] = self.obs_hist.clone()
+        return x
+
+    def dict_to_device(self, data):
+        return {k: v.to(self.device) for k, v in data.items()}
