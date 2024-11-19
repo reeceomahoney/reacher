@@ -201,12 +201,18 @@ class DiffusionRunner:
             self.ema_helper.restore(self.policy.parameters())
 
     def load(self, path):
-        loaded_dict = torch.load(path, weights_only=True)
+        loaded_dict = torch.load(path)
         self.policy.load_state_dict(loaded_dict["model_state_dict"])
         self.normalizer.load_state_dict(loaded_dict["norm_state_dict"])
         self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
         self.current_learning_iteration = loaded_dict["iter"]
         return loaded_dict["infos"]
+
+    def get_inference_policy(self, device=None):
+        self.eval_mode()
+        if device is not None:
+            self.policy.to(device)
+        return self.policy.act
 
     def train_mode(self):
         self.policy.train()

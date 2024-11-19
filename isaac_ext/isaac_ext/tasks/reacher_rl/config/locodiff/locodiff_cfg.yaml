@@ -61,4 +61,4 @@ dataset:
 
 hydra:
   run:
-    dir: logs/locodiff/${now:%Y-%m-%d}/${now:%H-%M-%S}
+    dir: logs/locodiff/${now:%b-%d}/${now:%H-%M-%S}
