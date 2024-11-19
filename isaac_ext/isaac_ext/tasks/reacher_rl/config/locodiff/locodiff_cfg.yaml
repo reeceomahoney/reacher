@@ -7,12 +7,12 @@ wandb_project: locodiff_isaac
 num_iters: 5e5
 seed: 42
 resume: False
-episode_length: 10
-
+episode_length: 5
 
 # training
-eval_interval: 1000
-sim_interval: 5000
+log_interval: 100
+eval_interval: 1e3
+sim_interval: 5e3
 device: cuda
 ema_decay: 0.999
 use_ema: True

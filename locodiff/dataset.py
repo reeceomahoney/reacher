@@ -4,7 +4,7 @@ import os
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
-from locodiff.utils import Scaler
+from locodiff.utils import Normalizer
 
 log = logging.getLogger(__name__)
 
@@ -217,7 +217,7 @@ def get_dataloaders_and_scaler(
     # Build the scaler
     x_data = train_set.get_all_obs()
     y_data = torch.cat([train_set.get_all_obs(), train_set.get_all_actions()], dim=-1)
-    scaler = Scaler(x_data, y_data, scaling, device)
+    scaler = Normalizer(x_data, y_data, scaling, device)
 
     # Build the dataloaders
     train_dataloader = DataLoader(

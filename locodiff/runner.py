@@ -1,22 +1,19 @@
 import logging
-import matplotlib.pyplot as plt
 import os
 import statistics
 import time
 import torch
-import torch.nn as nn
 from collections import deque
-from tqdm import tqdm, trange
+from tqdm import trange
 
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 
-import locodiff.utils as utils
 import wandb
 from locodiff.dataset import get_dataloaders_and_scaler
 from locodiff.policy import DiffusionPolicy
 from locodiff.transformer import DiffusionTransformer
-from locodiff.utils import ExponentialMovingAverage
+from locodiff.utils import ExponentialMovingAverage, InferenceContext
 from locodiff.wrappers import ScalingWrapper
 
 # A logger for this file
@@ -73,7 +70,6 @@ class DiffusionRunner:
         self.policy.reset()
         self.train_mode()  # switch to train mode (for dropout for example)
 
-        ep_infos = []
         rewbuffer = deque()
         lenbuffer = deque()
         cur_reward_sum = torch.zeros(
@@ -89,11 +85,11 @@ class DiffusionRunner:
         for it in trange(start_iter, tot_iter):
             start = time.time()
 
-            # Rollout
+            # simulation
             if it % self.cfg.sim_interval == 0:
-                with torch.inference_mode():
-                    self.eval_mode()
-                    for _ in range(self.num_steps_per_env):
+                ep_infos = []
+                with InferenceContext(self):
+                    for _ in trange(self.num_steps_per_env, desc="Simulating... "):
                         actions = self.policy.act({"obs": obs})
                         obs, rewards, dones, infos = self.env.step(actions)
                         # move device
@@ -102,8 +98,6 @@ class DiffusionRunner:
                             rewards.to(self.device),
                             dones.to(self.device),
                         )
-
-                        # reset prior loss weight
                         self.policy.reset(dones)
 
                         if self.log_dir is not None:
@@ -123,12 +117,11 @@ class DiffusionRunner:
 
             # evaluation
             if it % self.cfg.eval_interval == 0:
-                with torch.inference_mode():
-                    self.eval_mode()
-                    test_recon_loss = []
+                with InferenceContext(self):
+                    test_loss = []
                     for batch in self.test_loader:
-                        test_recon_loss.append(self.policy.test(batch))
-                    test_recon_loss = statistics.mean(test_recon_loss)
+                        test_loss.append(self.policy.test(batch))
+                    test_loss = statistics.mean(test_loss)
 
             # training
             try:
@@ -137,8 +130,8 @@ class DiffusionRunner:
                 generator = iter(self.train_loader)
                 batch = next(generator)
 
-            self.train_mode()
-            loss, recon_loss, kl_loss = self.policy.update(batch)
+            loss = self.policy.update(batch)
+            self.ema_helper.update(self.policy.parameters())
 
             # logging
             self.current_learning_iteration = it
@@ -148,184 +141,76 @@ class DiffusionRunner:
                 iter_time = stop - start
 
                 self.log(locals())
-                if it % self.cfg.save_interval == 0:
+                if it % self.cfg.sim_interval == 0:
                     self.save(os.path.join(self.log_dir, "models", "model.pt"))
-                ep_infos.clear()
 
         if self.log_dir is not None:
             self.save(os.path.join(self.log_dir, "models", "model.pt"))
 
-    def train(self):
-        """
-        Main training loop
-        """
-        best_total_mse = 1e10
-        generator = iter(self.train_loader)
-
-        for step in trange(self.train_steps, desc="Training", dynamic_ncols=True):
-            # evaluate
-            if not step % self.eval_every:
-                # reset the log_info
-                log_info = {k: [] for k in self.eval_keys}
-
-                # run evaluation
-                for batch in tqdm(self.test_loader, desc="evaluating"):
-                    info = self.evaluate(batch)
-                    log_info = {k: v + [info[k]] for k, v in log_info.items()}
-
-                # calculate the means and lr
-                log_info = {k: sum(v) / len(v) for k, v in log_info.items()}
-                log_info["lr"] = self.optimizer.param_groups[0]["lr"]
-
-                # save model if it has improved mse
-                if log_info["total_mse"] < best_total_mse:
-                    best_total_mse = log_info["total_mse"]
-                    self.save()
-                    log.info("New best test loss. Stored weights have been updated!")
-
-                # log to wandb
-                wandb.log({k: v for k, v in log_info.items()}, step=step)
-
-            # simulate
-            if not step % self.sim_every:
-                results = self.env.simulate(self)
-                wandb.log(results, step=step)
-
-            # train
-            try:
-                batch_loss = self.train_step(next(generator))
-            except StopIteration:
-                # restart the generator if the previous generator is exhausted.
-                generator = iter(self.train_loader)
-                batch_loss = self.train_step(next(generator))
-            if not step % 100:
-                wandb.log({"loss": batch_loss}, step=step)
-
-        self.save()
-        log.info("Training done!")
-
-    def train_step(self, batch: dict):
-        data_dict = self.process_batch(batch)
-        loss = self.agent.loss(data_dict)
-
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-        self.lr_scheduler.step()
-
-        self.ema_helper.update(self.agent.parameters())
-        return loss.item()
-
-    @torch.no_grad()
-    def evaluate(self, batch: dict) -> dict:
-        info = {}
-        data_dict = self.process_batch(batch)
-
-        if self.use_ema:
-            self.ema_helper.store(self.agent.parameters())
-            self.ema_helper.copy_to(self.agent.parameters())
-
-        if self.cond_mask_prob > 0:
-            x_0, x_0_max_return = self.agent(data_dict)
-            x_0 = self.scaler.clip(x_0)
-            x_0 = self.scaler.inverse_scale_output(x_0)
-
-            # divergence between normal and max_return outputs
-            x_0_max_return = self.scaler.clip(x_0_max_return)
-            x_0_max_return = self.scaler.inverse_scale_output(x_0_max_return)
-            output_divergence = torch.abs(x_0 - x_0_max_return).mean().item()
-            info["output_divergence"] = output_divergence
-        else:
-            x_0 = self.agent(data_dict)
-            x_0 = self.scaler.clip(x_0)
-            x_0 = self.scaler.inverse_scale_output(x_0)
-
-        # calculate the MSE
-        raw_action = self.scaler.inverse_scale_output(data_dict["action"])
-        mse = nn.functional.mse_loss(x_0, raw_action, reduction="none")
-        total_mse = mse.mean().item()
-        first_mse = mse[:, 0, :].mean().item()
-        last_mse = mse[:, -1, :].mean().item()
-
-        # restore the previous model parameters
-        if self.use_ema:
-            self.ema_helper.restore(self.agent.parameters())
-
-        info["total_mse"] = total_mse
-        info["first_mse"] = first_mse
-        info["last_mse"] = last_mse
-
-        return info
-
-    ##############
-    # Inference #
-    ##############
-
-    @torch.no_grad()
-    def __call__(self, batch: dict, new_sampling_steps=None):
-        batch = self.update_history(batch)
-        data_dict = self.process_batch(batch)
-
-        if new_sampling_steps is not None:
-            self.agent.sampling_steps = new_sampling_steps
-
-        if self.use_ema:
-            self.ema_helper.store(self.agent.parameters())
-            self.ema_helper.copy_to(self.agent.parameters())
-
-        if self.cond_mask_prob > 0:
-            pred_action, _ = self.agent(data_dict)
-        else:
-            pred_action = self.agent(data_dict)
-
-        pred_action = self.scaler.clip(pred_action)
-        pred_action = self.scaler.inverse_scale_output(pred_action)
-        pred_action = pred_action.cpu().numpy()
-        pred_action = pred_action[:, : self.T_action].copy()
-
-        if self.use_ema:
-            self.ema_helper.restore(self.agent.parameters())
-
-        return pred_action
-
-    ######################
-    # Saving and Loading #
-    ######################
-
-    def load(self, weights_path: str) -> None:
-        model_dir = os.path.join(weights_path, "model")
-
-        self.agent.load_state_dict(
-            torch.load(os.path.join(model_dir, "model.pt"), map_location=self.device),
-            strict=False,
+    def log(self, locs: dict):
+        # training
+        wandb.log(
+            {
+                "Loss/loss": locs["loss"],
+                "Perf/iter_time": locs["iter_time"] / self.cfg.log_interval,
+            },
+            step=locs["it"],
         )
+        # evaluation
+        if locs["it"] % self.cfg.eval_interval == 0:
+            wandb.log({"Loss/test_loss": locs["test_loss"]}, step=locs["it"])
+        # simulation
+        if locs["it"] % self.cfg.sim_interval == 0:
+            for key in locs["ep_infos"][0]:
+                # get the mean of each ep info value
+                infotensor = torch.tensor([], device=self.device)
+                for ep_info in locs["ep_infos"]:
+                    # handle scalar and zero dimensional tensor infos
+                    if key not in ep_info:
+                        continue
+                    if not isinstance(ep_info[key], torch.Tensor):
+                        ep_info[key] = torch.Tensor([ep_info[key]])
+                    if len(ep_info[key].shape) == 0:
+                        ep_info[key] = ep_info[key].unsqueeze(0)
+                    infotensor = torch.cat((infotensor, ep_info[key].to(self.device)))
+                value = torch.mean(infotensor)
+                # log
+                if "/" in key:
+                    wandb.log({key: value}, step=locs["it"])
+                else:
+                    wandb.log({"Episode/" + key, value}, step=locs["it"])
+            wandb.log(
+                {
+                    "Train/mean_reward": statistics.mean(locs["rewbuffer"]),
+                    "Train/mean_episode_length": statistics.mean(locs["lenbuffer"]),
+                },
+                step=locs["it"],
+            )
 
-        # Load scaler attributes
-        scaler_state = torch.load(
-            os.path.join(model_dir, "scaler.pt"), map_location=self.device
-        )
-        for attr, value in scaler_state.items():
-            setattr(self.scaler, attr, value)
+    def save(self, path, infos=None):
+        if self.use_ema:
+            self.ema_helper.store(self.policy.parameters())
+            self.ema_helper.copy_to(self.policy.parameters())
 
-        log.info("Loaded pre-trained agent parameters and scaler")
-
-    def save(self) -> None:
-        model_dir = os.path.join(self.output_dir, "model")
+        saved_dict = {
+            "model_state_dict": self.policy.state_dict(),
+            "optimizer_state_dict": self.policy.optimizer.state_dict(),
+            "norm_state_dict": self.normalizer.state_dict(),
+            "iter": self.current_learning_iteration,
+            "infos": infos,
+        }
+        torch.save(saved_dict, path)
 
         if self.use_ema:
-            self.ema_helper.store(self.agent.parameters())
-            self.ema_helper.copy_to(self.agent.parameters())
+            self.ema_helper.restore(self.policy.parameters())
 
-        torch.save(self.agent.state_dict(), os.path.join(model_dir, "model.pt"))
-
-        if self.use_ema:
-            self.ema_helper.restore(self.agent.parameters())
-
-        # Save scaler attributes
-        scaler_state = ["x_max", "x_min", "y_max", "y_min", "x_mean", "x_std", "y_mean"]
-        torch.save(
-            {k: getattr(self.scaler, k) for k in scaler_state}, model_dir + "/scaler.pt"
-        )
+    def load(self, path):
+        loaded_dict = torch.load(path, weights_only=True)
+        self.policy.load_state_dict(loaded_dict["model_state_dict"])
+        self.normalizer.load_state_dict(loaded_dict["norm_state_dict"])
+        self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
+        self.current_learning_iteration = loaded_dict["iter"]
+        return loaded_dict["infos"]
 
     def train_mode(self):
         self.policy.train()

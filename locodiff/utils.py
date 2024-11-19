@@ -1,48 +1,6 @@
 import math
-
 import torch
 import torch.nn as nn
-
-
-def reward_function(obs, vel_cmds, fn_name):
-    x_vel = obs[..., 30]
-    if x_vel.ndim == 1:
-        vel_cmds = vel_cmds.squeeze(1)
-
-    if fn_name == "x_vel":
-        rewards = obs[..., 30]
-        rewards = torch.clamp(rewards, -0.6, 0.6)
-    elif fn_name == "fwd_bwd":
-        lin_vel = obs[..., 30:32]
-        ang_vel = obs[..., 17:18]
-        vel = torch.cat([lin_vel, ang_vel], dim=-1)
-
-        rewards = torch.zeros_like(vel[..., 0])
-        tgt1 = torch.tensor([0.8, 0.0, 0.0]).to(vel.device)
-        tgt2 = torch.tensor([-0.8, 0.0, 0.0]).to(vel.device)
-        rewards = torch.where(
-            vel_cmds == 1, torch.exp(-3 * ((vel - tgt1) ** 2)).mean(dim=-1), rewards
-        )
-        rewards = torch.where(
-            vel_cmds == -1, torch.exp(-3 * ((vel - tgt2) ** 2)).mean(dim=-1), rewards
-        )
-    elif fn_name == "vel_target":
-        lin_vel = obs[..., 30:32]
-        ang_vel = obs[..., 17:18]
-        vel = torch.cat([lin_vel, ang_vel], dim=-1)
-        tgt = torch.tensor([-0.5, 0.0, 0.0]).to(vel.device)
-        rewards = torch.exp(-3 * ((vel - tgt) ** 2)).mean(dim=-1)
-    elif fn_name == "vel_target_var":
-        lin_vel = obs[..., 30:32]
-        ang_vel = obs[..., 17:18]
-        vel = torch.cat([lin_vel, ang_vel], dim=-1)
-        if vel.ndim == 3:
-            vel_cmds = vel_cmds.unsqueeze(1)
-        rewards = torch.exp(-3 * ((vel - vel_cmds) ** 2)).mean(dim=-1)
-    else:
-        raise ValueError(f"Unknown reward function {fn_name}")
-
-    return rewards
 
 
 class SinusoidalPosEmb(nn.Module):
@@ -158,36 +116,38 @@ class ExponentialMovingAverage:
         self.shadow_params = state_dict["shadow_params"]
 
 
-class Scaler:
+class Normalizer(nn.Module):
     def __init__(
         self, x_data: torch.Tensor, y_data: torch.Tensor, scaling: str, device: str
     ):
-        self.device = device
-
+        super().__init__()
         x_data = x_data.detach()
         y_data = y_data.detach()
 
-        self.x_max = x_data.max(0).values.to(device)
-        self.x_min = x_data.min(0).values.to(device)
+        # linear scaling
+        self.register_buffer("x_max", x_data.max(0).values)
+        self.register_buffer("x_min", x_data.min(0).values)
+        self.register_buffer("y_max", y_data.max(0).values)
+        self.register_buffer("y_min", y_data.min(0).values)
 
-        self.y_max = y_data.max(0).values.to(device)
-        self.y_min = y_data.min(0).values.to(device)
+        # gaussian scaling
+        self.register_buffer("x_mean", x_data.mean(0))
+        self.register_buffer("x_std", x_data.std(0))
+        self.register_buffer("y_mean", y_data.mean(0))
+        self.register_buffer("y_std", y_data.std(0))
 
-        self.x_mean = x_data.mean(0).to(device)
-        self.x_std = x_data.std(0).to(device)
-
-        self.y_mean = y_data.mean(0).to(device)
-        self.y_std = y_data.std(0).to(device)
-
-        self.scaling = scaling
-
-        self.y_bounds = torch.zeros((2, y_data.shape[-1])).to(device)
-        if self.scaling == "linear":
+        # bounds
+        y_bounds = torch.zeros((2, y_data.shape[-1]))
+        self.register_buffer("y_bounds", y_bounds)
+        if scaling == "linear":
             self.y_bounds[0, :] = -1.1
             self.y_bounds[1, :] = 1.1
-        elif self.scaling == "gaussian":
+        elif scaling == "gaussian":
             self.y_bounds[0, :] = -5
             self.y_bounds[1, :] = 5
+
+        self.scaling = scaling
+        self.to(device)
 
     def scale_input(self, x) -> torch.Tensor:
         if self.scaling == "linear":
@@ -215,3 +175,30 @@ class Scaler:
 
     def clip(self, y):
         return torch.clamp(y, self.y_bounds[0, :], self.y_bounds[1, :])
+
+
+class InferenceContext:
+    """
+    Context manager for inference mode
+    """
+
+    def __init__(self, runner):
+        self.runner = runner
+        self.policy = runner.policy
+        self.ema_helper = runner.ema_helper
+        self.use_ema = runner.use_ema
+
+    def __enter__(self):
+        self.inference_mode_context = torch.inference_mode()
+        self.inference_mode_context.__enter__()
+        self.runner.eval_mode()
+        if self.use_ema:
+            self.ema_helper.store(self.policy.parameters())
+            self.ema_helper.copy_to(self.policy.parameters())
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.runner.train_mode()
+        if self.use_ema:
+            self.ema_helper.restore(self.policy.parameters())
+        self.inference_mode_context.__exit__(exc_type, exc_value, traceback)

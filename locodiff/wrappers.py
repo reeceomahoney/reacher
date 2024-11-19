@@ -48,16 +48,15 @@ class ScalingWrapper(nn.Module):
         return c_skip.view(-1, 1, 1), c_out.view(-1, 1, 1), c_in.view(-1, 1, 1)
 
     def loss(self, noise, sigma, data_dict):
-        action = data_dict["action"]
-
-        noised_action = action + noise * sigma.view(-1, 1, 1)
-
+        # noise samples
+        x = data_dict["input"]
+        noised_x = x + noise * sigma.view(-1, 1, 1)
+        # calculate target
         c_skip, c_out, c_in = self.get_scalings(sigma)
-        model_output = self.model(noised_action * c_in, sigma, data_dict)
-        target = (action - c_skip * noised_action) / c_out
-
-        loss = (model_output - target).pow(2).mean()
-        return loss
+        model_output = self.model(noised_x * c_in, sigma, data_dict)
+        target = (x - c_skip * noised_x) / c_out
+        # calculate loss
+        return nn.functional.mse_loss(model_output, target)
 
     def forward(self, x_t, sigma, data_dict, uncond=False):
         c_skip, c_out, c_in = self.get_scalings(sigma)
