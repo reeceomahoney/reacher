@@ -11,8 +11,8 @@ from rsl_rl.utils import store_code_state
 
 import wandb
 from locodiff.dataset import get_dataloaders_and_scaler
-from locodiff.policy import DiffusionPolicy
 from locodiff.models.transformer import DiffusionTransformer
+from locodiff.policy import DiffusionPolicy
 from locodiff.utils import ExponentialMovingAverage, InferenceContext
 from locodiff.wrappers import ScalingWrapper
 
@@ -85,7 +85,9 @@ class DiffusionRunner:
             if it % self.cfg.sim_interval == 0:
                 ep_infos = []
                 with InferenceContext(self):
-                    for _ in trange(self.num_steps_per_env, desc="Simulating... "):
+                    for _ in trange(
+                        self.num_steps_per_env, leave=False, desc="Simulating... "
+                    ):
                         actions = self.policy.act({"obs": obs})
                         obs, rewards, dones, infos = self.env.step(actions)
                         # move device
