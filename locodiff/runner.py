@@ -47,7 +47,7 @@ class DiffusionRunner:
         # variables
         self.log_dir = log_dir
         self.num_steps_per_env = int(
-            self.cfg.episode_length / (self.env.cfg.decimation * self.env.cfg.sim.dt)
+            self.cfg.episode_length / (self.env.cfg.decimation * self.env.cfg.sim.dt)  # type: ignore
         )
         self.current_learning_iteration = 0
 
@@ -56,7 +56,7 @@ class DiffusionRunner:
             # initialize wandb
             wandb.init(project=self.cfg.wandb_project, dir=log_dir, config=self.cfg)
             # make model directory
-            os.makedirs(os.path.join(log_dir, "models"), exist_ok=True)
+            os.makedirs(os.path.join(log_dir, "models"), exist_ok=True)  # type: ignore
             # save git diffs
             store_code_state(self.log_dir, [__file__])
 
