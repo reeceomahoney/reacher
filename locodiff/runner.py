@@ -60,10 +60,6 @@ class DiffusionRunner:
             # save git diffs
             store_code_state(self.log_dir, [__file__])
 
-    ############
-    # Training #
-    ############
-
     def learn(self):
         obs, _ = self.env.get_observations()
         obs = obs.to(self.device)
