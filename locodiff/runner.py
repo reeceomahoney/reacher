@@ -12,7 +12,7 @@ from rsl_rl.utils import store_code_state
 import wandb
 from locodiff.dataset import get_dataloaders_and_scaler
 from locodiff.policy import DiffusionPolicy
-from locodiff.transformer import DiffusionTransformer
+from locodiff.models.transformer import DiffusionTransformer
 from locodiff.utils import ExponentialMovingAverage, InferenceContext
 from locodiff.wrappers import ScalingWrapper
 
