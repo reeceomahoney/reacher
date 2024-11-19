@@ -154,7 +154,7 @@ class DiffusionRunner:
         )
         # evaluation
         if locs["it"] % self.cfg.eval_interval == 0:
-            wandb.log({"Loss/test_loss": locs["test_loss"]}, step=locs["it"])
+            wandb.log({"Loss/test_mse": locs["test_loss"]}, step=locs["it"])
         # simulation
         if locs["it"] % self.cfg.sim_interval == 0:
             for key in locs["ep_infos"][0]:
