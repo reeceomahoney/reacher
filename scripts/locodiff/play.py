@@ -58,6 +58,7 @@ simulation_app = app_launcher.app
 import gymnasium as gym
 import matplotlib.pylab as plt
 import os
+import statistics
 import torch
 
 import hydra
@@ -126,6 +127,13 @@ def main(agent_cfg: DictConfig):
     resume_path = os.path.join(get_latest_run(log_root_path), "models", "model.pt")
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(resume_path)
+
+    # test_loss = []
+    # for batch in runner.test_loader:
+    #     test_loss.append(runner.policy.test(batch))
+    # test_loss = statistics.mean(test_loss)
+    # print(f"Test loss: {test_loss}")
+    # exit()
 
     # obtain the trained policy for inference
     policy = runner.get_inference_policy(device=env.unwrapped.device)

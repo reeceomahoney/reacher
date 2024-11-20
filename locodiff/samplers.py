@@ -85,8 +85,7 @@ def sample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
     s_in = x_t.new_ones([x_t.shape[0]])
 
     num_steps = kwargs.get("num_steps", len(sigmas) - 1)
-
-    # set target
+    # inpainting data
     tgt = kwargs["tgt"]
     mask = kwargs["mask"]
     x_t = tgt * mask + x_t * (1 - mask)
@@ -96,7 +95,7 @@ def sample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
         t, t_next = -sigmas[i].log(), -sigmas[i + 1].log()
         h = t_next - t
         x_t = ((-t_next).exp() / (-t).exp()) * x_t - (-h).expm1() * denoised
-        # set target
+        # inpaint
         noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i]
         x_t = noised_tgt * mask + x_t * (1 - mask)
 
@@ -116,6 +115,12 @@ def sample_euler_ancestral(model, noise: torch.Tensor, data_dict: dict, **kwargs
     sigmas = kwargs["sigmas"]
     x_t = noise
     s_in = x_t.new_ones([x_t.shape[0]])
+
+    # inpainting mask
+    tgt = kwargs["tgt"]
+    mask = kwargs["mask"]
+    x_t = tgt * mask + x_t * (1 - mask)
+
     for i in range(len(sigmas) - 1):
         # compute x_{t-1}
         denoised = model(x_t, sigmas[i] * s_in, data_dict)
@@ -129,6 +134,9 @@ def sample_euler_ancestral(model, noise: torch.Tensor, data_dict: dict, **kwargs
         x_t = x_t + d * dt
         if sigma_down > 0:
             x_t = x_t + torch.randn_like(x_t) * sigma_up
+        # inpaint
+        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i]
+        x_t = noised_tgt * mask + x_t * (1 - mask)
 
     return x_t
 
