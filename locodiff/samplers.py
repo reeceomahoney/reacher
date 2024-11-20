@@ -97,7 +97,7 @@ def sample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
         h = t_next - t
         x_t = ((-t_next).exp() / (-t).exp()) * x_t - (-h).expm1() * denoised
         # set target
-        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i + 1]
+        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i]
         x_t = noised_tgt * mask + x_t * (1 - mask)
 
     return x_t
