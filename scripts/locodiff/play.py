@@ -33,7 +33,7 @@ parser.add_argument(
     help="Disable fabric and use USD I/O operations.",
 )
 parser.add_argument(
-    "--num_envs", type=int, default=16, help="Number of environments to simulate."
+    "--num_envs", type=int, default=1, help="Number of environments to simulate."
 )
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 # append RSL-RL cli arguments
@@ -56,6 +56,7 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import gymnasium as gym
+import matplotlib.pylab as plt
 import os
 import torch
 
@@ -68,6 +69,24 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 import isaac_ext.tasks  # noqa: F401
 from locodiff.runner import DiffusionRunner
 from vae.utils import get_latest_run
+
+
+def plot(root_pos, obs, root_pos_traj, ax):
+    # collect real and pred positions
+    root_pos.append(obs[:, :2])
+    root_pos_traj = root_pos_traj[0].cpu().numpy()
+    # reset plot
+    ax.clear()
+    ax.set_xlim(-4, 4)
+    ax.set_ylim(-4, 4)
+    # plot trajectories
+    root_pos_curr = torch.cat(root_pos, dim=0).cpu().numpy()
+    ax.plot(root_pos_curr[:, 0], root_pos_curr[:, 1], "b")
+    ax.plot(root_pos_traj[:, 0], root_pos_traj[:, 1], "r--")
+    plt.draw()
+    plt.pause(0.01)
+
+    return root_pos
 
 
 @hydra.main(
@@ -111,6 +130,13 @@ def main(agent_cfg: DictConfig):
     # obtain the trained policy for inference
     policy = runner.get_inference_policy(device=env.unwrapped.device)
 
+    # create figure
+    plt.ion()
+    _, ax = plt.subplots()
+    ax.set_xlim(-4, 4)
+    ax.set_ylim(-4, 4)
+    root_pos = []
+
     # reset environment
     obs, _ = env.get_observations()
     timestep = 0
@@ -119,17 +145,15 @@ def main(agent_cfg: DictConfig):
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
-            actions = policy({"obs": obs})
+            actions, root_pos_traj = policy({"obs": obs})
             # env stepping
             obs, _, dones, _ = env.step(actions)
 
         if dones.any():
             runner.policy.reset(dones)
-        if args_cli.video:
-            timestep += 1
-            # Exit the play loop after recording one video
-            if timestep == args_cli.video_length:
-                break
+
+        root_pos = plot(root_pos, obs, root_pos_traj, ax)
+        timestep += 1
 
     # close the simulator
     env.close()

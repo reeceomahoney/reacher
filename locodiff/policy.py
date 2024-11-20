@@ -75,6 +75,7 @@ class DiffusionPolicy(nn.Module):
     def act(self, data: dict) -> torch.Tensor:
         data = self.process(data)
         x = self.forward(data)
+        # root_pos_traj = x[:, :, :2]
         # reutrn action
         return x[:, 0, self.obs_dim :]
 
