@@ -6,7 +6,7 @@ logger: wandb
 wandb_project: locodiff_isaac
 num_iters: 5e5
 seed: 42
-resume: False
+resume: false
 episode_length: 5
 
 # training
@@ -45,6 +45,8 @@ policy:
   lr: 1e-4
   betas: [0.9, 0.999]
   num_iters: ${num_iters}
+  inpaint_obs: true
+  inpaint_final_obs: false
   device: ${device}
 
 dataset:

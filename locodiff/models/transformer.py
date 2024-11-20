@@ -21,6 +21,7 @@ class DiffusionTransformer(nn.Module):
         emb_dropout: float,
         attn_dropout: float,
         weight_decay: float,
+        inpaint_obs: bool,
         device: str,
     ):
         super().__init__()
@@ -28,20 +29,22 @@ class DiffusionTransformer(nn.Module):
         input_dim = obs_dim + act_dim
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
+        self.inpaint_obs = inpaint_obs
         self.device = device
 
         # embeddings
         self.input_emb = nn.Linear(input_dim, d_model)
         self.obs_emb = nn.Linear(obs_dim, d_model)
         self.sigma_emb = nn.Linear(1, d_model)
+
+        # change dims depending on if we're inpainting the obs
+        input_len = T + T_cond - 1 if inpaint_obs else T
+        cond_len = 1 if inpaint_obs else T_cond + 1
+
         # dropout and position encoding
+        self.pos_emb = SinusoidalPosEmb(d_model)(torch.arange(input_len), device)
+        self.cond_pos_emb = SinusoidalPosEmb(d_model)(torch.arange(cond_len), device)
         self.drop = nn.Dropout(emb_dropout)
-        self.pos_emb = (
-            SinusoidalPosEmb(d_model)(torch.arange(T)).unsqueeze(0).to(device)
-        )
-        self.cond_pos_emb = (
-            SinusoidalPosEmb(d_model)(torch.arange(T_cond + 1)).unsqueeze(0).to(device)
-        )
 
         # transformer
         self.decoder = nn.TransformerDecoder(
@@ -56,7 +59,6 @@ class DiffusionTransformer(nn.Module):
             ),
             num_layers=num_layers,
         )
-        # self.register_buffer("mask", self.generate_mask(T))
         # output
         self.ln_f = nn.LayerNorm(d_model)
         self.output_pred = nn.Linear(d_model, input_dim)
@@ -162,18 +164,21 @@ class DiffusionTransformer(nn.Module):
         return optim_groups
 
     def forward(self, x, sigma, data_dict, uncond=False):
-        # diffusion timestep
-        sigma_emb = self.sigma_emb(sigma.view(-1, 1, 1))
         # embeddings
+        sigma_emb = self.sigma_emb(sigma.view(-1, 1, 1))
         x_emb = self.input_emb(x)
-        obs_emb = self.obs_emb(data_dict["obs"])
+
+        # create conditioning
+        if self.inpaint_obs:
+            obs_emb = self.obs_emb(data_dict["obs"])
+            cond_emb = torch.cat([sigma_emb, obs_emb], dim=1)
+        else:
+            cond_emb = sigma_emb
         # add position encoding and dropout
-        cond_emb = torch.cat([sigma_emb, obs_emb], dim=1)
         cond_emb = self.drop(cond_emb + self.cond_pos_emb)
         x_emb = self.drop(x_emb + self.pos_emb)
 
         # output
-        # x = self.decoder(tgt=x_emb, memory=cond_emb, tgt_mask=self.mask)
         x = self.decoder(tgt=x_emb, memory=cond_emb)
         x = self.ln_f(x)
         return self.output_pred(x)

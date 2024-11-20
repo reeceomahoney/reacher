@@ -28,6 +28,8 @@ class DiffusionPolicy(nn.Module):
         lr: float,
         betas: tuple,
         num_iters: int,
+        inpaint_obs: bool,
+        inpaint_final_obs: bool,
         device,
     ):
         super().__init__()
@@ -55,6 +57,8 @@ class DiffusionPolicy(nn.Module):
         self.inference_sigmas = get_sigmas_exponential(
             sampling_steps, sigma_min, sigma_max, device
         )
+        self.inpaint_obs = inpaint_obs
+        self.inpaint_final_obs = inpaint_final_obs
 
         # optimizer and lr scheduler
         optim_groups = self.model.get_optim_groups()
@@ -64,10 +68,15 @@ class DiffusionPolicy(nn.Module):
     def forward(self, data: dict) -> torch.Tensor:
         B = data["obs"].shape[0]
         # sample noise
-        noise = torch.randn((B, self.T, self.input_dim)).to(self.device)
-        noise = noise * self.sigma_max
+        noise = torch.randn((B, self.T + self.T_cond - 1, self.input_dim))
+        noise = noise.to(self.device) * self.sigma_max
+
+        # create inpainting mask and target
+        tgt, mask = self.create_inpainting_data(noise, data)
+
         # inference
-        x = self.sampler(self.model, noise, data, sigmas=self.inference_sigmas)
+        kwargs = {"sigmas": self.inference_sigmas, "tgt": tgt, "mask": mask}
+        x = self.sampler(self.model, noise, data, **kwargs)
         x = self.normalizer.clip(x)
         x = self.normalizer.inverse_scale_output(x)
         return x
@@ -76,8 +85,8 @@ class DiffusionPolicy(nn.Module):
         data = self.process(data)
         x = self.forward(data)
         # root_pos_traj = x[:, :, :2]
-        # reutrn action
-        return x[:, 0, self.obs_dim :]
+        # return action
+        return x[:, self.T_cond - 1, self.obs_dim :]
 
     def update(self, data: dict) -> torch.Tensor:
         data = self.process(data)
@@ -121,8 +130,11 @@ class DiffusionPolicy(nn.Module):
         else:
             # training
             raw_obs = data["obs"]
-            input_obs = raw_obs[:, self.T_cond - 1 : self.T_cond + self.T - 1]
-            input_act = raw_action[:, self.T_cond - 1 : self.T_cond + self.T - 1]
+            if self.inpaint_obs:
+                input_obs, input_act = raw_obs, raw_action
+            else:
+                input_obs = raw_obs[:, self.T_cond - 1 : self.T_cond + self.T - 1]
+                input_act = raw_action[:, self.T_cond - 1 : self.T_cond + self.T - 1]
             input = torch.cat([input_obs, input_act], dim=-1)
             input = self.normalizer.scale_output(input)
 
@@ -137,6 +149,19 @@ class DiffusionPolicy(nn.Module):
 
     def dict_to_device(self, data):
         return {k: v.to(self.device) for k, v in data.items()}
+
+    def create_inpainting_data(self, noise: torch.Tensor, data: dict):
+        tgt = torch.zeros_like(noise)
+        mask = torch.zeros_like(noise)
+        if self.inpaint_obs:
+            tgt[:, : self.T_cond, : self.obs_dim] = data["obs"]
+            mask[:, : self.T_cond, : self.obs_dim] = 1.0
+        if self.inpaint_final_obs:
+            tgt[:, -1, 0] = 2.0
+            mask[:, -1, :2] = 1.0
+        tgt = self.normalizer.scale_output(tgt)
+
+        return tgt, mask
 
     @torch.no_grad()
     def make_sample_density(self, size):
