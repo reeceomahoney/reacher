@@ -170,10 +170,10 @@ class DiffusionTransformer(nn.Module):
 
         # create conditioning
         if self.inpaint_obs:
+            cond_emb = sigma_emb
+        else:
             obs_emb = self.obs_emb(data_dict["obs"])
             cond_emb = torch.cat([sigma_emb, obs_emb], dim=1)
-        else:
-            cond_emb = sigma_emb
         # add position encoding and dropout
         cond_emb = self.drop(cond_emb + self.cond_pos_emb)
         x_emb = self.drop(x_emb + self.pos_emb)
