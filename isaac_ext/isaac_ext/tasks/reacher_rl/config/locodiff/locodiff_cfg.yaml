@@ -20,7 +20,7 @@ use_ema: True
 #dims
 obs_dim: null
 act_dim: null
-T: 50
+T: 10
 T_cond: 2
 T_action: 1
 num_envs: 64
