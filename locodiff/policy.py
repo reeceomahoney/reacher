@@ -165,7 +165,7 @@ class DiffusionPolicy(nn.Module):
         if self.inpaint_final_obs:
             tgt[:, -1, 0] = 2.0
             mask[:, -1, :2] = 1.0
-        tgt = self.normalizer.scale_output(tgt)
+        # tgt = self.normalizer.scale_output(tgt)
 
         return tgt, mask
 
