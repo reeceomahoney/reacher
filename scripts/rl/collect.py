@@ -175,13 +175,15 @@ def main(agent_cfg: DictConfig):
                 # collect data
                 collector_interface.add("obs", obs)
                 collector_interface.add("actions", actions)
-                root_pos = env.unwrapped.scene["robot"].data.root_pos_w
+                root_pos = (
+                    env.unwrapped.scene["robot"].data.root_pos_w
+                    - env.unwrapped.scene.env_origins
+                )
                 collector_interface.add("root_pos", root_pos)
                 # dones indicate first step in episode to make data splitting easier
                 collector_interface.add("first_steps", dones)
                 # env stepping
                 obs, _, dones, _ = env.step(actions)
-
 
             timestep += 1
             pbar.update(1)
