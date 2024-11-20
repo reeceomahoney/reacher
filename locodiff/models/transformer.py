@@ -165,6 +165,7 @@ class DiffusionTransformer(nn.Module):
 
     def forward(self, x, sigma, data_dict, uncond=False):
         # embeddings
+        sigma = sigma.log() / 4
         sigma_emb = self.sigma_emb(sigma.view(-1, 1, 1))
         x_emb = self.input_emb(x)
 
