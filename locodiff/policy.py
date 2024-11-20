@@ -45,6 +45,7 @@ class DiffusionPolicy(nn.Module):
         # dims
         self.obs_dim = obs_dim
         self.input_dim = obs_dim + act_dim
+        self.input_len = T + T_cond - 1 if inpaint_obs else T
         self.T = T
         self.T_cond = T_cond
         self.num_envs = num_envs
@@ -68,7 +69,7 @@ class DiffusionPolicy(nn.Module):
     def forward(self, data: dict) -> torch.Tensor:
         B = data["obs"].shape[0]
         # sample noise
-        noise = torch.randn((B, self.T + self.T_cond - 1, self.input_dim))
+        noise = torch.randn((B, self.input_len, self.input_dim))
         noise = noise.to(self.device) * self.sigma_max
 
         # create inpainting mask and target
@@ -85,8 +86,13 @@ class DiffusionPolicy(nn.Module):
         data = self.process(data)
         x = self.forward(data)
         # root_pos_traj = x[:, :, :2]
-        # return action
-        return x[:, self.T_cond - 1, self.obs_dim :]
+
+        # extract action
+        if self.inpaint_obs:
+            action = x[:, self.T_cond - 1, self.obs_dim :]
+        else:
+            action = x[:, 0, self.obs_dim :]
+        return action
 
     def update(self, data: dict) -> torch.Tensor:
         data = self.process(data)
