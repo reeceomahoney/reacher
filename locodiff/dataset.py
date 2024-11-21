@@ -203,6 +203,7 @@ def get_dataloaders_and_scaler(
     num_workers: int,
     scaling: str,
     evaluating: bool,
+    task_name: str,
 ):
     # if evaluating:
     #     # Build a dummy scaler for evaluation
@@ -214,7 +215,7 @@ def get_dataloaders_and_scaler(
     # else:
 
     # Build the datasets
-    dataset = ExpertDataset(data_directory, T_cond)
+    dataset = ExpertDataset(data_directory, T_cond, task_name)
     train, val = random_split(dataset, [train_fraction, 1 - train_fraction])
     train_set = SlicerWrapper(train, T_cond, T)
     test_set = SlicerWrapper(val, T_cond, T)
