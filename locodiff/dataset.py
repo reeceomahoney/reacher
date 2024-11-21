@@ -14,6 +14,7 @@ class ExpertDataset(Dataset):
         self,
         data_directory: str,
         T_cond: int,
+        task_name: str,
         device="cpu",
     ):
         self.data_directory = data_directory
@@ -43,6 +44,10 @@ class ExpertDataset(Dataset):
         obs = torch.cat((data["data/root_pos"], data["data/obs"]), dim=-1)
         actions = data["data/actions"]
         first_steps = data["data/first_steps"]
+
+        if task_name == "Isaac-Locodiff-no-cmd":
+            obs = torch.cat([obs[..., :59], obs[..., 62:]])
+
         self.data = self.process_data(obs, actions, first_steps)
 
         obs_size = list(self.data["obs"].shape)
