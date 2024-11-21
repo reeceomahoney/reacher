@@ -36,7 +36,7 @@ parser.add_argument(
     "--num_envs", type=int, default=64, help="Number of environments to simulate."
 )
 parser.add_argument(
-    "--task", type=str, default="Isaac-Locodiff", help="Name of the task."
+    "--task", type=str, default="Isaac-Locodiff-no-cmd", help="Name of the task."
 )
 parser.add_argument(
     "--seed", type=int, default=None, help="Seed used for the environment"
