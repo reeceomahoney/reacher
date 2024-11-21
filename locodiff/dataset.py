@@ -46,7 +46,7 @@ class ExpertDataset(Dataset):
         first_steps = data["data/first_steps"]
 
         if task_name == "Isaac-Locodiff-no-cmd":
-            obs = torch.cat([obs[..., :59], obs[..., 62:]])
+            obs = torch.cat([obs[..., :59], obs[..., 62:]], dim=-1)
 
         self.data = self.process_data(obs, actions, first_steps)
 
