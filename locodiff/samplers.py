@@ -1,7 +1,7 @@
 import math
+import torch
 from typing import Callable
 
-import torch
 import torchsde
 
 
@@ -88,7 +88,8 @@ def sample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
     # inpainting data
     tgt = kwargs["tgt"]
     mask = kwargs["mask"]
-    x_t = tgt * mask + x_t * (1 - mask)
+    # unsure if this is necessary
+    # x_t = tgt * mask + x_t * (1 - mask)
 
     for i in range(num_steps):
         denoised = model(x_t, sigmas[i] * s_in, data_dict)
@@ -96,7 +97,7 @@ def sample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
         h = t_next - t
         x_t = ((-t_next).exp() / (-t).exp()) * x_t - (-h).expm1() * denoised
         # inpaint
-        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i]
+        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i + 1]
         x_t = noised_tgt * mask + x_t * (1 - mask)
 
     return x_t
@@ -119,7 +120,8 @@ def sample_euler_ancestral(model, noise: torch.Tensor, data_dict: dict, **kwargs
     # inpainting mask
     tgt = kwargs["tgt"]
     mask = kwargs["mask"]
-    x_t = tgt * mask + x_t * (1 - mask)
+    # unsure if this is necessary
+    # x_t = tgt * mask + x_t * (1 - mask)
 
     for i in range(len(sigmas) - 1):
         # compute x_{t-1}
@@ -135,7 +137,7 @@ def sample_euler_ancestral(model, noise: torch.Tensor, data_dict: dict, **kwargs
         if sigma_down > 0:
             x_t = x_t + torch.randn_like(x_t) * sigma_up
         # inpaint
-        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i]
+        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i + 1]
         x_t = noised_tgt * mask + x_t * (1 - mask)
 
     return x_t
