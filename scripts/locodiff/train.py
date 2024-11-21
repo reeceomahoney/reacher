@@ -88,8 +88,8 @@ torch.backends.cudnn.benchmark = False
 
 
 @hydra.main(
-    config_path="../../isaac_ext/isaac_ext/tasks/reacher_rl/config/locodiff",
-    config_name="locodiff_cfg.yaml",
+    config_path="../../isaac_ext/isaac_ext/tasks/reacher_rl/config/no_cmd",
+    config_name="no_cmd_cfg.yaml",
     version_base=None,
 )
 def main(agent_cfg: DictConfig):
