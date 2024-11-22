@@ -13,7 +13,6 @@ from omni.isaac.lab_tasks.utils import parse_env_cfg
 def dynamic_hydra_main(task_name: str):
     """
     Custom decorator to dynamically set Hydra's config_path based on the task name
-    and infer agent_cfg_entry_point accordingly.
     """
 
     def decorator(func):
