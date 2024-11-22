@@ -4,18 +4,12 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 import math
-import torch
 from dataclasses import MISSING
 
 import omni.isaac.lab.sim as sim_utils
-import omni.isaac.lab.utils.math as math_utils
-from omni.isaac.lab.assets import (
-    Articulation,
-    ArticulationCfg,
-    AssetBaseCfg,
-    RigidObject,
-)
-from omni.isaac.lab.envs import ManagerBasedEnv, ManagerBasedRLEnvCfg
+import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
+from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
+from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab.managers import ActionTermCfg as ActionTerm
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
@@ -28,75 +22,7 @@ from omni.isaac.lab.sensors import ContactSensorCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 
-import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
-
-##
-# Custom functions
-##
-
-
-def reset_joints_random(
-    env: ManagerBasedEnv,
-    env_ids: torch.Tensor,
-    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-):
-    """Reset the robot joints to a random position within its full range."""
-    # extract the used quantities (to enable type-hinting)
-    asset: Articulation = env.scene[asset_cfg.name]
-    idx = (env_ids[:, None], asset_cfg.joint_ids)
-    # get default joint state for shape
-    joint_pos = asset.data.default_joint_pos[idx].clone()
-    joint_vel = asset.data.default_joint_vel[idx].clone()
-
-    # sample position
-    joint_pos_limits = asset.data.soft_joint_pos_limits[idx]
-    joint_pos = math_utils.sample_uniform(
-        joint_pos_limits[..., 0],
-        joint_pos_limits[..., 1],
-        joint_pos.shape,
-        joint_pos.device,
-    )
-
-    # set velocities to zero
-    joint_vel = torch.zeros_like(joint_vel)
-
-    # set into the physics simulation
-    asset.write_joint_state_to_sim(
-        joint_pos, joint_vel, joint_ids=asset_cfg.joint_ids, env_ids=env_ids
-    )
-
-
-def reset_joints_default(
-    env: ManagerBasedEnv,
-    env_ids: torch.Tensor,
-    asset_cfg: SceneEntityCfg = SceneEntityCfg("robot"),
-):
-    """Reset selected joints to default values"""
-    # extract the used quantities (to enable type-hinting)
-    asset: Articulation = env.scene[asset_cfg.name]
-    idx = (env_ids[:, None], asset_cfg.joint_ids)
-    # get default joint state
-    joint_pos = asset.data.default_joint_pos[idx].clone()
-    joint_vel = asset.data.default_joint_vel[idx].clone()
-
-    # set into the physics simulation
-    asset.write_joint_state_to_sim(
-        joint_pos, joint_vel, joint_ids=asset_cfg.joint_ids, env_ids=env_ids
-    )
-
-
-def ee_pos_rot(
-    env: ManagerBasedEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
-) -> torch.Tensor:
-    """Asset ee position and orientation in the environment frame."""
-    # extract the used quantities (to enable type-hinting)
-    asset: RigidObject = env.scene[asset_cfg.name]
-    pos = asset.data.body_pos_w[:, asset_cfg.body_ids].squeeze() - asset.data.root_pos_w
-    quat = asset.data.body_state_w[:, asset_cfg.body_ids, 3:7].squeeze()
-    rot_mat = math_utils.matrix_from_quat(quat)
-    ortho6d = rot_mat[..., :2].reshape(-1, 6)
-    return torch.cat([pos, ortho6d], dim=-1)
-
+from . import mdp as custom_mdp
 
 ##
 # Scene definition
@@ -185,7 +111,7 @@ class ObservationsCfg:
         )
         # joint_vel = ObsTerm(func=mdp.joint_vel_rel)
         ee_state = ObsTerm(
-            func=ee_pos_rot,
+            func=custom_mdp.ee_pos_rot,
             params={"asset_cfg": SceneEntityCfg("robot", body_names=MISSING)},
         )
 
@@ -201,7 +127,7 @@ class EventCfg:
     """Configuration for events."""
 
     reset_robot_joints = EventTerm(
-        func=reset_joints_random,
+        func=custom_mdp.reset_joints_random,
         mode="reset",
         params={"asset_cfg": SceneEntityCfg("robot", joint_names=MISSING)},
     )
@@ -247,9 +173,7 @@ class ReacherEnvCfg(ManagerBasedRLEnvCfg):
     """Configuration for the reach end-effector pose tracking environment."""
 
     # Scene settings
-    scene: ReacherSceneCfg = ReacherSceneCfg(
-        num_envs=4096, env_spacing=2.5
-    )
+    scene: ReacherSceneCfg = ReacherSceneCfg(num_envs=4096, env_spacing=2.5)
     # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
     actions: ActionsCfg = ActionsCfg()

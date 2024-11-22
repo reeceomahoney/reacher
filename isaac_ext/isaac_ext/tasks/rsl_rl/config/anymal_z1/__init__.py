@@ -1,13 +1,13 @@
 import gymnasium as gym
 
-from . import rl_env_cfg
+from . import anymal_z1_env_cfg
 
 gym.register(
     id="Isaac-Reacher-RL",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": rl_env_cfg.ReacherRLEnvCfg,
+        "env_cfg_entry_point": anymal_z1_env_cfg.ReacherRLEnvCfg,
         "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherPPORunnerCfg",
     },
 )
@@ -17,7 +17,7 @@ gym.register(
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": rl_env_cfg.ReacherRLEnvCfg_PLAY,
+        "env_cfg_entry_point": anymal_z1_env_cfg.ReacherRLEnvCfg_PLAY,
         "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherPPORunnerCfg",
     },
 )
@@ -27,7 +27,7 @@ gym.register(
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": rl_env_cfg.ReacherRLFlatEnvCfg,
+        "env_cfg_entry_point": anymal_z1_env_cfg.ReacherRLFlatEnvCfg,
         "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherFlatPPORunnerCfg",
     },
 )
@@ -36,7 +36,7 @@ gym.register(
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": rl_env_cfg.ReacherRLFlatEnvCfg_PLAY,
+        "env_cfg_entry_point": anymal_z1_env_cfg.ReacherRLFlatEnvCfg_PLAY,
         "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherFlatPPORunnerCfg",
     },
 )
