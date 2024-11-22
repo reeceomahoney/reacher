@@ -36,7 +36,7 @@ parser.add_argument(
     "--num_envs", type=int, default=None, help="Number of environments to simulate."
 )
 parser.add_argument(
-    "--task", type=str, default="Isaac-Reacher-RL-Flat", help="Name of the task."
+    "--task", type=str, default="Isaac-Cartpole", help="Name of the task."
 )
 parser.add_argument(
     "--seed", type=int, default=None, help="Seed used for the environment"
@@ -68,7 +68,6 @@ import gymnasium as gym
 import os
 import torch
 
-import hydra
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 from rsl_rl.runners import OnPolicyRunner
@@ -80,6 +79,7 @@ from omni.isaac.lab_tasks.utils import get_checkpoint_path, parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
 import isaac_ext.tasks  # noqa: F401
+from locodiff.utils import dynamic_hydra_main
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -87,11 +87,7 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
 
-@hydra.main(
-    config_path="../../isaac_ext/isaac_ext/tasks/reacher_rl/config",
-    config_name="rl_cfg.yaml",
-    version_base=None,
-)
+@dynamic_hydra_main(args_cli.task)
 def main(agent_cfg: DictConfig):
     """Train with RSL-RL agent."""
     env_cfg = parse_env_cfg(
