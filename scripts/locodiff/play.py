@@ -108,6 +108,7 @@ def main(agent_cfg: DictConfig):
     if args_cli.num_envs is not None:
         agent_cfg.num_envs = args_cli.num_envs
     env_cfg.episode_length_s = agent_cfg.episode_length
+    agent_cfg.dataset.task_name = args_cli.task
 
     # create isaac environment
     env = gym.make(
