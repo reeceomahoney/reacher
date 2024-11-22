@@ -4,7 +4,7 @@ import os
 from omni.isaac.lab_tasks.manager_based.classic.cartpole.cartpole_env_cfg import CartpoleEnvCfg
 
 gym.register(
-    id="Isaac-Cartpole",
+    id="Isaac-Diffusion-Cartpole",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={

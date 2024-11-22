@@ -36,7 +36,7 @@ parser.add_argument(
     "--num_envs", type=int, default=None, help="Number of environments to simulate."
 )
 parser.add_argument(
-    "--task", type=str, default="Isaac-Cartpole", help="Name of the task."
+    "--task", type=str, default="Isaac-Diffusion-Cartpole", help="Name of the task."
 )
 parser.add_argument(
     "--seed", type=int, default=None, help="Seed used for the environment"
@@ -72,7 +72,11 @@ from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 from rsl_rl.runners import OnPolicyRunner
 
-from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
+from omni.isaac.lab.envs import (
+    DirectMARLEnv,
+    ManagerBasedRLEnvCfg,
+    multi_agent_to_single_agent,
+)
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 from omni.isaac.lab_tasks.utils import get_checkpoint_path, parse_env_cfg
@@ -88,7 +92,7 @@ torch.backends.cudnn.benchmark = False
 
 
 @dynamic_hydra_main(args_cli.task)
-def main(agent_cfg: DictConfig):
+def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     """Train with RSL-RL agent."""
     env_cfg = parse_env_cfg(
         args_cli.task, device=agent_cfg.device, num_envs=agent_cfg.num_envs

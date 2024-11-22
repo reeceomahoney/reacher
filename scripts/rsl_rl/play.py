@@ -35,7 +35,9 @@ parser.add_argument(
 parser.add_argument(
     "--num_envs", type=int, default=16, help="Number of environments to simulate."
 )
-parser.add_argument("--task", type=str, default=None, help="Name of the task.")
+parser.add_argument(
+    "--task", type=str, default="Isaac-Diffusion-Cartpole", help="Name of the task."
+)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -59,13 +61,15 @@ import gymnasium as gym
 import os
 import torch
 
-import hydra
 from omegaconf import DictConfig, OmegaConf
 from rsl_rl.runners import OnPolicyRunner
 
-from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
+from omni.isaac.lab.envs import (
+    DirectMARLEnv,
+    ManagerBasedRLEnvCfg,
+    multi_agent_to_single_agent,
+)
 from omni.isaac.lab.utils.dict import print_dict
-from omni.isaac.lab_tasks.utils import parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
     RslRlVecEnvWrapper,
     export_policy_as_jit,
@@ -73,27 +77,15 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
 )
 
 import isaac_ext.tasks  # noqa: F401
+from locodiff.utils import dynamic_hydra_main
 from vae.utils import get_latest_run
 
 
-@hydra.main(
-    config_path="../../isaac_ext/isaac_ext/tasks/reacher_rl/config",
-    config_name="rl_cfg.yaml",
-    version_base=None,
-)
-def main(agent_cfg: DictConfig):
+@dynamic_hydra_main(args_cli.task)
+def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     """Play with RSL-RL agent."""
-    # parse configuration
-    args_cli.task = "Isaac-Reacher-RL-Flat"
-    env_cfg = parse_env_cfg(
-        args_cli.task,
-        device=args_cli.device,
-        num_envs=args_cli.num_envs,
-        use_fabric=not args_cli.disable_fabric,
-    )
-
     # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "reacher_rl")
+    log_root_path = os.path.join("logs", "rsl_rl", "cartpole")
     log_root_path = os.path.abspath(log_root_path)
     resume_path = get_latest_run(log_root_path)
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
