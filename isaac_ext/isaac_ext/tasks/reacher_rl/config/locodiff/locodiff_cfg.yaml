@@ -60,6 +60,7 @@ dataset:
   num_workers: 4
   scaling: linear
   evaluating: false
+  task_name: null
 
 hydra:
   run:

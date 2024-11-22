@@ -36,7 +36,7 @@ parser.add_argument(
     "--num_envs", type=int, default=64, help="Number of environments to simulate."
 )
 parser.add_argument(
-    "--task", type=str, default="Isaac-Locodiff-no-cmd", help="Name of the task."
+    "--task", type=str, default="Isaac-Locodiff", help="Name of the task."
 )
 parser.add_argument(
     "--seed", type=int, default=None, help="Seed used for the environment"
@@ -68,18 +68,22 @@ import gymnasium as gym
 import os
 import torch
 
-import hydra
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
-from locodiff.runner import DiffusionRunner
 
-from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
+from omni.isaac.lab.envs import (
+    DirectMARLEnv,
+    ManagerBasedRLEnvCfg,
+    multi_agent_to_single_agent,
+)
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
-from omni.isaac.lab_tasks.utils import get_checkpoint_path, parse_env_cfg
+from omni.isaac.lab_tasks.utils import get_checkpoint_path
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
 import isaac_ext.tasks  # noqa: F401
+from locodiff.runner import DiffusionRunner
+from locodiff.utils import dynamic_hydra_main
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -87,16 +91,9 @@ torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
 
-@hydra.main(
-    config_path="../../isaac_ext/isaac_ext/tasks/reacher_rl/config/no_cmd",
-    config_name="no_cmd_cfg.yaml",
-    version_base=None,
-)
-def main(agent_cfg: DictConfig):
+@dynamic_hydra_main(args_cli.task)
+def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     """Train with RSL-RL agent."""
-    env_cfg = parse_env_cfg(
-        args_cli.task, device=agent_cfg.device, num_envs=agent_cfg.num_envs
-    )
     # override configurations with non-hydra CLI arguments
     agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
     env_cfg.scene.num_envs = (
@@ -154,9 +151,7 @@ def main(agent_cfg: DictConfig):
     env = RslRlVecEnvWrapper(env)
 
     # create runner from rsl-rl
-    runner = DiffusionRunner(
-        env, agent_cfg, log_dir=log_dir, device=agent_cfg.device
-    )
+    runner = DiffusionRunner(env, agent_cfg, log_dir=log_dir, device=agent_cfg.device)
     # write git state to logs
     # load the checkpoint
     if agent_cfg.resume:

@@ -1,6 +1,48 @@
+import gymnasium as gym
 import math
 import torch
 import torch.nn as nn
+from functools import wraps
+
+import hydra
+from omegaconf import DictConfig
+
+from omni.isaac.lab_tasks.utils import parse_env_cfg
+
+
+def dynamic_hydra_main(task_name: str):
+    """
+    Custom decorator to dynamically set Hydra's config_path based on the task name
+    and infer agent_cfg_entry_point accordingly.
+    """
+
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # get agent config
+            agent_cfg_entry_point = gym.spec(task_name).kwargs.get(
+                "agent_cfg_entry_point"
+            )
+            config_path, config_name = agent_cfg_entry_point.rsplit("/", 1)
+            print(f"[INFO]: Parsing configuration from: {config_path}")
+
+            @hydra.main(
+                config_path=config_path, config_name=config_name, version_base=None
+            )
+            def hydra_wrapper(agent_cfg: DictConfig):
+                env_cfg = parse_env_cfg(
+                    task_name,
+                    device=agent_cfg.device,
+                    num_envs=agent_cfg.num_envs,
+                )
+
+                return func(agent_cfg, env_cfg, *args, **kwargs)
+
+            return hydra_wrapper()
+
+        return wrapper
+
+    return decorator
 
 
 class SinusoidalPosEmb(nn.Module):
