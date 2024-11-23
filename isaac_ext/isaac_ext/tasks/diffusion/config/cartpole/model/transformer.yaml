@@ -1,6 +1,6 @@
 obs_dim: ${obs_dim}
 act_dim: ${act_dim}
-d_model: 256
+d_model: 128
 nhead: 4
 num_layers: 4
 T: ${T}
