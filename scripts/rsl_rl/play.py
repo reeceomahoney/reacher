@@ -89,6 +89,11 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     log_root_path = os.path.abspath(log_root_path)
     resume_path = get_latest_run(log_root_path)
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
+    log_dir = os.path.join("logs/rsl_rl/cartpole_collect")
+
+    if args_cli.num_envs is not None:
+        env_cfg.scene.num_envs = args_cli.num_envs
+        agent_cfg.num_envs = args_cli.num_envs
 
     # create isaac environment
     env = gym.make(

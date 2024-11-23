@@ -10,5 +10,5 @@ from omni.isaac.lab_tasks.manager_based.classic.cartpole.cartpole_env_cfg import
 class DiffusionCartpoleEnvCfg(CartpoleEnvCfg):
     def __post_init__(self):
         super().__post_init__()
-        self.actions.joint_effort.scale = 20.0
+        self.actions.joint_effort.scale = 1.0
         self.events.reset_pole_position.params["position_range"] = (-math.pi, math.pi)
