@@ -6,7 +6,7 @@ from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 import isaac_ext.tasks.rsl_rl.mdp as custom_mdp
-from isaac_ext.tasks.rsl_rl.config.rsl_rl_env_cfg import ReacherRLFlatEnvCfg
+from isaac_ext.tasks.rsl_rl.config.anymal_z1.anymal_z1_env_cfg import ReacherRLFlatEnvCfg
 
 
 @configclass
