@@ -1,10 +1,10 @@
 import gymnasium as gym
 import os
 
-from . import cartpole_env_cfg
+from isaac_ext.tasks.rsl_rl.config.cartpole import cartpole_env_cfg
 
 gym.register(
-    id="Isaac-Cartpole-RL",
+    id="Isaac-Cartpole-Diffusion",
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={

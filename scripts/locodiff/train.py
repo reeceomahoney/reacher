@@ -36,9 +36,6 @@ parser.add_argument(
     "--num_envs", type=int, default=64, help="Number of environments to simulate."
 )
 parser.add_argument(
-    "--task", type=str, default="Isaac-Locodiff", help="Name of the task."
-)
-parser.add_argument(
     "--seed", type=int, default=None, help="Seed used for the environment"
 )
 parser.add_argument(
@@ -90,8 +87,10 @@ torch.backends.cudnn.allow_tf32 = True
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
+task = "Isaac-Cartpole-Diffusion"
 
-@dynamic_hydra_main(args_cli.task)
+
+@dynamic_hydra_main(task)
 def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     """Train with RSL-RL agent."""
     # override configurations with non-hydra CLI arguments
@@ -120,7 +119,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
     # create isaac environment
     env = gym.make(
-        args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
+        task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
     )
     agent_cfg.obs_dim = env.observation_space["policy"].shape[-1]
     agent_cfg.act_dim = env.action_space.shape[-1]
