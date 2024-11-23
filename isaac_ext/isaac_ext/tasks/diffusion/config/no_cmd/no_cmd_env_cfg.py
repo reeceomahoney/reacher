@@ -5,8 +5,8 @@ from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
-import isaac_ext.tasks.reacher_rl.mdp as reacher_mdp
-from isaac_ext.tasks.reacher_rl.config.rl_env_cfg import ReacherRLFlatEnvCfg
+import isaac_ext.tasks.rsl_rl.mdp as custom_mdp
+from isaac_ext.tasks.rsl_rl.config.anymal_z1.anymal_z1_env_cfg import ReacherRLFlatEnvCfg
 
 
 @configclass
@@ -34,12 +34,12 @@ class ObservationsCfg:
         )
         joint_vel = ObsTerm(func=mdp.joint_vel_rel, noise=Unoise(n_min=-1.5, n_max=1.5))
         ee_state = ObsTerm(
-            func=reacher_mdp.ee_pose,
+            func=custom_mdp.ee_pose,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="gripperMover")},
         )
         # commands
         ee_commands = ObsTerm(
-            func=reacher_mdp.position_commands, params={"command_name": "ee_pose"}
+            func=custom_mdp.position_commands, params={"command_name": "ee_pose"}
         )
         # other terms
         actions = ObsTerm(func=mdp.last_action)
