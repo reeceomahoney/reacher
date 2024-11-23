@@ -65,13 +65,15 @@ import os
 import torch
 from tqdm import tqdm
 
-import hydra
 from omegaconf import DictConfig, OmegaConf
 from rsl_rl.runners import OnPolicyRunner
 
-from omni.isaac.lab.envs import DirectMARLEnv, multi_agent_to_single_agent
+from omni.isaac.lab.envs import (
+    DirectMARLEnv,
+    ManagerBasedRLEnvCfg,
+    multi_agent_to_single_agent,
+)
 from omni.isaac.lab.utils.dict import print_dict
-from omni.isaac.lab_tasks.utils import parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
     RslRlVecEnvWrapper,
     export_policy_as_jit,
@@ -79,37 +81,27 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
 )
 
 import isaac_ext.tasks  # noqa: F401
+from locodiff.utils import dynamic_hydra_main
 from vae.data_collector import DataCollector
 from vae.utils import get_latest_run
 
+task = "Isaac-Diffusion-Cartpole"
 
-@hydra.main(
-    config_path="../../isaac_ext/isaac_ext/tasks/reacher_rl/config",
-    config_name="rl_cfg.yaml",
-    version_base=None,
-)
-def main(agent_cfg: DictConfig):
+
+@dynamic_hydra_main(task)
+def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     """Play with RSL-RL agent."""
-    # parse configuration
-    args_cli.task = "Isaac-Reacher-RL-Flat"
-    env_cfg = parse_env_cfg(
-        args_cli.task,
-        device=args_cli.device,
-        num_envs=args_cli.num_envs,
-        use_fabric=not args_cli.disable_fabric,
-    )
-
     # load policy
-    log_root_path = os.path.join("logs", "reacher_rl")
+    log_root_path = os.path.join("logs/rsl_rl/cartpole")
     log_root_path = os.path.abspath(log_root_path)
     resume_path = get_latest_run(log_root_path)
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
     # create log directory
-    log_dir = os.path.join("logs", "reacher_rl_record")
+    log_dir = os.path.join("logs/rsl_rl/cartpole_collect")
 
     # create isaac environment
     env = gym.make(
-        args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
+        task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
     )
     # wrap for video recording
     if args_cli.video:
@@ -171,7 +163,7 @@ def main(agent_cfg: DictConfig):
         while simulation_app.is_running():
             with torch.inference_mode():
                 # agent stepping
-                actions = policy(obs)
+                actions = torch.tensor(env.action_space.sample()).to(env.device)
                 # collect data
                 collector_interface.add("obs", obs)
                 collector_interface.add("actions", actions)
