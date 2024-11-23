@@ -12,4 +12,4 @@ class DiffusionCartpoleEnvCfg(CartpoleEnvCfg):
         super().__post_init__()
         self.actions.joint_effort.scale = 5.0
         self.events.reset_pole_position.params["position_range"] = (-math.pi, math.pi)
-        self.terminations.cart_out_of_bounds.params["bounds"] = (-10.0, 10.0)
+        self.terminations.cart_out_of_bounds.params["bounds"] = (-6.0, 6.0)
