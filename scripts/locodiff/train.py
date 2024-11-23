@@ -104,7 +104,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         else agent_cfg.num_iters
     )
     env_cfg.episode_length_s = agent_cfg.episode_length
-    agent_cfg.dataset.task_name = args_cli.task
+    agent_cfg.dataset.task_name = task
 
     # set the environment seed
     # note: certain randomizations occur in the environment initialization so we set the seed here
