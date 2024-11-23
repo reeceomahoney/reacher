@@ -36,7 +36,7 @@ parser.add_argument(
     "--num_envs", type=int, default=16, help="Number of environments to simulate."
 )
 parser.add_argument("--task", type=str, default=None, help="Name of the task.")
-parser.add_argument("--num_timesteps", type=str, default=128, help="Name of the task.")
+parser.add_argument("--num_timesteps", type=int, default=128, help="Name of the task.")
 parser.add_argument(
     "--filename", type=str, default="hdf_dataset", help="Basename of output file."
 )
@@ -98,6 +98,10 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     print(f"[INFO] Loading experiment from directory: {log_root_path}")
     # create log directory
     log_dir = os.path.join("logs/rsl_rl/cartpole_collect")
+
+    if args_cli.num_envs is not None:
+        env_cfg.scene.num_envs = args_cli.num_envs
+        agent_cfg.num_envs = args_cli.num_envs
 
     # create isaac environment
     env = gym.make(
@@ -167,11 +171,12 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
                 # collect data
                 collector_interface.add("obs", obs)
                 collector_interface.add("actions", actions)
-                root_pos = (
-                    env.unwrapped.scene["robot"].data.root_pos_w
-                    - env.unwrapped.scene.env_origins
-                )
-                collector_interface.add("root_pos", root_pos)
+                # root_pos
+                # root_pos = (
+                #     env.unwrapped.scene["robot"].data.root_pos_w
+                #     - env.unwrapped.scene.env_origins
+                # )
+                # collector_interface.add("root_pos", root_pos)
                 # dones indicate first step in episode to make data splitting easier
                 collector_interface.add("first_steps", dones)
                 # env stepping
