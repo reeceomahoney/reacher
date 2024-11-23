@@ -41,12 +41,15 @@ class ExpertDataset(Dataset):
             data[k] = torch.from_numpy(v).transpose(0, 1)
 
         # build obs
-        obs = torch.cat((data["data/root_pos"], data["data/obs"]), dim=-1)
+        if task_name.startswith("Isaac-Locodiff"):
+            obs = torch.cat((data["data/root_pos"], data["data/obs"]), dim=-1)
+            if task_name == "Isaac-Locodiff-no-cmd":
+                obs = torch.cat([obs[..., :59], obs[..., 62:]], dim=-1)
+        else:
+            obs = data["data/obs"]
+        # get other data
         actions = data["data/actions"]
         first_steps = data["data/first_steps"]
-
-        if task_name == "Isaac-Locodiff-no-cmd":
-            obs = torch.cat([obs[..., :59], obs[..., 62:]], dim=-1)
 
         self.data = self.process_data(obs, actions, first_steps)
 
