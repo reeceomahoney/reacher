@@ -35,9 +35,6 @@ parser.add_argument(
 parser.add_argument(
     "--num_envs", type=int, default=16, help="Number of environments to simulate."
 )
-parser.add_argument(
-    "--task", type=str, default="Isaac-Diffusion-Cartpole", help="Name of the task."
-)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -80,8 +77,10 @@ import isaac_ext.tasks  # noqa: F401
 from locodiff.utils import dynamic_hydra_main
 from vae.utils import get_latest_run
 
+task = "Isaac-Cartpole-RL"
 
-@dynamic_hydra_main(args_cli.task)
+
+@dynamic_hydra_main(task)
 def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     """Play with RSL-RL agent."""
     # specify directory for logging experiments
@@ -97,7 +96,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
     # create isaac environment
     env = gym.make(
-        args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
+        task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
     )
     # wrap for video recording
     if args_cli.video:

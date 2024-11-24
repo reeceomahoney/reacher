@@ -85,7 +85,7 @@ from locodiff.utils import dynamic_hydra_main
 from vae.data_collector import DataCollector
 from vae.utils import get_latest_run
 
-task = "Isaac-Diffusion-Cartpole"
+task = "Isaac-Cartpole-RL"
 
 
 @dynamic_hydra_main(task)
@@ -167,7 +167,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         while simulation_app.is_running():
             with torch.inference_mode():
                 # agent stepping
-                actions = torch.tensor(env.action_space.sample()).to(env.device)
+                actions = policy(obs)
                 # collect data
                 collector_interface.add("obs", obs)
                 collector_interface.add("actions", actions)

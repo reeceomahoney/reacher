@@ -35,7 +35,6 @@ parser.add_argument(
 parser.add_argument(
     "--num_envs", type=int, default=1, help="Number of environments to simulate."
 )
-parser.add_argument("--task", type=str, default=None, help="Name of the task.")
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -61,14 +60,14 @@ import os
 import statistics
 import torch
 
-import hydra
 from omegaconf import DictConfig
 
-from omni.isaac.lab_tasks.utils import parse_env_cfg
+from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
 import isaac_ext.tasks  # noqa: F401
 from locodiff.runner import DiffusionRunner
+from locodiff.utils import dynamic_hydra_main
 from vae.utils import get_latest_run
 
 
@@ -90,29 +89,21 @@ def plot(root_pos, obs, root_pos_traj, ax):
     return root_pos
 
 
-@hydra.main(
-    config_path="../../isaac_ext/isaac_ext/tasks/reacher_rl/config/locodiff",
-    config_name="locodiff_cfg.yaml",
-    version_base=None,
-)
-def main(agent_cfg: DictConfig):
+task = "Isaac-Cartpole-Diffusion"
+
+
+@dynamic_hydra_main(task)
+def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     """Play with RSL-RL agent."""
-    # parse configuration
-    args_cli.task = "Isaac-Locodiff"
-    env_cfg = parse_env_cfg(
-        args_cli.task,
-        device=args_cli.device,
-        num_envs=args_cli.num_envs,
-        use_fabric=not args_cli.disable_fabric,
-    )
     if args_cli.num_envs is not None:
+        env_cfg.scene.num_envs = args_cli.num_envs
         agent_cfg.num_envs = args_cli.num_envs
     env_cfg.episode_length_s = agent_cfg.episode_length
-    agent_cfg.dataset.task_name = args_cli.task
+    agent_cfg.dataset.task_name = task
 
     # create isaac environment
     env = gym.make(
-        args_cli.task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
+        task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
     )
 
     # wrap around environment for rsl-rl
@@ -124,7 +115,7 @@ def main(agent_cfg: DictConfig):
     runner = DiffusionRunner(env, agent_cfg, device=agent_cfg.device)
 
     # load the checkpoint
-    log_root_path = os.path.abspath(os.path.join("logs", "locodiff"))
+    log_root_path = os.path.abspath("logs/diffusion/cartpole")
     resume_path = os.path.join(get_latest_run(log_root_path), "models", "model.pt")
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(resume_path)
@@ -140,11 +131,11 @@ def main(agent_cfg: DictConfig):
     policy = runner.get_inference_policy(device=env.unwrapped.device)
 
     # create figure
-    plt.ion()
-    _, ax = plt.subplots()
-    ax.set_xlim(-4, 4)
-    ax.set_ylim(-4, 4)
-    root_pos = []
+    # plt.ion()
+    # _, ax = plt.subplots()
+    # ax.set_xlim(-4, 4)
+    # ax.set_ylim(-4, 4)
+    # root_pos = []
 
     # reset environment
     obs, _ = env.get_observations()
@@ -154,14 +145,14 @@ def main(agent_cfg: DictConfig):
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
-            actions, root_pos_traj = policy({"obs": obs})
+            actions = policy({"obs": obs})
             # env stepping
             obs, _, dones, _ = env.step(actions)
 
         if dones.any():
             runner.policy.reset(dones)
 
-        root_pos = plot(root_pos, obs, root_pos_traj, ax)
+        # root_pos = plot(root_pos, obs, root_pos_traj, ax)
         timestep += 1
 
     # close the simulator

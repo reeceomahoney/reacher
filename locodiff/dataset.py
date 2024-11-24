@@ -205,18 +205,8 @@ def get_dataloaders_and_scaler(
     test_batch_size: int,
     num_workers: int,
     scaling: str,
-    evaluating: bool,
     task_name: str,
 ):
-    # if evaluating:
-    #     # Build a dummy scaler for evaluation
-    #     x_data = torch.zeros((2, obs_dim), device=device)
-    #     y_data = torch.zeros((2, act_dim), device=device)
-    #     scaler = Scaler(x_data, y_data, scaling, device)
-    #
-    #     train_dataloader, test_dataloader = None, None
-    # else:
-
     # Build the datasets
     dataset = ExpertDataset(data_directory, T_cond, task_name)
     train, val = random_split(dataset, [train_fraction, 1 - train_fraction])
