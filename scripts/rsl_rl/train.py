@@ -36,7 +36,7 @@ parser.add_argument(
     "--num_envs", type=int, default=None, help="Number of environments to simulate."
 )
 parser.add_argument(
-    "--task", type=str, default="Isaac-Cartpole-Diffusion", help="Name of the task."
+    "--task", type=str, default="Isaac-Cartpole-RL", help="Name of the task."
 )
 parser.add_argument(
     "--seed", type=int, default=None, help="Seed used for the environment"
