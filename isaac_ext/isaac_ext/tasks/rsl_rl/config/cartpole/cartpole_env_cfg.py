@@ -11,7 +11,7 @@ class DiffusionCartpoleEnvCfg(CartpoleEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         # robot
-        self.scene.robot.actuators["cart_actuator"].effort_limit = 20.0
+        self.scene.robot.actuators["cart_actuator"].effort_limit = 5.0
         # mdp
-        self.actions.joint_effort.scale = 20.0
+        self.actions.joint_effort.scale = 5.0
         self.events.reset_pole_position.params["position_range"] = (-math.pi, math.pi)
