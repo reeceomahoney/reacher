@@ -85,14 +85,14 @@ class DiffusionPolicy(nn.Module):
     def act(self, data: dict) -> torch.Tensor:
         data = self.process(data)
         x = self.forward(data)
-        root_pos_traj = x[:, :, :1]
+        # root_pos_traj = x[:, :, :1]
 
         # extract action
         if self.inpaint_obs:
             action = x[:, self.T_cond - 1, self.obs_dim :]
         else:
             action = x[:, 0, self.obs_dim :]
-        return action, root_pos_traj
+        return action
 
     def update(self, data: dict) -> torch.Tensor:
         data = self.process(data)
