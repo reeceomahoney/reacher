@@ -1,4 +1,3 @@
-_target_: locodiff.unet.ConditionalUnet1D
 obs_dim: ${obs_dim}
 input_dim: ${act_dim}
 T_cond: ${T_cond}
