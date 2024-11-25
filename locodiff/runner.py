@@ -89,7 +89,7 @@ class DiffusionRunner:
                     for _ in trange(
                         self.num_steps_per_env, leave=False, desc="Simulating... "
                     ):
-                        actions = self.policy.act({"obs": obs})
+                        actions = self.policy.act({"obs": obs})["action"]
                         obs, rewards, dones, infos = self.env.step(actions)
                         # move device
                         obs, rewards, dones = (

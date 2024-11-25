@@ -83,7 +83,7 @@ def plot(root_pos, obs, root_pos_traj, ax):
     # root_pos_curr = torch.cat(root_pos, dim=0).cpu().numpy()
     # ax.plot(root_pos_curr[:, 0], root_pos_curr[:, 1], "b")
     # ax.plot(root_pos_traj[:, 0], root_pos_traj[:, 1], "r--")
-    ax.plot(root_pos_traj)
+    ax.plot(root_pos_traj[:, 0])
     plt.draw()
     plt.pause(0.01)
 
@@ -146,14 +146,14 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
-            actions, root_pos_traj = policy({"obs": obs})
+            output = policy({"obs": obs})
             # env stepping
-            obs, _, dones, _ = env.step(actions)
+            obs, _, dones, _ = env.step(output["action"])
 
         if dones.any():
             runner.policy.reset(dones)
 
-        root_pos = plot(root_pos, obs, root_pos_traj, ax)
+        root_pos = plot(root_pos, obs, output["obs_traj"], ax)
         timestep += 1
 
     # close the simulator
