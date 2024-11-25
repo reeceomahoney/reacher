@@ -39,7 +39,7 @@ policy:
   sampler_type: ddim
   sigma_data: 0.5
   sigma_min: 0.001
-  sigma_max: 1
+  sigma_max: 80
   cond_lambda: 1
   cond_mask_prob: ${cond_mask_prob}
   lr: 1e-4
