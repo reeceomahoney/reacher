@@ -73,16 +73,17 @@ from vae.utils import get_latest_run
 
 def plot(root_pos, obs, root_pos_traj, ax):
     # collect real and pred positions
-    root_pos.append(obs[:, :2])
+    root_pos.append(obs[:, :1])
     root_pos_traj = root_pos_traj[0].cpu().numpy()
     # reset plot
     ax.clear()
-    ax.set_xlim(-4, 4)
-    ax.set_ylim(-4, 4)
+    # ax.set_xlim(-4, 4)
+    # ax.set_ylim(-4, 4)
     # plot trajectories
-    root_pos_curr = torch.cat(root_pos, dim=0).cpu().numpy()
-    ax.plot(root_pos_curr[:, 0], root_pos_curr[:, 1], "b")
-    ax.plot(root_pos_traj[:, 0], root_pos_traj[:, 1], "r--")
+    # root_pos_curr = torch.cat(root_pos, dim=0).cpu().numpy()
+    # ax.plot(root_pos_curr[:, 0], root_pos_curr[:, 1], "b")
+    # ax.plot(root_pos_traj[:, 0], root_pos_traj[:, 1], "r--")
+    ax.plot(root_pos_traj)
     plt.draw()
     plt.pause(0.01)
 
@@ -131,11 +132,11 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     policy = runner.get_inference_policy(device=env.unwrapped.device)
 
     # create figure
-    # plt.ion()
-    # _, ax = plt.subplots()
-    # ax.set_xlim(-4, 4)
-    # ax.set_ylim(-4, 4)
-    # root_pos = []
+    plt.ion()
+    _, ax = plt.subplots()
+    ax.set_xlim(-4, 4)
+    ax.set_ylim(-4, 4)
+    root_pos = []
 
     # reset environment
     obs, _ = env.get_observations()
@@ -145,14 +146,14 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
-            actions = policy({"obs": obs})
+            actions, root_pos_traj = policy({"obs": obs})
             # env stepping
             obs, _, dones, _ = env.step(actions)
 
         if dones.any():
             runner.policy.reset(dones)
 
-        # root_pos = plot(root_pos, obs, root_pos_traj, ax)
+        root_pos = plot(root_pos, obs, root_pos_traj, ax)
         timestep += 1
 
     # close the simulator
