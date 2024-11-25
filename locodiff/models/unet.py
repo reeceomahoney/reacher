@@ -1,9 +1,9 @@
 import logging
+import torch
+import torch.nn as nn
 from functools import partial
 
 import einops
-import torch
-import torch.nn as nn
 from einops.layers.torch import Rearrange
 
 from locodiff.utils import SinusoidalPosEmb
@@ -189,7 +189,7 @@ class ConditionalUnet1D(nn.Module):
         )
 
         self.sigma_encoder = nn.Sequential(
-            SinusoidalPosEmb(cond_embed_dim),
+            SinusoidalPosEmb(cond_embed_dim, device),
             nn.Linear(cond_embed_dim, cond_embed_dim * 4),
             nn.Mish(),
             nn.Linear(cond_embed_dim * 4, cond_embed_dim),

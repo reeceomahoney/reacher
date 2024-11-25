@@ -42,8 +42,8 @@ class DiffusionTransformer(nn.Module):
         cond_len = 1 if inpaint_obs else T_cond + 1
 
         # dropout and position encoding
-        self.pos_emb = SinusoidalPosEmb(d_model)(torch.arange(input_len), device)
-        self.cond_pos_emb = SinusoidalPosEmb(d_model)(torch.arange(cond_len), device)
+        self.pos_emb = SinusoidalPosEmb(d_model, device)(torch.arange(input_len))
+        self.cond_pos_emb = SinusoidalPosEmb(d_model, device)(torch.arange(cond_len))
         self.drop = nn.Dropout(emb_dropout)
 
         # transformer
