@@ -12,6 +12,7 @@ from rsl_rl.utils import store_code_state
 import wandb
 from locodiff.dataset import get_dataloaders_and_scaler
 from locodiff.models.transformer import DiffusionTransformer
+from locodiff.models.unet import ConditionalUnet1D
 from locodiff.policy import DiffusionPolicy
 from locodiff.utils import ExponentialMovingAverage, InferenceContext
 from locodiff.wrappers import ScalingWrapper
@@ -33,7 +34,7 @@ class DiffusionRunner:
             get_dataloaders_and_scaler(**self.cfg.dataset)
         )
         model = ScalingWrapper(
-            model=DiffusionTransformer(**self.cfg.model),
+            model=ConditionalUnet1D(**self.cfg.model),
             sigma_data=agent_cfg.policy.sigma_data,
         )
         self.policy = DiffusionPolicy(model, self.normalizer, **self.cfg.policy)
