@@ -123,6 +123,7 @@ class ConditionalUnet1D(nn.Module):
         device,
         cond_mask_prob,
         weight_decay: float,
+        inpaint_obs: bool,
         local_cond_dim=None,
         kernel_size=3,
         n_groups=8,
@@ -135,7 +136,9 @@ class ConditionalUnet1D(nn.Module):
         in_out = list(zip(all_dims[:-1], all_dims[1:]))
 
         # diffusion step embedding and observations
-        cond_dim = cond_embed_dim + (obs_dim * T_cond)
+        cond_dim = (
+            cond_embed_dim if inpaint_obs else cond_embed_dim + (obs_dim * T_cond)
+        )
 
         CondResBlock = partial(
             ConditionalResidualBlock1D,
@@ -198,6 +201,7 @@ class ConditionalUnet1D(nn.Module):
 
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
+        self.inapint_obs = inpaint_obs
 
         self.local_cond_encoder = local_cond_encoder
         self.up_modules = up_modules
@@ -226,10 +230,12 @@ class ConditionalUnet1D(nn.Module):
         """
         sample = einops.rearrange(noised_action, "b t h -> b h t")
 
-        obs = data_dict["obs"].reshape(sample.shape[0], -1)
         sigma_emb = self.sigma_encoder(sigma).squeeze(0)
-
-        global_feature = torch.cat([sigma_emb, obs], dim=-1)
+        if self.inapint_obs:
+            global_feature = sigma_emb
+        else:
+            obs = data_dict["obs"].reshape(sample.shape[0], -1)
+            global_feature = torch.cat([sigma_emb, obs], dim=-1)
 
         # encode local features
         h_local = list()

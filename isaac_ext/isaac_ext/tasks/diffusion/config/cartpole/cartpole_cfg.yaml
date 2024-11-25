@@ -45,7 +45,7 @@ policy:
   lr: 1e-4
   betas: [0.9, 0.999]
   num_iters: ${num_iters}
-  inpaint_obs: false
+  inpaint_obs: true
   inpaint_final_obs: false
   device: ${device}
 
