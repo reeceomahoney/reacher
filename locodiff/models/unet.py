@@ -116,7 +116,7 @@ class ConditionalUnet1D(nn.Module):
     def __init__(
         self,
         obs_dim,
-        input_dim,
+        act_dim,
         T_cond,
         cond_embed_dim,
         down_dims,
@@ -129,12 +129,13 @@ class ConditionalUnet1D(nn.Module):
         cond_predict_scale=False,
     ):
         super().__init__()
+        input_dim = obs_dim + act_dim
         all_dims = [input_dim] + list(down_dims)
         start_dim = down_dims[0]
         in_out = list(zip(all_dims[:-1], all_dims[1:]))
 
-        # diffusion step embedding, observations, vel_cmd, return
-        cond_dim = cond_embed_dim + (obs_dim * T_cond) + 4
+        # diffusion step embedding and observations
+        cond_dim = cond_embed_dim + (obs_dim * T_cond)
 
         CondResBlock = partial(
             ConditionalResidualBlock1D,
@@ -226,7 +227,7 @@ class ConditionalUnet1D(nn.Module):
         sample = einops.rearrange(noised_action, "b t h -> b h t")
 
         obs = data_dict["obs"].reshape(sample.shape[0], -1)
-        sigma_emb = self.sigma_encoder(sigma)
+        sigma_emb = self.sigma_encoder(sigma).squeeze(0)
 
         global_feature = torch.cat([sigma_emb, obs], dim=-1)
 
