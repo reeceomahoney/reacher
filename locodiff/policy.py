@@ -166,10 +166,12 @@ class DiffusionPolicy(nn.Module):
             tgt[:, : self.T_cond, : self.obs_dim] = data["obs"]
             mask[:, : self.T_cond, : self.obs_dim] = 1.0
         if self.inpaint_final_obs:
-            # tgt_pos = torch.tensor([1.0]).to(self.device)
-            # tgt_pos = self.normalizer.scale_pos(tgt_pos)
-            # tgt[:, -1, 0] = tgt_pos
-            tgt[:, -1, 0] = data["input"][:, -1, 0]
+            if data["input"] is None:
+                tgt_pos = torch.tensor([1.0]).to(self.device)
+                tgt_pos = self.normalizer.scale_pos(tgt_pos)
+                tgt[:, -1, 0] = tgt_pos
+            else:
+                tgt[:, -1, 0] = data["input"][:, -1, 0]
             mask[:, -1, 0] = 1.0
 
         return tgt, mask
