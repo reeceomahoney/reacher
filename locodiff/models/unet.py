@@ -230,6 +230,7 @@ class ConditionalUnet1D(nn.Module):
         """
         sample = einops.rearrange(noised_action, "b t h -> b h t")
 
+        sigma = sigma.log() / 4
         sigma_emb = self.sigma_encoder(sigma).squeeze(0)
         if self.inapint_obs:
             global_feature = sigma_emb
