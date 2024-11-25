@@ -96,10 +96,13 @@ class DiffusionPolicy(nn.Module):
 
     def update(self, data: dict) -> torch.Tensor:
         data = self.process(data)
-        # calculate loss
         noise = torch.randn_like(data["input"])
+        # create inpainting mask and target
+        tgt, mask = self.create_inpainting_data(noise, data)
+        kwargs = {"tgt": tgt, "mask": mask}
+        # calculate loss
         sigma = self.make_sample_density(len(noise))
-        loss = self.model.loss(noise, sigma, data)
+        loss = self.model.loss(noise, sigma, data, **kwargs)
 
         # update model
         self.optimizer.zero_grad()
