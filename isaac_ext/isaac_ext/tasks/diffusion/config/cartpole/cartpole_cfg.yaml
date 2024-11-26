@@ -26,7 +26,7 @@ T_action: 1
 num_envs: 64
 
 # diffusion
-sampling_steps: 10
+sampling_steps: 20
 cond_mask_prob: 0
 
 policy:
@@ -36,7 +36,7 @@ policy:
   T_cond: ${T_cond}
   num_envs: ${num_envs}
   sampling_steps: ${sampling_steps}
-  sampler_type: ddim
+  sampler_type: ddpm
   sigma_data: 0.5
   sigma_min: 0.001
   sigma_max: 80
@@ -46,7 +46,7 @@ policy:
   betas: [0.9, 0.999]
   num_iters: ${num_iters}
   inpaint_obs: true
-  inpaint_final_obs: false
+  inpaint_final_obs: true
   device: ${device}
 
 dataset:

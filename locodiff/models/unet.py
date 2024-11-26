@@ -124,6 +124,7 @@ class ConditionalUnet1D(nn.Module):
         cond_mask_prob,
         weight_decay: float,
         inpaint_obs: bool,
+        sampler_type: str,
         local_cond_dim=None,
         kernel_size=3,
         n_groups=8,
@@ -202,6 +203,7 @@ class ConditionalUnet1D(nn.Module):
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
         self.inapint_obs = inpaint_obs
+        self.sample_type = sampler_type
 
         self.local_cond_encoder = local_cond_encoder
         self.up_modules = up_modules
@@ -230,6 +232,8 @@ class ConditionalUnet1D(nn.Module):
         """
         sample = einops.rearrange(noised_action, "b t h -> b h t")
 
+        if self.sample_type != "ddpm":
+            sigma = sigma.log() / 4
         sigma_emb = self.sigma_encoder(sigma).squeeze(0)
         if self.inapint_obs:
             global_feature = sigma_emb

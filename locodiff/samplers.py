@@ -86,19 +86,19 @@ def sample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
 
     num_steps = kwargs.get("num_steps", len(sigmas) - 1)
     # inpainting data
-    tgt = kwargs["tgt"]
-    mask = kwargs["mask"]
+    # tgt = kwargs["tgt"]
+    # mask = kwargs["mask"]
     # unsure if this is necessary
     # x_t = tgt * mask + x_t * (1 - mask)
 
     for i in range(num_steps):
-        denoised = model(x_t, sigmas[i] * s_in, data_dict)
+        denoised = model(x_t, sigmas[i] * s_in, data_dict, **kwargs)
         t, t_next = -sigmas[i].log(), -sigmas[i + 1].log()
         h = t_next - t
         x_t = ((-t_next).exp() / (-t).exp()) * x_t - (-h).expm1() * denoised
         # inpaint
-        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i]
-        x_t = noised_tgt * mask + x_t * (1 - mask)
+        # noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i]
+        # x_t = noised_tgt * mask + x_t * (1 - mask)
 
     return x_t
 
@@ -196,11 +196,21 @@ def sample_ddpm(model, noise: torch.Tensor, data_dict: dict, **kwargs):
     """
     noise_scheduler = kwargs["noise_scheduler"]
     x_t = noise
+    # inpainting mask
+    tgt = kwargs["tgt"]
+    mask = kwargs["mask"]
 
-    for t in noise_scheduler.timesteps:
+    for idx, t in enumerate(noise_scheduler.timesteps):
         t_pt = t.float().to(noise.device)
         output = model(x_t, t_pt.expand(x_t.shape[0]), data_dict)
         x_t = noise_scheduler.step(output, t, x_t).prev_sample
+        # inpaint
+        if idx < len(noise_scheduler.timesteps) - 1:
+            t_next = noise_scheduler.timesteps[idx + 1]
+            noised_tgt = noise_scheduler.add_noise(tgt, noise, t_next)
+        else:
+            noised_tgt = tgt
+        x_t = noised_tgt * mask + x_t * (1 - mask)
 
     return x_t
 

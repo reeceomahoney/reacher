@@ -8,3 +8,4 @@ cond_mask_prob: ${cond_mask_prob}
 weight_decay: 1e-6
 cond_predict_scale: True
 inpaint_obs: ${policy.inpaint_obs}
+sampler_type: ${policy.sampler_type}
