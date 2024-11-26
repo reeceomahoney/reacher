@@ -59,9 +59,6 @@ class DiffusionTransformer(nn.Module):
             ),
             num_layers=num_layers,
         )
-        mask = self.generate_mask(input_len)
-        self.register_buffer("mask", mask)
-
         # output
         self.ln_f = nn.LayerNorm(d_model)
         self.output_pred = nn.Linear(d_model, input_dim)
@@ -183,7 +180,7 @@ class DiffusionTransformer(nn.Module):
         x_emb = self.drop(x_emb + self.pos_emb)
 
         # output
-        x = self.decoder(tgt=x_emb, memory=cond_emb, tgt_mask=self.mask)
+        x = self.decoder(tgt=x_emb, memory=cond_emb)
         x = self.ln_f(x)
         return self.output_pred(x)
 

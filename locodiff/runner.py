@@ -34,7 +34,7 @@ class DiffusionRunner:
             get_dataloaders_and_scaler(**self.cfg.dataset)
         )
         model = ScalingWrapper(
-            model=DiffusionTransformer(**self.cfg.model),
+            model=ConditionalUnet1D(**self.cfg.model),
             sigma_data=agent_cfg.policy.sigma_data,
         )
         self.policy = DiffusionPolicy(model, self.normalizer, **self.cfg.policy)
