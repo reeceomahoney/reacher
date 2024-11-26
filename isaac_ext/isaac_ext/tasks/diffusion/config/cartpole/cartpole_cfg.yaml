@@ -58,7 +58,7 @@ dataset:
   train_batch_size: 1024
   test_batch_size: 1024
   num_workers: 4
-  scaling: gaussian
+  scaling: linear
   task_name: null
 
 hydra:
