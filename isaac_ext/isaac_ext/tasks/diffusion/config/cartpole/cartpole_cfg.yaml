@@ -20,7 +20,7 @@ use_ema: True
 #dims
 obs_dim: null
 act_dim: null
-T: 57
+T: 64
 T_cond: 8
 T_action: 1
 num_envs: 64
@@ -45,7 +45,7 @@ policy:
   lr: 1e-4
   betas: [0.9, 0.999]
   num_iters: ${num_iters}
-  inpaint_obs: true
+  inpaint_obs: false
   inpaint_final_obs: true
   device: ${device}
 
