@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
-from locodiff.samplers import get_sampler, get_sigmas_exponential, rand_log_logistic
+from locodiff.samplers import get_sampler, get_sigmas_exponential, rand_log_logistic, get_sigmas_linear
 from locodiff.wrappers import CFGWrapper
 
 
@@ -70,7 +70,7 @@ class DiffusionPolicy(nn.Module):
         self.sigma_min = sigma_min
         self.sigma_max = sigma_max
         self.cond_mask_prob = cond_mask_prob
-        self.inference_sigmas = get_sigmas_exponential(
+        self.inference_sigmas = get_sigmas_linear(
             sampling_steps, sigma_min, sigma_max, device
         )
         self.inpaint_obs = inpaint_obs

@@ -137,7 +137,7 @@ def sample_euler_ancestral(model, noise: torch.Tensor, data_dict: dict, **kwargs
         if sigma_down > 0:
             x_t = x_t + torch.randn_like(x_t) * sigma_up
         # inpaint
-        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i + 1]
+        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i]
         x_t = noised_tgt * mask + x_t * (1 - mask)
 
     return x_t

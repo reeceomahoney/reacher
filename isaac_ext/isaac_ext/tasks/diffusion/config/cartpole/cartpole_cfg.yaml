@@ -26,7 +26,7 @@ T_action: 1
 num_envs: 64
 
 # diffusion
-sampling_steps: 20
+sampling_steps: 10
 cond_mask_prob: 0
 
 policy:
@@ -36,10 +36,10 @@ policy:
   T_cond: ${T_cond}
   num_envs: ${num_envs}
   sampling_steps: ${sampling_steps}
-  sampler_type: ddpm
+  sampler_type: euler_ancestral
   sigma_data: 0.5
-  sigma_min: 0.001
-  sigma_max: 80
+  sigma_min: 0.005
+  sigma_max: 1
   cond_lambda: 1
   cond_mask_prob: ${cond_mask_prob}
   lr: 1e-4
