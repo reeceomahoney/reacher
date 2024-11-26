@@ -4,6 +4,8 @@ import torch.nn as nn
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+
 from locodiff.samplers import get_sampler, get_sigmas_exponential, rand_log_logistic
 from locodiff.wrappers import CFGWrapper
 
@@ -38,6 +40,17 @@ class DiffusionPolicy(nn.Module):
             model = CFGWrapper(model, cond_lambda, cond_mask_prob)
         self.model = model
         self.sampler = get_sampler(sampler_type)
+        if sampler_type == "ddpm":
+            self.noise_scheduler = DDPMScheduler(
+                num_train_timesteps=sampling_steps,
+                beta_start=0.0001,
+                beta_end=0.02,
+                beta_schedule="squaredcos_cap_v2",
+                variance_type="fixed_small",
+                clip_sample=True,
+                prediction_type="epsilon",
+            )
+
         self.normalizer = normalizer
         self.obs_hist = torch.zeros((num_envs, T_cond, obs_dim), device=device)
         self.device = device
@@ -70,13 +83,21 @@ class DiffusionPolicy(nn.Module):
         B = data["obs"].shape[0]
         # sample noise
         noise = torch.randn((B, self.input_len, self.input_dim))
-        noise = noise.to(self.device) * self.sigma_max
+        noise = noise.to(self.device)
 
         # create inpainting mask and target
         tgt, mask = self.create_inpainting_data(noise, data)
+        kwargs = {"tgt": tgt, "mask": mask}
+
+        # create noise
+        if self.sampler_type == "ddpm":
+            self.noise_scheduler.set_timesteps(self.sampling_steps)
+            kwargs["noise_scheduler"] = self.noise_scheduler
+        else:
+            noise = noise * self.sigma_max
+            kwargs["sigmas"] = self.inference_sigmas
 
         # inference
-        kwargs = {"sigmas": self.inference_sigmas, "tgt": tgt, "mask": mask}
         x = self.sampler(self.model, noise, data, **kwargs)
         x = self.normalizer.clip(x)
         x = self.normalizer.inverse_scale_output(x)
@@ -85,7 +106,7 @@ class DiffusionPolicy(nn.Module):
     def act(self, data: dict) -> dict[str, torch.Tensor]:
         data = self.process(data)
         x = self.forward(data)
-        obs = x[:, :, :self.obs_dim]
+        obs = x[:, :, : self.obs_dim]
 
         # extract action
         if self.inpaint_obs:
@@ -94,15 +115,26 @@ class DiffusionPolicy(nn.Module):
             action = x[:, 0, self.obs_dim :]
         return {"action": action, "obs_traj": obs}
 
-    def update(self, data: dict) -> torch.Tensor:
+    def update(self, data: dict) -> float:
         data = self.process(data)
         noise = torch.randn_like(data["input"])
         # create inpainting mask and target
-        tgt, mask = self.create_inpainting_data(noise, data)
+        tgt = torch.zeros_like(noise)
+        mask = torch.zeros_like(noise)
         kwargs = {"tgt": tgt, "mask": mask}
+
         # calculate loss
-        sigma = self.make_sample_density(len(noise))
-        loss = self.model.loss(noise, sigma, data, **kwargs)
+        if self.sampler_type == "ddpm":
+            timesteps = torch.randint(0, self.sampling_steps, (noise.shape[0],))
+            noise_trajectory = self.noise_scheduler.add_noise(
+                data["input"], noise, timesteps
+            )
+            timesteps = timesteps.float().to(self.device)
+            pred = self.model(noise_trajectory, timesteps, data, **kwargs)
+            loss = torch.nn.functional.mse_loss(pred, noise)
+        else:
+            sigma = self.make_sample_density(len(noise))
+            loss = self.model.loss(noise, sigma, data, **kwargs)
 
         # update model
         self.optimizer.zero_grad()

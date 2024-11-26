@@ -196,11 +196,17 @@ def sample_ddpm(model, noise: torch.Tensor, data_dict: dict, **kwargs):
     """
     noise_scheduler = kwargs["noise_scheduler"]
     x_t = noise
+    # inpainting mask
+    tgt = kwargs["tgt"]
+    mask = kwargs["mask"]
 
     for t in noise_scheduler.timesteps:
         t_pt = t.float().to(noise.device)
         output = model(x_t, t_pt.expand(x_t.shape[0]), data_dict)
         x_t = noise_scheduler.step(output, t, x_t).prev_sample
+        # inpaint
+        noised_tgt = noise_scheduler.add_noise(tgt, noise, t)
+        x_t = noised_tgt * mask + x_t * (1 - mask)
 
     return x_t
 
