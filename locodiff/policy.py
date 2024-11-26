@@ -40,6 +40,8 @@ class DiffusionPolicy(nn.Module):
             model = CFGWrapper(model, cond_lambda, cond_mask_prob)
         self.model = model
         self.sampler = get_sampler(sampler_type)
+        self.sampler_type = sampler_type
+        self.sampling_steps = sampling_steps
         if sampler_type == "ddpm":
             self.noise_scheduler = DDPMScheduler(
                 num_train_timesteps=sampling_steps,
