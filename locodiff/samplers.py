@@ -2,77 +2,37 @@ import math
 import torch
 from typing import Callable
 
-import torchsde
-
-
-class BatchedBrownianTree:
-    """A wrapper around torchsde.BrownianTree that enables batches of entropy."""
-
-    def __init__(self, x, t0, t1, seed=None, **kwargs):
-        t0, t1, self.sign = self.sort(t0, t1)
-        w0 = kwargs.get("w0", torch.zeros_like(x))
-        if seed is None:
-            seed = torch.randint(0, 2**63 - 1, []).item()
-        self.batched = True
-        try:
-            assert len(seed) == x.shape[0]
-            w0 = w0[0]
-        except TypeError:
-            seed = [seed]
-            self.batched = False
-        self.trees = [
-            torchsde.BrownianTree(t0, w0, t1, entropy=s, **kwargs) for s in seed
-        ]
-
-    @staticmethod
-    def sort(a, b):
-        return (a, b, 1) if a < b else (b, a, -1)
-
-    def __call__(self, t0, t1):
-        t0, t1, sign = self.sort(t0, t1)
-        w = torch.stack([tree(t0, t1) for tree in self.trees]) * (self.sign * sign)
-        return w if self.batched else w[0]
-
-
-class BrownianTreeNoiseSampler:
-    """A noise sampler backed by a torchsde.BrownianTree.
-    Args:
-        x (Tensor): The tensor whose shape, device and dtype to use to generate
-            random samples.
-        sigma_min (float): The low end of the valid interval.
-        sigma_max (float): The high end of the valid interval.
-        seed (int or List[int]): The random seed. If a list of seeds is
-            supplied instead of a single integer, then the noise sampler will
-            use one BrownianTree per batch item, each with its own seed.
-        transform (callable): A function that maps sigma to the sampler's
-            internal timestep.
-    """
-
-    def __init__(self, x, sigma_min, sigma_max, seed=None, transform=lambda x: x):
-        self.transform = transform
-        t0, t1 = self.transform(torch.as_tensor(sigma_min)), self.transform(
-            torch.as_tensor(sigma_max)
-        )
-        self.tree = BatchedBrownianTree(x, t0, t1, seed)
-
-    def __call__(self, sigma, sigma_next):
-        t0, t1 = self.transform(torch.as_tensor(sigma)), self.transform(
-            torch.as_tensor(sigma_next)
-        )
-        return self.tree(t0, t1) / (t1 - t0).abs().sqrt()
-
 
 def get_sampler(sampler_type: str) -> Callable:
     if sampler_type == "ddim":
         return sample_ddim
-    elif sampler_type == "dpmpp_2m_sde":
-        return sample_dpmpp_2m_sde
     elif sampler_type == "euler_ancestral":
         return sample_euler_ancestral
     elif sampler_type == "ddpm":
         return sample_ddpm
     else:
         raise ValueError(f"Unknown sampler type: {sampler_type}")
+
+
+def get_resampling_sequence(T, r, j):
+    """
+    Generate a sequence of "up" and "down" steps for diffusion resampling
+
+    Parameters:
+        T (int): Total diffusion steps.
+        r (int): Resampling steps per diffusion step
+        j (int): Jump length of resampling steps
+
+    Returns:
+        list: The generated sequence of "up" and "down".
+    """
+    # Start with T initial "down" steps
+    sequence = ["down"] * j
+    resampling_sequence = ["down"] * j + (["up"] * j + ["down"] * j) * (r - 1)
+    sequence += resampling_sequence * ((T - j) // j)
+    sequence += ["down"] * ((T - j) % j)
+
+    return sequence
 
 
 @torch.no_grad()
@@ -86,10 +46,8 @@ def sample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
 
     num_steps = kwargs.get("num_steps", len(sigmas) - 1)
     # inpainting data
-    # tgt = kwargs["tgt"]
-    # mask = kwargs["mask"]
-    # unsure if this is necessary
-    # x_t = tgt * mask + x_t * (1 - mask)
+    tgt = kwargs["tgt"]
+    mask = kwargs["mask"]
 
     for i in range(num_steps):
         denoised = model(x_t, sigmas[i] * s_in, data_dict, **kwargs)
@@ -97,10 +55,51 @@ def sample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
         h = t_next - t
         x_t = ((-t_next).exp() / (-t).exp()) * x_t - (-h).expm1() * denoised
         # inpaint
-        # noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i]
-        # x_t = noised_tgt * mask + x_t * (1 - mask)
+        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i + 1]
+        x_t = noised_tgt * mask + x_t * (1 - mask)
 
     return x_t
+
+
+def sample_resample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
+    sigmas = kwargs["sigmas"]
+    x_t = noise
+    s_in = x_t.new_ones([x_t.shape[0]])
+    num_steps = kwargs.get("num_steps", len(sigmas) - 1)
+
+    # inpainting data
+    tgt = kwargs["tgt"]
+    mask = kwargs["mask"]
+
+    # resampling sequence
+    resampling_sequence = get_resampling_sequence(
+        num_steps, kwargs["resampling_steps"], kwargs["jump_length"]
+    )
+
+    t = num_steps
+    for step in resampling_sequence:
+        denoised = model(x_t, sigmas[t] * s_in, data_dict, **kwargs)
+        t, t_next = -sigmas[t].log(), -sigmas[t + 1].log()
+        h = t_next - t
+        x_t = ((-t_next).exp() / (-t).exp()) * x_t - (-h).expm1() * denoised
+        if step == "up":
+            x_t = x_t + torch.randn_like(x_t) * sigmas[t + 1]
+        # inpaint
+        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[t]
+        x_t = noised_tgt * mask + x_t * (1 - mask)
+
+
+def get_ancestral_step(sigma_from, sigma_to, eta=1.0):
+    """Calculates the noise level (sigma_down) to step down to and the amount
+    of noise to add (sigma_up) when doing an ancestral sampling step."""
+    if not eta:
+        return sigma_to, 0.0
+    sigma_up = min(
+        sigma_to,
+        eta * (sigma_to**2 * (sigma_from**2 - sigma_to**2) / sigma_from**2) ** 0.5,
+    )
+    sigma_down = (sigma_to**2 - sigma_up**2) ** 0.5
+    return sigma_down, sigma_up
 
 
 @torch.no_grad()
@@ -144,52 +143,6 @@ def sample_euler_ancestral(model, noise: torch.Tensor, data_dict: dict, **kwargs
 
 
 @torch.no_grad()
-def sample_dpmpp_2m_sde(model, noise: torch.Tensor, data_dict: dict, **kwargs):
-    """DPM-Solver++(2M)."""
-    sigmas = kwargs["sigmas"]
-    sigma_min, sigma_max = sigmas[sigmas > 0].min(), sigmas.max()
-    x_t = noise
-    noise_sampler = BrownianTreeNoiseSampler(x_t, sigma_min, sigma_max)
-    s_in = x_t.new_ones([x_t.shape[0]])
-
-    old_denoised = None
-    h_last = None
-
-    for i in range(len(sigmas) - 1):
-        denoised = model(x_t, sigmas[i] * s_in, data_dict)
-
-        # DPM-Solver++(2M) SDE
-        if sigmas[i + 1] == 0:
-            x_t = denoised
-        else:
-            t, s = -sigmas[i].log(), -sigmas[i + 1].log()
-            h = s - t
-            eta_h = h
-
-            x_t = (
-                sigmas[i + 1] / sigmas[i] * (-eta_h).exp() * x_t
-                + (-h - eta_h).expm1().neg() * denoised
-            )
-
-            if old_denoised is not None:
-                r = h_last / h
-                x_t = x_t + ((-h - eta_h).expm1().neg() / (-h - eta_h) + 1) * (
-                    1 / r
-                ) * (denoised - old_denoised)
-
-            x_t = (
-                x_t
-                + noise_sampler(sigmas[i], sigmas[i + 1])
-                * sigmas[i + 1]
-                * (-2 * eta_h).expm1().neg().sqrt()
-            )
-
-        old_denoised = denoised
-        h_last = h
-    return x_t
-
-
-@torch.no_grad()
 def sample_ddpm(model, noise: torch.Tensor, data_dict: dict, **kwargs):
     """
     Perform inference using the DDPM sampler
@@ -227,19 +180,6 @@ def get_sigmas_linear(n, sigma_min, sigma_max, device="cpu"):
     """Constructs an linear noise schedule."""
     sigmas = torch.linspace(sigma_max, sigma_min, n, device=device)
     return torch.cat([sigmas, sigmas.new_zeros([1])])
-
-
-def get_ancestral_step(sigma_from, sigma_to, eta=1.0):
-    """Calculates the noise level (sigma_down) to step down to and the amount
-    of noise to add (sigma_up) when doing an ancestral sampling step."""
-    if not eta:
-        return sigma_to, 0.0
-    sigma_up = min(
-        sigma_to,
-        eta * (sigma_to**2 * (sigma_from**2 - sigma_to**2) / sigma_from**2) ** 0.5,
-    )
-    sigma_down = (sigma_to**2 - sigma_up**2) ** 0.5
-    return sigma_down, sigma_up
 
 
 def rand_log_logistic(

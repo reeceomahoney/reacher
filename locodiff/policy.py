@@ -70,7 +70,7 @@ class DiffusionPolicy(nn.Module):
         self.sigma_min = sigma_min
         self.sigma_max = sigma_max
         self.cond_mask_prob = cond_mask_prob
-        self.inference_sigmas = get_sigmas_linear(
+        self.inference_sigmas = get_sigmas_exponential(
             sampling_steps, sigma_min, sigma_max, device
         )
         self.inpaint_obs = inpaint_obs
