@@ -36,7 +36,7 @@ policy:
   T_cond: ${T_cond}
   num_envs: ${num_envs}
   sampling_steps: ${sampling_steps}
-  sampler_type: ddim
+  sampler_type: ddim_resample
   sigma_data: 0.5
   sigma_min: 0.005
   sigma_max: 1

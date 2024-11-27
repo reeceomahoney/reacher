@@ -6,6 +6,8 @@ from typing import Callable
 def get_sampler(sampler_type: str) -> Callable:
     if sampler_type == "ddim":
         return sample_ddim
+    if sampler_type == "ddim_resample":
+        return sample_resample_ddim
     elif sampler_type == "euler_ancestral":
         return sample_euler_ancestral
     elif sampler_type == "ddpm":
