@@ -77,24 +77,24 @@ def sample_resample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
         len(sigmas) - 1, kwargs["resampling_steps"], kwargs["jump_length"]
     )
 
-    t = 0
+    i = 0
     for step in resampling_sequence:
         if step == "down":
             # denoising step
-            denoised = model(x_t, sigmas[t] * s_in, data_dict, **kwargs)
-            t, t_next = -sigmas[t].log(), -sigmas[t + 1].log()
+            denoised = model(x_t, sigmas[i] * s_in, data_dict, **kwargs)
+            t, t_next = -sigmas[i].log(), -sigmas[i + 1].log()
             h = t_next - t
             x_t = ((-t_next).exp() / (-t).exp()) * x_t - (-h).expm1() * denoised
             # inpaint
-            noised_tgt = tgt + torch.randn_like(tgt) * sigmas[t + 1]
+            noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i + 1]
             x_t = noised_tgt * mask + x_t * (1 - mask)
-            t += 1
+            i += 1
 
         if step == "up":
             # noise resampling step
-            d_sigma = torch.sqrt(sigmas[t - 1] ** 2 - sigmas[t] ** 2)
+            d_sigma = torch.sqrt(sigmas[i - 1] ** 2 - sigmas[i] ** 2)
             x_t = x_t + torch.randn_like(x_t) * d_sigma
-            t -= 1
+            i -= 1
 
     return x_t
 
