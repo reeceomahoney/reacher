@@ -43,6 +43,7 @@ args_cli, hydra_args = parser.parse_known_args()
 # always enable cameras to record video
 if args_cli.video:
     args_cli.enable_cameras = True
+args_cli.headless = True
 
 sys.argv = [sys.argv[0]] + hydra_args
 sys.argv.append("hydra.output_subdir=null")
@@ -59,6 +60,7 @@ import matplotlib.pylab as plt
 import os
 import statistics
 import torch
+from tqdm import tqdm
 
 from omegaconf import DictConfig
 
@@ -121,43 +123,70 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(resume_path)
 
-    # test_loss = []
-    # for batch in runner.test_loader:
-    #     test_loss.append(runner.policy.test(batch))
-    # test_loss = statistics.mean(test_loss)
-    # print(f"Test loss: {test_loss}")
-    # exit()
+    test_type = "mse"
 
-    # obtain the trained policy for inference
-    policy = runner.get_inference_policy(device=env.unwrapped.device)
+    if test_type == "mse":
+        # T_values = [10, 20, 50]
+        # r_values = [0, 1, 3, 5, 10]
+        # j_values = [1,2,5]
+        T_values = [3, 6]
+        r_values = [0, 2]
+        j_values = [1, 2]
 
-    # create figure
-    plt.ion()
-    _, ax = plt.subplots()
-    ax.set_xlim(-4, 4)
-    ax.set_ylim(-4, 4)
-    root_pos = []
+        results = []
+        batch = next(iter(runner.test_loader))
+        with tqdm(total=len(T_values) * len(r_values) * len(j_values)) as pbar:
+            for T in T_values:
+                for r in r_values:
+                    for j in j_values:
+                        # set the policy parameters
+                        runner.policy.sampling_steps = T
+                        runner.policy.resampling_steps = r
+                        runner.policy.jump_length = j
 
-    # reset environment
-    obs, _ = env.get_observations()
-    timestep = 0
-    # simulate environment
-    while simulation_app.is_running():
-        # run everything in inference mode
-        with torch.inference_mode():
-            # agent stepping
-            output = policy({"obs": obs})
-            # env stepping
-            obs, _, dones, _ = env.step(output["action"])
+                        # test policy mse
+                        test_loss = []
+                        test_loss.append(runner.policy.test(batch))
+                        test_loss = statistics.mean(test_loss)
+                        results.append((T, r, j, test_loss))
 
-        if dones.any():
-            runner.policy.reset(dones)
+                        pbar.update(1)
 
-        root_pos = plot(root_pos, obs, output["obs_traj"], ax)
-        timestep += 1
+        print(results)
 
-    # close the simulator
-    env.close()
+    elif test_type == "play":
+        # obtain the trained policy for inference
+        policy = runner.get_inference_policy(device=env.unwrapped.device)
+
+        # create figure
+        plt.ion()
+        _, ax = plt.subplots()
+        ax.set_xlim(-4, 4)
+        ax.set_ylim(-4, 4)
+        root_pos = []
+
+        # reset environment
+        obs, _ = env.get_observations()
+        timestep = 0
+        # simulate environment
+        while simulation_app.is_running():
+            # run everything in inference mode
+            with torch.inference_mode():
+                # agent stepping
+                output = policy({"obs": obs})
+                # env stepping
+                obs, _, dones, _ = env.step(output["action"])
+
+            if dones.any():
+                runner.policy.reset(dones)
+
+            root_pos = plot(root_pos, obs, output["obs_traj"], ax)
+            timestep += 1
+
+        # close the simulator
+        env.close()
+    else:
+        raise ValueError(f"Unknown test type {test_type}")
 
 
 if __name__ == "__main__":
