@@ -48,6 +48,8 @@ policy:
   inpaint_obs: true
   inpaint_final_obs: true
   device: ${device}
+  resampling_steps: 3
+  jump_length: 1
 
 dataset:
   data_directory: logs/rsl_rl/cartpole_collect/hdf_dataset.hdf5

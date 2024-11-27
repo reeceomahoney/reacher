@@ -6,7 +6,12 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
-from locodiff.samplers import get_sampler, get_sigmas_exponential, rand_log_logistic, get_sigmas_linear
+from locodiff.samplers import (
+    get_sampler,
+    get_sigmas_exponential,
+    get_sigmas_linear,
+    rand_log_logistic,
+)
 from locodiff.wrappers import CFGWrapper
 
 
@@ -32,7 +37,9 @@ class DiffusionPolicy(nn.Module):
         num_iters: int,
         inpaint_obs: bool,
         inpaint_final_obs: bool,
-        device,
+        device: str,
+        resampling_steps: int,
+        jump_length: int,
     ):
         super().__init__()
         # model
@@ -75,6 +82,8 @@ class DiffusionPolicy(nn.Module):
         )
         self.inpaint_obs = inpaint_obs
         self.inpaint_final_obs = inpaint_final_obs
+        self.resampling_steps = resampling_steps
+        self.jump_length = jump_length
 
         # optimizer and lr scheduler
         optim_groups = self.model.get_optim_groups()
@@ -98,6 +107,8 @@ class DiffusionPolicy(nn.Module):
         else:
             noise = noise * self.sigma_max
             kwargs["sigmas"] = self.inference_sigmas
+            kwargs["resampling_steps"] = self.resampling_steps
+            kwargs["jump_length"] = self.jump_length
 
         # inference
         x = self.sampler(self.model, noise, data, **kwargs)

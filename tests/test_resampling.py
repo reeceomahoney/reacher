@@ -3,7 +3,7 @@ import random
 from locodiff.samplers import get_resampling_sequence
 
 T_values = [10, 20, 30]
-r_values = [2, 4, 6]
+r_values = [0, 2, 4, 6]
 j_values = [1, 2, 4]
 
 for _ in range(30):

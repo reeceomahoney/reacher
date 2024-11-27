@@ -65,7 +65,6 @@ def sample_resample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
     sigmas = kwargs["sigmas"]
     x_t = noise
     s_in = x_t.new_ones([x_t.shape[0]])
-    num_steps = kwargs.get("num_steps", len(sigmas) - 1)
 
     # inpainting data
     tgt = kwargs["tgt"]
@@ -73,20 +72,29 @@ def sample_resample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
 
     # resampling sequence
     resampling_sequence = get_resampling_sequence(
-        num_steps, kwargs["resampling_steps"], kwargs["jump_length"]
+        len(sigmas) - 1, kwargs["resampling_steps"], kwargs["jump_length"]
     )
 
-    t = num_steps
+    t = 0
     for step in resampling_sequence:
-        denoised = model(x_t, sigmas[t] * s_in, data_dict, **kwargs)
-        t, t_next = -sigmas[t].log(), -sigmas[t + 1].log()
-        h = t_next - t
-        x_t = ((-t_next).exp() / (-t).exp()) * x_t - (-h).expm1() * denoised
+        if step == "down":
+            # denoising step
+            denoised = model(x_t, sigmas[t] * s_in, data_dict, **kwargs)
+            t, t_next = -sigmas[t].log(), -sigmas[t + 1].log()
+            h = t_next - t
+            x_t = ((-t_next).exp() / (-t).exp()) * x_t - (-h).expm1() * denoised
+            # inpaint
+            noised_tgt = tgt + torch.randn_like(tgt) * sigmas[t + 1]
+            x_t = noised_tgt * mask + x_t * (1 - mask)
+            t += 1
+
         if step == "up":
-            x_t = x_t + torch.randn_like(x_t) * sigmas[t + 1]
-        # inpaint
-        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[t]
-        x_t = noised_tgt * mask + x_t * (1 - mask)
+            # noise resampling step
+            d_sigma = torch.sqrt(sigmas[t - 1] ** 2 - sigmas[t] ** 2)
+            x_t = x_t + torch.randn_like(x_t) * d_sigma
+            t -= 1
+
+    return x_t
 
 
 def get_ancestral_step(sigma_from, sigma_to, eta=1.0):
