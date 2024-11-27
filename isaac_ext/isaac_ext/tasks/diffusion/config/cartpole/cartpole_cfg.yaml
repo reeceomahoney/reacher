@@ -20,8 +20,8 @@ use_ema: True
 #dims
 obs_dim: null
 act_dim: null
-T: 7
-T_cond: 2
+T: 57
+T_cond: 8
 T_action: 1
 num_envs: 64
 
@@ -48,7 +48,7 @@ policy:
   inpaint_obs: true
   inpaint_final_obs: true
   device: ${device}
-  resampling_steps: 3
+  resampling_steps: 0
   jump_length: 1
 
 dataset:
