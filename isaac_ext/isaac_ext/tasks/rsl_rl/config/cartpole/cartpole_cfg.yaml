@@ -1,4 +1,4 @@
-num_steps_per_env: 24
+num_steps_per_env: 16
 max_iterations: 8000
 save_interval: 50
 experiment_name: cartpole
