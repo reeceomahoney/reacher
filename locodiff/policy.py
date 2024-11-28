@@ -106,7 +106,10 @@ class DiffusionPolicy(nn.Module):
             kwargs["noise_scheduler"] = self.noise_scheduler
         else:
             noise = noise * self.sigma_max
-            kwargs["sigmas"] = self.inference_sigmas
+            inference_sigmas = get_sigmas_exponential(
+                self.sampling_steps, self.sigma_min, self.sigma_max, self.device
+            )
+            kwargs["sigmas"] = inference_sigmas
             kwargs["resampling_steps"] = self.resampling_steps
             kwargs["jump_length"] = self.jump_length
 

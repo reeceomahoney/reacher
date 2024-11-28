@@ -63,6 +63,7 @@ def sample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
     return x_t
 
 
+@torch.no_grad()
 def sample_resample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
     sigmas = kwargs["sigmas"]
     x_t = noise

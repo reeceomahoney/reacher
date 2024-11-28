@@ -126,15 +126,14 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     test_type = "mse"
 
     if test_type == "mse":
-        # T_values = [10, 20, 50]
-        # r_values = [0, 1, 3, 5, 10]
-        # j_values = [1,2,5]
-        T_values = [3, 6]
-        r_values = [0, 2]
-        j_values = [1, 2]
+        from locodiff.samplers import get_resampling_sequence
+
+        T_values = [10]
+        r_values = [5, 10, 20, 40, 80, 160]
+        j_values = [1]
 
         results = []
-        batch = next(iter(runner.test_loader))
+        # batch = next(iter(runner.test_loader))
         with tqdm(total=len(T_values) * len(r_values) * len(j_values)) as pbar:
             for T in T_values:
                 for r in r_values:
@@ -146,13 +145,18 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
                         # test policy mse
                         test_loss = []
-                        test_loss.append(runner.policy.test(batch))
+                        for batch in runner.test_loader:
+                            test_loss.append(runner.policy.test(batch))
                         test_loss = statistics.mean(test_loss)
-                        results.append((T, r, j, test_loss))
+                        nfe = get_resampling_sequence(T, r, j).count("down")
+                        results.append((T, r, j, nfe, test_loss))
 
                         pbar.update(1)
 
-        print(results)
+        results = sorted(results, key=lambda x: x[-1])
+        # Print tuples with the last value rounded to 3 significant figures
+        for item in results:
+            print((*item[:-1], f"{item[-1]:.3g}"))
 
     elif test_type == "play":
         # obtain the trained policy for inference
