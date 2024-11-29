@@ -4,71 +4,72 @@ import os
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
+import minari
+
 log = logging.getLogger(__name__)
 
 
 class ExpertDataset(Dataset):
     def __init__(
         self,
-        data_directory: str,
+        data_directory: str | None,
         T_cond: int,
         task_name: str,
+        seed: int,
         device="cpu",
     ):
-        self.data_directory = data_directory
         self.T_cond = T_cond
         self.device = device
 
-        # build path
-        current_dir = os.path.dirname(os.path.realpath(__file__))
-        dataset_path = current_dir + "/../" + data_directory
-        log.info(f"Loading data from {data_directory}")
+        if data_directory is not None:
+            # build path
+            current_dir = os.path.dirname(os.path.realpath(__file__))
+            dataset_path = current_dir + "/../" + data_directory
+            log.info(f"Loading data from {data_directory}")
 
-        data = {}
-        # load data
-        with h5py.File(dataset_path, "r") as f:
+            data = {}
+            # load data
+            with h5py.File(dataset_path, "r") as f:
 
-            def load_dataset(name, obj):
-                if isinstance(obj, h5py.Dataset):
-                    data[name] = obj[:]
+                def load_dataset(name, obj):
+                    if isinstance(obj, h5py.Dataset):
+                        data[name] = obj[:]
 
-            f.visititems(load_dataset)
+                f.visititems(load_dataset)
 
-        # (B, T, D)
-        for k, v in data.items():
-            data[k] = torch.from_numpy(v).transpose(0, 1)
+            # (B, T, D)
+            for k, v in data.items():
+                data[k] = torch.from_numpy(v).transpose(0, 1)
 
-        # build obs
-        if task_name.startswith("Isaac-Locodiff"):
-            obs = torch.cat((data["data/root_pos"], data["data/obs"]), dim=-1)
-            if task_name == "Isaac-Locodiff-no-cmd":
-                obs = torch.cat([obs[..., :59], obs[..., 62:]], dim=-1)
+            # build obs
+            if task_name.startswith("Isaac-Locodiff"):
+                obs = torch.cat((data["data/root_pos"], data["data/obs"]), dim=-1)
+                if task_name == "Isaac-Locodiff-no-cmd":
+                    obs = torch.cat([obs[..., :59], obs[..., 62:]], dim=-1)
+            else:
+                obs = data["data/obs"]
+            # get other data
+            actions = data["data/actions"]
+            first_steps = data["data/first_steps"]
+
+            # add first step flages to episode starts
+            first_steps[:, 0] = 1
+            # find episode ends
+            first_steps_flat = first_steps.reshape(-1)
+            split_indices = torch.where(first_steps_flat == 1)[0]
+            # split the sequences at episode ends
+            obs_splits = self.split_eps(obs, split_indices)
+            actions_splits = self.split_eps(actions, split_indices)
+
         else:
-            obs = data["data/obs"]
-        # get other data
-        actions = data["data/actions"]
-        first_steps = data["data/first_steps"]
+            dataset = minari.load_dataset("D4RL/pointmaze/medium-v2")
 
-        self.data = self.process_data(obs, actions, first_steps)
-
-        obs_size = list(self.data["obs"].shape)
-        action_size = list(self.data["action"].shape)
-        log.info(f"Dataset size | Observations: {obs_size} | Actions: {action_size}")
-
-    # --------------
-    # Initialization
-    # --------------
-
-    def process_data(self, obs, actions, first_steps):
-        # add first step flages to episode starts
-        first_steps[:, 0] = 1
-        # find episode ends
-        first_steps_flat = first_steps.reshape(-1)
-        split_indices = torch.where(first_steps_flat == 1)[0]
-
-        # split the sequences at episode ends
-        obs_splits = self.split_eps(obs, split_indices)
-        actions_splits = self.split_eps(actions, split_indices)
+            obs_splits, actions_splits = [], []
+            for episode in dataset:
+                obs_splits.append(
+                    torch.tensor(episode.observations["observation"], dtype=torch.float)
+                )
+                actions_splits.append(torch.tensor(episode.actions, dtype=torch.float))
 
         # add padding to make all sequences the same length
         max_len = max(split.shape[0] for split in obs_splits)
@@ -76,7 +77,11 @@ class ExpertDataset(Dataset):
         actions = self.add_padding(actions_splits, max_len, temporal=True)
         masks = self.create_masks(obs_splits, max_len)
 
-        return {"obs": obs, "action": actions, "mask": masks}
+        self.data = {"obs": obs, "action": actions, "mask": masks}
+
+        obs_size = list(self.data["obs"].shape)
+        action_size = list(self.data["action"].shape)
+        log.info(f"Dataset size | Observations: {obs_size} | Actions: {action_size}")
 
     # -------
     # Getters
@@ -196,9 +201,10 @@ def get_dataloaders(
     train_batch_size: int,
     test_batch_size: int,
     num_workers: int,
+    seed: int,
 ):
     # Build the datasets
-    dataset = ExpertDataset(data_directory, T_cond, task_name)
+    dataset = ExpertDataset(data_directory, T_cond, task_name, seed)
     train, val = random_split(dataset, [train_fraction, 1 - train_fraction])
     train_set = SlicerWrapper(train, T_cond, T)
     test_set = SlicerWrapper(val, T_cond, T)

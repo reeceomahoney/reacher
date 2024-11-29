@@ -7,13 +7,13 @@ from functools import wraps
 import hydra
 from omegaconf import DictConfig
 
-from omni.isaac.lab_tasks.utils import parse_env_cfg
-
 
 def dynamic_hydra_main(task_name: str):
     """
     Custom decorator to dynamically set Hydra's config_path based on the task name
     """
+    # this is here to stop isaac errors
+    from omni.isaac.lab_tasks.utils import parse_env_cfg
 
     def decorator(func):
         @wraps(func)
