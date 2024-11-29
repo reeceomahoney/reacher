@@ -4,8 +4,6 @@ import os
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
-from locodiff.utils import Normalizer
-
 log = logging.getLogger(__name__)
 
 
@@ -106,9 +104,6 @@ class ExpertDataset(Dataset):
             [self.data["action"][i, : self.get_seq_length(i)] for i in range(len(self))]
         )
 
-    def get_all_vel_cmds(self):
-        return self.data["vel_cmd"].flatten()
-
     # ----------------
     # Helper functions
     # ----------------
@@ -191,21 +186,16 @@ class SlicerWrapper(Dataset):
     def get_all_actions(self):
         return self.dataset.dataset.get_all_actions()
 
-    def get_all_vel_cmds(self):
-        return self.dataset.dataset.get_all_vel_cmds()
 
-
-def get_dataloaders_and_scaler(
+def get_dataloaders(
+    task_name: str,
     data_directory: str,
     T_cond: int,
     T: int,
     train_fraction: float,
-    device: str,
     train_batch_size: int,
     test_batch_size: int,
     num_workers: int,
-    scaling: str,
-    task_name: str,
 ):
     # Build the datasets
     dataset = ExpertDataset(data_directory, T_cond, task_name)
@@ -216,7 +206,6 @@ def get_dataloaders_and_scaler(
     # Build the scaler
     x_data = train_set.get_all_obs()
     y_data = torch.cat([train_set.get_all_obs(), train_set.get_all_actions()], dim=-1)
-    scaler = Normalizer(x_data, y_data, scaling, device)
 
     # Build the dataloaders
     train_dataloader = DataLoader(
@@ -234,4 +223,4 @@ def get_dataloaders_and_scaler(
         pin_memory=True,
     )
 
-    return train_dataloader, test_dataloader, scaler
+    return train_dataloader, test_dataloader, (x_data, y_data)

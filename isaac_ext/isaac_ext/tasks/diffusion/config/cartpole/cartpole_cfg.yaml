@@ -16,6 +16,7 @@ sim_interval: 5e3
 device: cuda
 ema_decay: 0.999
 use_ema: True
+scaling: linear
 
 #dims
 obs_dim: null
@@ -53,16 +54,14 @@ policy:
   jump_length: 1
 
 dataset:
+  task_name: null
   data_directory: logs/rsl_rl/cartpole_collect/hdf_dataset.hdf5
   train_fraction: 0.95
-  device: ${device}
   T_cond: ${T_cond}
   T: ${T}
   train_batch_size: 1024
   test_batch_size: 1024
   num_workers: 4
-  scaling: linear
-  task_name: null
 
 hydra:
   run:

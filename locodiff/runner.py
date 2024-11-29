@@ -10,11 +10,12 @@ from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 
 import wandb
-from locodiff.dataset import get_dataloaders_and_scaler
+from locodiff.dataset import get_dataloaders
+from locodiff.envs import MazeEnv
 from locodiff.models.transformer import DiffusionTransformer
 from locodiff.models.unet import ConditionalUnet1D
 from locodiff.policy import DiffusionPolicy
-from locodiff.utils import ExponentialMovingAverage, InferenceContext
+from locodiff.utils import ExponentialMovingAverage, InferenceContext, Normalizer
 from locodiff.wrappers import ScalingWrapper
 
 # A logger for this file
@@ -23,16 +24,17 @@ log = logging.getLogger(__name__)
 
 class DiffusionRunner:
     def __init__(
-        self, env: VecEnv, agent_cfg, log_dir: str | None = None, device="cpu"
+        self, env: VecEnv | MazeEnv, agent_cfg, log_dir: str | None = None, device="cpu"
     ):
         self.env = env
         self.cfg = agent_cfg
         self.device = device
 
         # classes
-        self.train_loader, self.test_loader, self.normalizer = (
-            get_dataloaders_and_scaler(**self.cfg.dataset)
+        self.train_loader, self.test_loader, all_data = get_dataloaders(
+            **self.cfg.dataset
         )
+        self.normalizer = Normalizer(*all_data, agent_cfg.scaling, device)
         model = ScalingWrapper(
             model=ConditionalUnet1D(**self.cfg.model),
             sigma_data=agent_cfg.policy.sigma_data,
