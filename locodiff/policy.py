@@ -24,6 +24,7 @@ class DiffusionPolicy(nn.Module):
         act_dim: int,
         T: int,
         T_cond: int,
+        T_action: int,
         num_envs: int,
         sampling_steps: int,
         sampler_type: str,
@@ -70,6 +71,7 @@ class DiffusionPolicy(nn.Module):
         self.input_len = T + T_cond - 1 if inpaint_obs else T
         self.T = T
         self.T_cond = T_cond
+        self.T_action = T_action
         self.num_envs = num_envs
 
         # diffusion
@@ -126,9 +128,11 @@ class DiffusionPolicy(nn.Module):
 
         # extract action
         if self.inpaint_obs:
-            action = x[:, self.T_cond - 1, self.obs_dim :]
+            action = x[
+                :, self.T_cond - 1 : self.T_cond + self.T_action - 1, self.obs_dim :
+            ]
         else:
-            action = x[:, 0, self.obs_dim :]
+            action = x[:, : self.T_action, self.obs_dim :]
         return {"action": action, "obs_traj": obs}
 
     def update(self, data: dict) -> float:
@@ -215,12 +219,12 @@ class DiffusionPolicy(nn.Module):
             mask[:, : self.T_cond, : self.obs_dim] = 1.0
         if self.inpaint_final_obs:
             if data["input"] is None:
-                tgt_pos = torch.tensor([1.0, 0.0, 0.0, 0.0]).to(self.device)
+                tgt_pos = torch.tensor([1.0]).to(self.device)
                 tgt_pos = self.normalizer.scale_pos(tgt_pos)
-                tgt[:, -1, : self.obs_dim] = tgt_pos
+                tgt[:, -1, 0] = tgt_pos
             else:
-                tgt[:, -1, : self.obs_dim] = data["input"][:, -1, : self.obs_dim]
-            mask[:, -1, : self.obs_dim] = 1.0
+                tgt[:, -1, 0] = data["input"][:, -1, 0]
+            mask[:, -1, 0] = 1.0
 
         return tgt, mask
 

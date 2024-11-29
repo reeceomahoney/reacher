@@ -43,7 +43,6 @@ args_cli, hydra_args = parser.parse_known_args()
 # always enable cameras to record video
 if args_cli.video:
     args_cli.enable_cameras = True
-args_cli.headless = True
 
 sys.argv = [sys.argv[0]] + hydra_args
 sys.argv.append("hydra.output_subdir=null")
@@ -63,6 +62,11 @@ import torch
 from tqdm import tqdm
 
 from omegaconf import DictConfig
+from omni.isaac.core.utils.extensions import enable_extension
+
+enable_extension("omni.isaac.debug_draw")
+
+from omni.isaac.debug_draw import _debug_draw
 
 from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
@@ -71,26 +75,6 @@ import isaac_ext.tasks  # noqa: F401
 from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main
 from vae.utils import get_latest_run
-
-
-def plot(root_pos, obs, root_pos_traj, ax):
-    # collect real and pred positions
-    root_pos.append(obs[:, :1])
-    root_pos_traj = root_pos_traj[0].cpu().numpy()
-    # reset plot
-    ax.clear()
-    # ax.set_xlim(-4, 4)
-    # ax.set_ylim(-4, 4)
-    # plot trajectories
-    # root_pos_curr = torch.cat(root_pos, dim=0).cpu().numpy()
-    # ax.plot(root_pos_curr[:, 0], root_pos_curr[:, 1], "b")
-    # ax.plot(root_pos_traj[:, 0], root_pos_traj[:, 1], "r--")
-    ax.plot(root_pos_traj[:, 0])
-    plt.draw()
-    plt.pause(0.01)
-
-    return root_pos
-
 
 task = "Isaac-Cartpole-Diffusion"
 
@@ -123,7 +107,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(resume_path)
 
-    test_type = "mse"
+    test_type = "play"
 
     if test_type == "mse":
         from locodiff.samplers import get_resampling_sequence
@@ -162,12 +146,9 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         # obtain the trained policy for inference
         policy = runner.get_inference_policy(device=env.unwrapped.device)
 
-        # create figure
-        plt.ion()
-        _, ax = plt.subplots()
-        ax.set_xlim(-4, 4)
-        ax.set_ylim(-4, 4)
-        root_pos = []
+        # draw goal point
+        draw = _debug_draw.acquire_debug_draw_interface()
+        draw.draw_points([(0, 1, 2)], [(0.8, 0.2, 0, 1)], [25])
 
         # reset environment
         obs, _ = env.get_observations()
@@ -178,13 +159,19 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
             with torch.inference_mode():
                 # agent stepping
                 output = policy({"obs": obs})
+                # plot trajectory
+                plt.plot(output["obs_traj"][0, :, 0].cpu().numpy())
+                plt.show()
+
                 # env stepping
-                obs, _, dones, _ = env.step(output["action"])
+                for i in range(runner.policy.T_action):
+                    obs, _, dones, _ = env.step(output["action"][:, i])
+                    if i < runner.policy.T_action - 1:
+                        runner.policy.update_history({"obs": obs})
 
             if dones.any():
                 runner.policy.reset(dones)
 
-            root_pos = plot(root_pos, obs, output["obs_traj"], ax)
             timestep += 1
 
         # close the simulator

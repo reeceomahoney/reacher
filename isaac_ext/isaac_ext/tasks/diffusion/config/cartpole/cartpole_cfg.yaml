@@ -22,7 +22,7 @@ obs_dim: null
 act_dim: null
 T: 57
 T_cond: 8
-T_action: 1
+T_action: 20
 num_envs: 64
 
 # diffusion
@@ -34,6 +34,7 @@ policy:
   act_dim: ${act_dim}
   T: ${T}
   T_cond: ${T_cond}
+  T_action: ${T_action}
   num_envs: ${num_envs}
   sampling_steps: ${sampling_steps}
   sampler_type: ddim_resample
@@ -48,7 +49,7 @@ policy:
   inpaint_obs: true
   inpaint_final_obs: true
   device: ${device}
-  resampling_steps: 0
+  resampling_steps: 40
   jump_length: 1
 
 dataset:
