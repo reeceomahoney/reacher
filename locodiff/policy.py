@@ -219,14 +219,17 @@ class DiffusionPolicy(nn.Module):
             mask[:, : self.T_cond, : self.obs_dim] = 1.0
         if self.inpaint_final_obs:
             if data["input"] is None:
-                tgt_pos = torch.tensor([1.0]).to(self.device)
-                tgt_pos = self.normalizer.scale_pos(tgt_pos)
-                tgt[:, -1, 0] = tgt_pos
+                tgt_pos = self.normalizer.scale_pos(self.goal)
+                tgt[:, -1, : self.goal_dim] = tgt_pos
             else:
-                tgt[:, -1, 0] = data["input"][:, -1, 0]
+                tgt[:, -1, :self.goal_dim] = data["input"][:, -1, :self.goal_dim]
             mask[:, -1, 0] = 1.0
 
         return tgt, mask
+
+    def set_goal(self, goal):
+        self.goal = goal
+        self.goal_dim = self.goal.shape[-1]
 
     @torch.no_grad()
     def make_sample_density(self, size):

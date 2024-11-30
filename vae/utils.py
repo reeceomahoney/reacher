@@ -3,8 +3,8 @@ import torch
 from datetime import datetime
 from pathlib import Path
 
-from omni.isaac.lab.envs import DirectRLEnv, ManagerBasedRLEnv
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
+# from omni.isaac.lab.envs import DirectRLEnv, ManagerBasedRLEnv
+# from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
 
 def get_latest_run(base_path, resume=False):
@@ -49,30 +49,30 @@ def get_latest_run(base_path, resume=False):
         return target_dir
 
 
-class ReacherEnvWrapper(RslRlVecEnvWrapper):
-    def __init__(
-        self, env: ManagerBasedRLEnv | DirectRLEnv, num_actions: int | None = None
-    ):
-        super().__init__(env)
-        self.num_actions = num_actions
-
-    def step(
-        self, actions: torch.Tensor
-    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict]:
-        # add ee command to action
-        des_ee_position = self.env.unwrapped.command_manager.get_command("ee_pose")[:, :3]
-        actions = torch.cat([actions, des_ee_position], dim=1)
-        # record step information
-        obs_dict, rew, terminated, truncated, extras = self.env.step(actions)
-        # compute dones for compatibility with RSL-RL
-        dones = (terminated | truncated).to(dtype=torch.long)
-        # move extra observations to the extras dict
-        obs = obs_dict["policy"]
-        extras["observations"] = obs_dict
-        # move time out information to the extras dict
-        # this is only needed for infinite horizon tasks
-        if not self.unwrapped.cfg.is_finite_horizon:
-            extras["time_outs"] = truncated
-
-        # return the step information
-        return obs, rew, dones, extras
+# class ReacherEnvWrapper(RslRlVecEnvWrapper):
+#     def __init__(
+#         self, env: ManagerBasedRLEnv | DirectRLEnv, num_actions: int | None = None
+#     ):
+#         super().__init__(env)
+#         self.num_actions = num_actions
+#
+#     def step(
+#         self, actions: torch.Tensor
+#     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, dict]:
+#         # add ee command to action
+#         des_ee_position = self.env.unwrapped.command_manager.get_command("ee_pose")[:, :3]
+#         actions = torch.cat([actions, des_ee_position], dim=1)
+#         # record step information
+#         obs_dict, rew, terminated, truncated, extras = self.env.step(actions)
+#         # compute dones for compatibility with RSL-RL
+#         dones = (terminated | truncated).to(dtype=torch.long)
+#         # move extra observations to the extras dict
+#         obs = obs_dict["policy"]
+#         extras["observations"] = obs_dict
+#         # move time out information to the extras dict
+#         # this is only needed for infinite horizon tasks
+#         if not self.unwrapped.cfg.is_finite_horizon:
+#             extras["time_outs"] = truncated
+#
+#         # return the step information
+#         return obs, rew, dones, extras
