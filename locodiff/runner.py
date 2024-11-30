@@ -98,7 +98,11 @@ class DiffusionRunner:
                         self.num_steps_per_env, leave=False, desc="Simulating... "
                     ):
                         actions = self.policy.act({"obs": obs})["action"]
-                        obs, rewards, dones, infos = self.env.step(actions)
+                        for i in range(self.policy.T_action):
+                            obs, rewards, dones, infos = self.env.step(actions[:, i])
+                            if i < self.policy.T_action - 1:
+                                self.policy.update_history({"obs": obs})
+
                         # move device
                         obs, rewards, dones = (
                             obs.to(self.device),
