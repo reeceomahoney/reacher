@@ -1,4 +1,5 @@
 import gymnasium as gym
+import numpy as np
 import torch
 
 import gymnasium_robotics
@@ -51,3 +52,7 @@ class MazeEnv:
 
     def close(self):
         self.env.close()
+
+    def get_maze(self):
+        maze = np.array(self.env.unwrapped.maze.maze_map)
+        return 1 - maze

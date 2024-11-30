@@ -223,7 +223,7 @@ class DiffusionPolicy(nn.Module):
                 tgt[:, -1, : self.goal_dim] = tgt_pos
             else:
                 tgt[:, -1, :self.goal_dim] = data["input"][:, -1, :self.goal_dim]
-            mask[:, -1, 0] = 1.0
+            mask[:, -1, :self.goal_dim] = 1.0
 
         return tgt, mask
 
