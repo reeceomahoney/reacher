@@ -7,7 +7,7 @@ gym.register_envs(gymnasium_robotics)
 
 
 class MazeEnv:
-    def __init__(self, agent_cfg, render=True):
+    def __init__(self, agent_cfg, render=False):
         render_mode = "human" if render else None
         self.env = gym.make(
             agent_cfg.task,
