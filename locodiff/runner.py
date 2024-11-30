@@ -92,6 +92,7 @@ class DiffusionRunner:
             if it % self.cfg.sim_interval == 0:
                 ep_infos = []
                 self.env.reset()
+                self.policy.set_goal(self.env.goal)
                 with InferenceContext(self):
                     for _ in trange(
                         self.num_steps_per_env, leave=False, desc="Simulating... "

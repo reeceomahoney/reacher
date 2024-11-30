@@ -15,6 +15,7 @@ class MazeEnv:
             render_mode=render_mode,
         )
         self.obs = None
+        self.goal = None
         self.device = agent_cfg.device
 
         self.obs_dim = self.env.observation_space["observation"].shape[0]  # type: ignore
