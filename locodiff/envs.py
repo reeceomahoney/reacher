@@ -25,8 +25,8 @@ class MazeEnv:
 
     def reset(self):
         obs, _ = self.env.reset()
-        self.obs = torch.tensor(obs["observation"]).to(self.device)
-        self.goal = torch.tensor(obs["desired_goal"]).to(self.device)
+        self.obs = torch.tensor(obs["observation"], dtype=torch.float).to(self.device)
+        self.goal = torch.tensor(obs["desired_goal"], dtype=torch.float).to(self.device)
         return self.obs
 
     def step(self, action):
