@@ -231,7 +231,7 @@ class DiffusionPolicy(nn.Module):
         return tgt, mask
 
     def set_goal(self, goal):
-        self.goal = goal
+        self.goal = goal.unsqueeze(0)
 
     @torch.no_grad()
     def make_sample_density(self, size):
