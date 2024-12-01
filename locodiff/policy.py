@@ -73,6 +73,7 @@ class DiffusionPolicy(nn.Module):
         self.T_cond = T_cond
         self.T_action = T_action
         self.num_envs = num_envs
+        self.goal_dim = 2
 
         # diffusion
         self.sigma_data = sigma_data
@@ -188,6 +189,7 @@ class DiffusionPolicy(nn.Module):
             data = self.update_history(data)
             raw_obs = data["obs"]
             input = None
+            goal = self.normalizer.scale_pos(self.goal)
         else:
             # training
             raw_obs = data["obs"]
@@ -198,9 +200,10 @@ class DiffusionPolicy(nn.Module):
                 input_act = raw_action[:, self.T_cond - 1 : self.T_cond + self.T - 1]
             input = torch.cat([input_obs, input_act], dim=-1)
             input = self.normalizer.scale_output(input)
+            goal = input[:, -1, : self.goal_dim]
 
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
-        return {"obs": obs, "input": input}
+        return {"obs": obs, "input": input, goal: "goal"}
 
     def update_history(self, x):
         self.obs_hist[:, :-1] = self.obs_hist[:, 1:].clone()
@@ -222,14 +225,13 @@ class DiffusionPolicy(nn.Module):
                 tgt_pos = self.normalizer.scale_pos(self.goal)
                 tgt[:, -1, : self.goal_dim] = tgt_pos
             else:
-                tgt[:, -1, :self.goal_dim] = data["input"][:, -1, :self.goal_dim]
-            mask[:, -1, :self.goal_dim] = 1.0
+                tgt[:, -1, : self.goal_dim] = data["input"][:, -1, : self.goal_dim]
+            mask[:, -1, : self.goal_dim] = 1.0
 
         return tgt, mask
 
     def set_goal(self, goal):
         self.goal = goal
-        self.goal_dim = self.goal.shape[-1]
 
     @torch.no_grad()
     def make_sample_density(self, size):
