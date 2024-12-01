@@ -203,7 +203,7 @@ class DiffusionPolicy(nn.Module):
             goal = input[:, -1, : self.goal_dim]
 
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
-        return {"obs": obs, "input": input, goal: "goal"}
+        return {"obs": obs, "input": input, "goal": goal}
 
     def update_history(self, x):
         self.obs_hist[:, :-1] = self.obs_hist[:, 1:].clone()
