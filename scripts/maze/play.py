@@ -49,8 +49,6 @@ def main(agent_cfg: DictConfig):
 
     # make figure
     plt.figure(figsize=(8,8))
-    plt.xlim(-4, 4)
-    plt.ylim(-4, 4)
 
     # reset environment
     obs = env.reset()
@@ -64,9 +62,11 @@ def main(agent_cfg: DictConfig):
             output = policy({"obs": obs})
             # plot trajectory
             obs_traj = output["obs_traj"].cpu().numpy()
+            plt.clf()
             plt.imshow(env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
             plt.plot(obs_traj[0, :, 0], obs_traj[0, :, 1])
-            plt.show()
+            plt.draw()
+            plt.pause(0.1)
 
             # env stepping
             for i in range(runner.policy.T_action):
