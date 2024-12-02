@@ -17,14 +17,14 @@ sim_interval: 5e3
 device: cuda
 ema_decay: 0.999
 use_ema: True
-scaling: gaussian
+scaling: linear
 
 #dims
 obs_dim: null
 act_dim: null
-T: 256
+T: 8
 T_cond: 1
-T_action: 256
+T_action: 8
 num_envs: 1
 
 # diffusion
