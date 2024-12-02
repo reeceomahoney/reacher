@@ -53,9 +53,9 @@ class ScalingWrapper(nn.Module):
         noised_x = x + noise * sigma.view(-1, 1, 1)
 
         # apply inpainting mask
-        tgt = kwargs["tgt"]
-        mask = kwargs["mask"]
-        noised_x = tgt * mask + noised_x * (1 - mask)
+        # tgt = kwargs["tgt"]
+        # mask = kwargs["mask"]
+        # noised_x = tgt * mask + noised_x * (1 - mask)
 
         # calculate target
         c_skip, c_out, c_in = self.get_scalings(sigma)
@@ -63,7 +63,7 @@ class ScalingWrapper(nn.Module):
         target = (x - c_skip * noised_x) / c_out
 
         # apply inpainting mask
-        model_output = tgt * mask + model_output * (1 - mask)
+        # model_output = tgt * mask + model_output * (1 - mask)
 
         # calculate loss
         return nn.functional.mse_loss(model_output, target)
@@ -72,9 +72,9 @@ class ScalingWrapper(nn.Module):
         c_skip, c_out, c_in = self.get_scalings(sigma)
 
         # apply inpainting mask
-        tgt = kwargs["tgt"]
-        mask = kwargs["mask"]
-        x_t = tgt * mask + x_t * (1 - mask)
+        # tgt = kwargs["tgt"]
+        # mask = kwargs["mask"]
+        # x_t = tgt * mask + x_t * (1 - mask)
 
         return self.model(x_t * c_in, sigma, data_dict, uncond) * c_out + x_t * c_skip
 
