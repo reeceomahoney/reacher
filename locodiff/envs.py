@@ -12,7 +12,7 @@ class MazeEnv:
         render_mode = "human" if render else None
         self.env = gym.make(
             agent_cfg.task,
-            max_episode_steps=agent_cfg.episode_length,
+            max_episode_steps=agent_cfg.episode_length * 100,
             render_mode=render_mode,
         )
         self.obs = None
@@ -25,7 +25,11 @@ class MazeEnv:
 
     def reset(self):
         obs, _ = self.env.reset()
-        self.obs = torch.tensor(obs["observation"], dtype=torch.float).to(self.device)
+        self.obs = (
+            torch.tensor(obs["observation"], dtype=torch.float)
+            .to(self.device)
+            .unsqueeze(0)
+        )
         self.goal = torch.tensor(obs["desired_goal"], dtype=torch.float).to(self.device)
         return self.obs
 

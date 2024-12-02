@@ -48,7 +48,7 @@ def main(agent_cfg: DictConfig):
     policy = runner.get_inference_policy(device=env.device)
 
     # make figure
-    plt.figure(figsize=(8,8))
+    plt.figure(figsize=(8, 8))
 
     # reset environment
     obs = env.reset()
@@ -60,11 +60,18 @@ def main(agent_cfg: DictConfig):
         with torch.inference_mode():
             # agent stepping
             output = policy({"obs": obs})
+
             # plot trajectory
-            obs_traj = output["obs_traj"].cpu().numpy()
             plt.clf()
+            obs_traj = output["obs_traj"].cpu().numpy()
             plt.imshow(env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
             plt.plot(obs_traj[0, :, 0], obs_traj[0, :, 1])
+            # plot current and goal position
+            obs_np = obs.cpu().numpy()
+            goal_np = env.goal.cpu().numpy()
+            plt.plot(obs_np[0, 0], obs_np[0, 1], "go")
+            plt.plot(goal_np[0], goal_np[1], "ro")
+            # draw
             plt.draw()
             plt.pause(0.1)
 
@@ -75,8 +82,10 @@ def main(agent_cfg: DictConfig):
                 if i < runner.policy.T_action - 1:
                     runner.policy.update_history({"obs": obs})
 
-        if dones.any():
-            runner.policy.reset(dones)
+                if dones.any():
+                    env.reset()
+                    runner.policy.reset(dones)
+                    break
 
         timestep += 1
 
