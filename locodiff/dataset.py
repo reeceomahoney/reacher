@@ -71,6 +71,8 @@ class ExpertDataset(Dataset):
                 )
                 actions_splits.append(torch.tensor(episode.actions, dtype=torch.float))
 
+        # TODO: calculate x and y mean here
+
         # add padding to make all sequences the same length
         max_len = max(split.shape[0] for split in obs_splits)
         obs = self.add_padding(obs_splits, max_len, temporal=True)
