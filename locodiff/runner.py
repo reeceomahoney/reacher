@@ -54,7 +54,7 @@ class DiffusionRunner:
                 self.cfg.episode_length / (self.env.cfg.decimation * self.env.cfg.sim.dt)  # type: ignore
             )
         elif isinstance(env, MazeEnv):
-            self.num_steps_per_env = int(self.cfg.episode_length / 0.01)
+            self.num_steps_per_env = int(self.cfg.episode_length / 0.1)
         self.log_dir = log_dir
         self.current_learning_iteration = 0
 
@@ -103,29 +103,32 @@ class DiffusionRunner:
                             if i < self.policy.T_action - 1:
                                 self.policy.update_history({"obs": obs})
 
-                        # move device
-                        obs, rewards, dones = (
-                            obs.to(self.device),
-                            rewards.to(self.device),
-                            dones.to(self.device),
-                        )
-                        self.policy.reset(dones)
+                            # move device
+                            obs, rewards, dones = (
+                                obs.to(self.device),
+                                rewards.to(self.device),
+                                dones.to(self.device),
+                            )
+                            self.policy.reset(dones)
 
-                        if self.log_dir is not None:
-                            # rewards and dones
-                            if "log" in infos:
-                                ep_infos.append(infos["log"])
-                            cur_reward_sum += rewards
-                            cur_episode_length += 1
-                            new_ids = (dones > 0).nonzero(as_tuple=False)
-                            rewbuffer.extend(
-                                cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist()
-                            )
-                            lenbuffer.extend(
-                                cur_episode_length[new_ids][:, 0].cpu().numpy().tolist()
-                            )
-                            cur_reward_sum[new_ids] = 0
-                            cur_episode_length[new_ids] = 0
+                            if self.log_dir is not None:
+                                # rewards and dones
+                                if "log" in infos:
+                                    ep_infos.append(infos["log"])
+                                cur_reward_sum += rewards
+                                cur_episode_length += 1
+                                new_ids = (dones > 0).nonzero(as_tuple=False)
+                                rewbuffer.extend(
+                                    cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist()
+                                )
+                                lenbuffer.extend(
+                                    cur_episode_length[new_ids][:, 0]
+                                    .cpu()
+                                    .numpy()
+                                    .tolist()
+                                )
+                                cur_reward_sum[new_ids] = 0
+                                cur_episode_length[new_ids] = 0
 
             # evaluation
             if it % self.cfg.eval_interval == 0:
@@ -185,7 +188,9 @@ class DiffusionRunner:
                             ep_info[key] = torch.Tensor([ep_info[key]])
                         if len(ep_info[key].shape) == 0:
                             ep_info[key] = ep_info[key].unsqueeze(0)
-                        infotensor = torch.cat((infotensor, ep_info[key].to(self.device)))
+                        infotensor = torch.cat(
+                            (infotensor, ep_info[key].to(self.device))
+                        )
                     value = torch.mean(infotensor)
                     # log
                     if "/" in key:
