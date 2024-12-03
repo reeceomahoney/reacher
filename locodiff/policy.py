@@ -173,7 +173,7 @@ class DiffusionPolicy(nn.Module):
         loss = nn.functional.mse_loss(x, input, reduction="none")
         obs_loss = loss[:, :, : self.obs_dim].mean()
         action_loss = loss[:, :, self.obs_dim :].mean()
-        return loss.item(), obs_loss.item(), action_loss.item()
+        return loss.mean().item(), obs_loss.item(), action_loss.item()
 
     def reset(self, dones=None):
         if dones is not None:
