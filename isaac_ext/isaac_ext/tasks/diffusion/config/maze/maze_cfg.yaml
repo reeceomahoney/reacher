@@ -22,9 +22,9 @@ scaling: linear
 #dims
 obs_dim: null
 act_dim: null
-T: 64
+T: 256
 T_cond: 1
-T_action: 64
+T_action: 256
 num_envs: 1
 
 # diffusion
