@@ -28,7 +28,7 @@ T_action: 256
 num_envs: 1
 
 # diffusion
-sampling_steps: 10
+sampling_steps: 256
 cond_mask_prob: 0
 
 policy:
@@ -39,7 +39,7 @@ policy:
   T_action: ${T_action}
   num_envs: ${num_envs}
   sampling_steps: ${sampling_steps}
-  sampler_type: ddim
+  sampler_type: ddpm
   sigma_data: 0.5
   sigma_min: 0.005
   sigma_max: 1
