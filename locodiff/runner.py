@@ -138,10 +138,15 @@ class DiffusionRunner:
             # evaluation
             if it % self.cfg.eval_interval == 0:
                 with InferenceContext(self):
-                    test_loss = []
+                    test_mse, test_obs_mse, test_act_mse = [], [], []
                     for batch in self.test_loader:
-                        test_loss.append(self.policy.test(batch))
-                    test_loss = statistics.mean(test_loss)
+                        mse, obs_mse, act_mse = self.policy.test(batch)
+                        test_mse.append(mse)
+                        test_obs_mse.append(obs_mse)
+                        test_act_mse.append(act_mse)
+                    test_mse = statistics.mean(test_mse)
+                    test_obs_mse = statistics.mean(test_obs_mse)
+                    test_act_mse = statistics.mean(test_act_mse)
 
             # training
             try:
@@ -178,7 +183,14 @@ class DiffusionRunner:
         )
         # evaluation
         if locs["it"] % self.cfg.eval_interval == 0:
-            wandb.log({"Loss/test_mse": locs["test_loss"]}, step=locs["it"])
+            wandb.log(
+                {
+                    "Loss/test_mse": locs["test_mse"],
+                    "Loss/test_obs_mse": locs["test_obs_mse"],
+                    "Loss/test_act_mse": locs["test_act_mse"],
+                },
+                step=locs["it"],
+            )
         # simulation
         if locs["it"] % self.cfg.sim_interval == 0:
             if locs["ep_infos"]:
@@ -202,13 +214,13 @@ class DiffusionRunner:
                         wandb.log({key: value}, step=locs["it"])
                     else:
                         wandb.log({"Episode/" + key, value}, step=locs["it"])
-            # wandb.log(
-            #     {
-            #         "Train/mean_reward": statistics.mean(locs["rewbuffer"]),
-            #         "Train/mean_episode_length": statistics.mean(locs["lenbuffer"]),
-            #     },
-            #     step=locs["it"],
-            # )
+            wandb.log(
+                {
+                    "Train/mean_reward": statistics.mean(locs["rewbuffer"]),
+                    "Train/mean_episode_length": statistics.mean(locs["lenbuffer"]),
+                },
+                step=locs["it"],
+            )
 
     def save(self, path, infos=None):
         if self.use_ema:

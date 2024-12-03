@@ -165,13 +165,15 @@ class DiffusionPolicy(nn.Module):
 
         return loss.item()
 
-    def test(self, data: dict) -> float:
+    def test(self, data: dict) -> tuple[float, float, float]:
         data = self.process(data)
         x = self.forward(data)
         # calculate loss
         input = self.normalizer.inverse_scale_output(data["input"])
-        loss = nn.functional.mse_loss(x, input)
-        return loss.item()
+        loss = nn.functional.mse_loss(x, input, reduction="none")
+        obs_loss = loss[:, :, : self.obs_dim].mean()
+        action_loss = loss[:, :, self.obs_dim :].mean()
+        return loss.item(), obs_loss.item(), action_loss.item()
 
     def reset(self, dones=None):
         if dones is not None:
