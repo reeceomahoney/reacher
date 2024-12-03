@@ -39,7 +39,7 @@ class DiffusionTransformer(nn.Module):
 
         # change dims depending on if we're inpainting the obs
         input_len = T + T_cond - 1 if inpaint_obs else T
-        cond_len = 1 if inpaint_obs else T_cond + 1
+        cond_len = 1 if inpaint_obs else T_cond + 2
 
         # dropout and position encoding
         self.pos_emb = SinusoidalPosEmb(d_model, device)(torch.arange(input_len))
@@ -174,7 +174,8 @@ class DiffusionTransformer(nn.Module):
             cond_emb = sigma_emb
         else:
             obs_emb = self.obs_emb(data_dict["obs"])
-            cond_emb = torch.cat([sigma_emb, obs_emb], dim=1)
+            goal_emb = self.obs_emb(data_dict["goal"]).unsqueeze(1)
+            cond_emb = torch.cat([sigma_emb, obs_emb, goal_emb], dim=1)
         # add position encoding and dropout
         cond_emb = self.drop(cond_emb + self.cond_pos_emb)
         x_emb = self.drop(x_emb + self.pos_emb)

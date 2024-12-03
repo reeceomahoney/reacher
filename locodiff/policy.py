@@ -73,7 +73,7 @@ class DiffusionPolicy(nn.Module):
         self.T_cond = T_cond
         self.T_action = T_action
         self.num_envs = num_envs
-        self.goal_dim = 2
+        self.goal_dim = 4
 
         # diffusion
         self.sigma_data = sigma_data
@@ -234,6 +234,7 @@ class DiffusionPolicy(nn.Module):
 
     def set_goal(self, goal):
         self.goal = goal.unsqueeze(0)
+        self.goal = torch.cat([self.goal, torch.zeros_like(self.goal)], dim=-1)
 
     @torch.no_grad()
     def make_sample_density(self, size):
