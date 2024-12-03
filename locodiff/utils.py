@@ -159,27 +159,24 @@ class ExponentialMovingAverage:
 
 
 class Normalizer(nn.Module):
-    def __init__(
-        self, x_data: torch.Tensor, y_data: torch.Tensor, scaling: str, device: str
-    ):
+    def __init__(self, data_loader, scaling: str, device: str):
         super().__init__()
-        x_data = x_data.detach()
-        y_data = y_data.detach()
+        dl = data_loader
 
         # linear scaling
-        self.register_buffer("x_max", x_data.max(0).values)
-        self.register_buffer("x_min", x_data.min(0).values)
-        self.register_buffer("y_max", y_data.max(0).values)
-        self.register_buffer("y_min", y_data.min(0).values)
+        self.register_buffer("x_max", dl.x_max)
+        self.register_buffer("x_min", dl.x_min)
+        self.register_buffer("y_max", dl.y_max)
+        self.register_buffer("y_min", dl.y_min)
 
         # gaussian scaling
-        self.register_buffer("x_mean", x_data.mean(0))
-        self.register_buffer("x_std", x_data.std(0))
-        self.register_buffer("y_mean", y_data.mean(0))
-        self.register_buffer("y_std", y_data.std(0))
+        self.register_buffer("x_mean", dl.x_mean)
+        self.register_buffer("x_std", dl.x_std)
+        self.register_buffer("y_mean", dl.y_mean)
+        self.register_buffer("y_std", dl.y_std)
 
         # bounds
-        y_bounds = torch.zeros((2, y_data.shape[-1]))
+        y_bounds = torch.zeros((2, self.y_mean.shape[-1]))
         self.register_buffer("y_bounds", y_bounds)
         if scaling == "linear":
             self.y_bounds[0, :] = -1.1

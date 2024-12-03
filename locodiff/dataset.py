@@ -15,7 +15,6 @@ class ExpertDataset(Dataset):
         data_directory: str | None,
         T_cond: int,
         task_name: str,
-        seed: int,
         device="cpu",
     ):
         self.T_cond = T_cond
@@ -71,7 +70,7 @@ class ExpertDataset(Dataset):
                 )
                 actions_splits.append(torch.tensor(episode.actions, dtype=torch.float))
 
-        # TODO: calculate x and y mean here
+        self.calculate_norm_data(obs_splits, actions_splits)
 
         # add padding to make all sequences the same length
         max_len = max(split.shape[0] for split in obs_splits)
@@ -85,10 +84,6 @@ class ExpertDataset(Dataset):
         action_size = list(self.data["action"].shape)
         log.info(f"Dataset size | Observations: {obs_size} | Actions: {action_size}")
 
-    # -------
-    # Getters
-    # -------
-
     def __len__(self):
         return len(self.data["obs"])
 
@@ -97,23 +92,6 @@ class ExpertDataset(Dataset):
         return {
             key: tensor[idx, :T] for key, tensor in self.data.items() if key != "mask"
         }
-
-    def get_seq_length(self, idx):
-        return int(self.data["mask"][idx].sum().item())
-
-    def get_all_obs(self):
-        return torch.cat(
-            [self.data["obs"][i, : self.get_seq_length(i)] for i in range(len(self))]
-        )
-
-    def get_all_actions(self):
-        return torch.cat(
-            [self.data["action"][i, : self.get_seq_length(i)] for i in range(len(self))]
-        )
-
-    # ----------------
-    # Helper functions
-    # ----------------
 
     def split_eps(self, x, split_indices):
         x = torch.tensor_split(x.reshape(-1, x.shape[-1]), split_indices.tolist())
@@ -158,6 +136,21 @@ class ExpertDataset(Dataset):
 
         return masks.to(self.device)
 
+    def calculate_norm_data(self, obs_splits, actions_splits):
+        all_obs = torch.cat(obs_splits)[:1000000]
+        all_actions = torch.cat(actions_splits)
+        all_obs_acts = torch.cat([all_obs, all_actions], dim=-1)
+
+        self.x_mean = all_obs.mean(0)
+        self.x_std = all_obs.std(0)
+        self.x_min = all_obs.min(0).values
+        self.x_max = all_obs.max(0).values
+
+        self.y_mean = all_obs_acts.mean(0)
+        self.y_std = all_obs_acts.std(0)
+        self.y_min = all_obs_acts.min(0).values
+        self.y_max = all_obs_acts.max(0).values
+
 
 class SlicerWrapper(Dataset):
     def __init__(self, dataset: Subset, T_cond: int, T: int):
@@ -187,12 +180,6 @@ class SlicerWrapper(Dataset):
         # This is to handle data without a time dimension (e.g. skills)
         return {k: v[start:end] if v.ndim > 1 else v for k, v in x.items()}
 
-    def get_all_obs(self):
-        return self.dataset.dataset.get_all_obs()
-
-    def get_all_actions(self):
-        return self.dataset.dataset.get_all_actions()
-
 
 def get_dataloaders(
     task_name: str,
@@ -203,17 +190,12 @@ def get_dataloaders(
     train_batch_size: int,
     test_batch_size: int,
     num_workers: int,
-    seed: int,
 ):
     # Build the datasets
-    dataset = ExpertDataset(data_directory, T_cond, task_name, seed)
+    dataset = ExpertDataset(data_directory, T_cond, task_name)
     train, val = random_split(dataset, [train_fraction, 1 - train_fraction])
     train_set = SlicerWrapper(train, T_cond, T)
     test_set = SlicerWrapper(val, T_cond, T)
-
-    # Build the scaler
-    x_data = train_set.get_all_obs()
-    y_data = torch.cat([train_set.get_all_obs(), train_set.get_all_actions()], dim=-1)
 
     # Build the dataloaders
     train_dataloader = DataLoader(
@@ -231,4 +213,4 @@ def get_dataloaders(
         pin_memory=True,
     )
 
-    return train_dataloader, test_dataloader, (x_data, y_data)
+    return train_dataloader, test_dataloader

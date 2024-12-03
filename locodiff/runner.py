@@ -32,10 +32,10 @@ class DiffusionRunner:
         self.device = device
 
         # classes
-        self.train_loader, self.test_loader, all_data = get_dataloaders(
+        self.train_loader, self.test_loader = get_dataloaders(
             **self.cfg.dataset
         )
-        self.normalizer = Normalizer(*all_data, agent_cfg.scaling, device)
+        self.normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
         model = ScalingWrapper(
             model=ConditionalUnet1D(**self.cfg.model),
             sigma_data=agent_cfg.policy.sigma_data,
@@ -197,13 +197,13 @@ class DiffusionRunner:
                         wandb.log({key: value}, step=locs["it"])
                     else:
                         wandb.log({"Episode/" + key, value}, step=locs["it"])
-            wandb.log(
-                {
-                    "Train/mean_reward": statistics.mean(locs["rewbuffer"]),
-                    "Train/mean_episode_length": statistics.mean(locs["lenbuffer"]),
-                },
-                step=locs["it"],
-            )
+            # wandb.log(
+            #     {
+            #         "Train/mean_reward": statistics.mean(locs["rewbuffer"]),
+            #         "Train/mean_episode_length": statistics.mean(locs["lenbuffer"]),
+            #     },
+            #     step=locs["it"],
+            # )
 
     def save(self, path, infos=None):
         if self.use_ema:
