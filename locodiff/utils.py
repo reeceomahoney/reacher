@@ -161,7 +161,7 @@ class ExponentialMovingAverage:
 class Normalizer(nn.Module):
     def __init__(self, data_loader, scaling: str, device: str):
         super().__init__()
-        dl = data_loader
+        dl = data_loader.dataset.dataset.dataset
 
         # linear scaling
         self.register_buffer("x_max", dl.x_max)

@@ -6,10 +6,10 @@ import torch
 from collections import deque
 from tqdm import trange
 
+import wandb
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 
-import wandb
 from locodiff.dataset import get_dataloaders
 from locodiff.envs import MazeEnv
 from locodiff.models.transformer import DiffusionTransformer
@@ -32,9 +32,7 @@ class DiffusionRunner:
         self.device = device
 
         # classes
-        self.train_loader, self.test_loader = get_dataloaders(
-            **self.cfg.dataset
-        )
+        self.train_loader, self.test_loader = get_dataloaders(**self.cfg.dataset)
         self.normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
         model = ScalingWrapper(
             model=ConditionalUnet1D(**self.cfg.model),
