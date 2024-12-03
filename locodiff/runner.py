@@ -4,7 +4,7 @@ import statistics
 import time
 import torch
 from collections import deque
-from tqdm import trange
+from tqdm import tqdm, trange
 
 import wandb
 from rsl_rl.env import VecEnv
@@ -88,13 +88,15 @@ class DiffusionRunner:
 
             # simulation
             if it % self.cfg.sim_interval == 0:
+                t = 0
                 ep_infos = []
                 self.env.reset()
                 self.policy.set_goal(self.env.goal)
-                with InferenceContext(self):
-                    for _ in trange(
-                        self.num_steps_per_env, leave=False, desc="Simulating... "
-                    ):
+
+                with InferenceContext(self) and tqdm(
+                    total=self.num_steps_per_env, desc="Simulating...", leave=False
+                ) as pbar:
+                    while t < self.num_steps_per_env:
                         actions = self.policy.act({"obs": obs})["action"]
                         for i in range(self.policy.T_action):
                             obs, rewards, dones, infos = self.env.step(actions[:, i])
@@ -127,6 +129,11 @@ class DiffusionRunner:
                                 )
                                 cur_reward_sum[new_ids] = 0
                                 cur_episode_length[new_ids] = 0
+
+                            t += 1
+                            pbar.update(1)
+                            if t == self.num_steps_per_env:
+                                break
 
             # evaluation
             if it % self.cfg.eval_interval == 0:

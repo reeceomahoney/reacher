@@ -35,7 +35,9 @@ class MazeEnv:
 
     def step(self, action):
         action = action[0].cpu().numpy()
-        obs, reward, terminated, truncated, info = self.env.step(action)
+
+        for _ in range(10):
+            obs, reward, terminated, truncated, info = self.env.step(action)
 
         self.obs = (
             torch.tensor(obs["observation"], dtype=torch.float)

@@ -3,7 +3,6 @@ import torch
 import hydra
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
-import sys
 
 from locodiff.envs import MazeEnv
 from locodiff.runner import DiffusionRunner
@@ -21,11 +20,6 @@ torch.backends.cudnn.benchmark = False
 )
 def main(agent_cfg: DictConfig):
     """Train with RSL-RL agent."""
-    # override configurations with non-hydra CLI arguments
-
-    if sys.gettrace() is not None:
-        agent_cfg.episode_length = 1
-
     # specify directory for logging experiments
     log_dir = HydraConfig.get().runtime.output_dir
     print(f"[INFO] Logging experiment in directory: {log_dir}")
