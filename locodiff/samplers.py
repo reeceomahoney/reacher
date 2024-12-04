@@ -1,6 +1,7 @@
 import math
 import torch
 from typing import Callable
+from locodiff.helpers import apply_conditioning
 
 
 def get_sampler(sampler_type: str) -> Callable:
@@ -161,17 +162,17 @@ def sample_ddpm(model, noise: torch.Tensor, data_dict: dict, **kwargs):
     noise_scheduler = kwargs["noise_scheduler"]
     x_t = noise
     # inpainting mask
-    tgt = kwargs["tgt"]
-    mask = kwargs["mask"]
+    # tgt = kwargs["tgt"]
+    # mask = kwargs["mask"]
+    cond = kwargs["cond"]
 
     for idx, t in enumerate(noise_scheduler.timesteps):
-        x_t = tgt * mask + x_t * (1 - mask)
+        x_t = apply_conditioning(x_t, cond, 2)
         t_pt = t.float().to(noise.device)
         output = model(x_t, data_dict, t_pt.expand(x_t.shape[0]))
         x_t = noise_scheduler.step(output, t, x_t).prev_sample
-        x_t = torch.clamp(x_t, -1, 1)
 
-    x_t = tgt * mask + x_t * (1 - mask)
+    x_t = apply_conditioning(x_t, cond, 2)
     return x_t
 
 

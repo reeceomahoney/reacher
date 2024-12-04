@@ -1,7 +1,6 @@
 import math
-import numpy as np
-import wandb
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.optim.adam import Adam
@@ -10,6 +9,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
+import wandb
 from locodiff.helpers import Losses, apply_conditioning, cosine_beta_schedule, extract
 from locodiff.samplers import (
     get_sampler,
@@ -64,7 +64,7 @@ class DiffusionPolicy(nn.Module):
                 beta_schedule="squaredcos_cap_v2",
                 variance_type="fixed_small",
                 clip_sample=True,
-                prediction_type="epsilon",
+                prediction_type="sample",
             )
 
         self.normalizer = normalizer
@@ -99,49 +99,16 @@ class DiffusionPolicy(nn.Module):
         # optimizer and lr scheduler
         optim_groups = self.model.get_optim_groups()
         self.optimizer = Adam(optim_groups, lr=lr)
-        # self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
-        loss_weights = self.get_loss_weights(1.0, 1.0, None)
-        self.loss_fn = Losses["l2"](loss_weights, self.action_dim)
+        self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
 
         diff_betas = cosine_beta_schedule(sampling_steps)
         alphas = 1.0 - diff_betas
         alphas_cumprod = torch.cumprod(alphas, dim=0)
-        alphas_cumprod_prev = torch.cat([torch.ones(1), alphas_cumprod[:-1]])
         self.register_buffer("sqrt_alphas_cumprod", torch.sqrt(alphas_cumprod))
         self.register_buffer(
             "sqrt_one_minus_alphas_cumprod", torch.sqrt(1.0 - alphas_cumprod)
         )
         self.to(device)
-
-    def get_loss_weights(self, action_weight, discount, weights_dict):
-        """
-        sets loss coefficients for trajectory
-
-        action_weight   : float
-            coefficient on first action loss
-        discount   : float
-            multiplies t^th timestep of trajectory loss by discount**t
-        weights_dict    : dict
-            { i: c } multiplies dimension i of observation loss by c
-        """
-        self.action_weight = action_weight
-
-        dim_weights = torch.ones(self.input_dim, dtype=torch.float32)
-
-        ## set loss coefficients for dimensions of observation
-        if weights_dict is None:
-            weights_dict = {}
-        for ind, w in weights_dict.items():
-            dim_weights[self.action_dim + ind] *= w
-
-        ## decay loss with trajectory timestep: discount**t
-        discounts = discount ** torch.arange(self.T, dtype=torch.float)
-        discounts = discounts / discounts.mean()
-        loss_weights = torch.einsum("h,t->ht", discounts, dim_weights)
-
-        ## manually set a0 weight
-        loss_weights[0, : self.action_dim] = action_weight
-        return loss_weights
 
     def forward(self, data: dict) -> torch.Tensor:
         B = data["obs"].shape[0]
@@ -150,8 +117,17 @@ class DiffusionPolicy(nn.Module):
         noise = noise.to(self.device)
 
         # create inpainting mask and target
-        tgt, mask = self.create_inpainting_data(noise, data)
-        kwargs = {"tgt": tgt, "mask": mask}
+        # tgt, mask = self.create_inpainting_data(noise, data)
+        # kwargs = {"tgt": tgt, "mask": mask}
+        if data["input"] is not None:
+            kwargs = {
+                "cond": {
+                    0: data["input"][:, 0, self.action_dim :],
+                    self.T - 1: data["input"][:, -1, self.action_dim :],
+                }
+            }
+        else:
+            kwargs = {"cond": {0: data["obs"], self.T - 1: data["goal"]}}
 
         # create noise
         if self.sampler_type == "ddpm":
@@ -223,13 +199,13 @@ class DiffusionPolicy(nn.Module):
         x_recon = self.model(x_noisy, cond, t)
         x_recon = apply_conditioning(x_recon, cond, self.action_dim)
 
-        loss, info = self.loss_fn(x_recon, x_start)
+        loss = torch.nn.functional.mse_loss(x_recon, x_start)
 
         # update model
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        # self.lr_scheduler.step()
+        self.lr_scheduler.step()
 
         return loss.item()
 
@@ -250,20 +226,20 @@ class DiffusionPolicy(nn.Module):
         # calculate loss
         input = self.normalizer.inverse_scale_output(data["input"])
         loss = nn.functional.mse_loss(x, input, reduction="none")
-        obs_loss = loss[:, :, self.action_dim:].mean()
-        action_loss = loss[:, :, :self.action_dim].mean()
+        obs_loss = loss[:, :, self.action_dim :].mean()
+        action_loss = loss[:, :, : self.action_dim].mean()
 
         if plot:
-            obs_traj = x[0, :, self.action_dim:]
+            obs_traj = x[0, :, self.action_dim :].cpu().numpy()
             fig = plt.figure()
-            maze = self.env.env.unwrapped.maze_array
+            maze = self.env.env.unwrapped.maze_arr
             maze -= 10
-            maze[np.where(maze == 2)] = 0
+            maze[np.where(maze == 2)] = 1
 
-            plt.imshow(maze, cmap="gray", extent=(-4, 4, -4, 4))
+            plt.imshow(maze, cmap="gray")
             plt.scatter(obs_traj[:, 0], obs_traj[:, 1])
-            wandb.Image(fig)
-        
+            wandb.log({"Image": wandb.Image(fig)})
+
         return loss.mean().item(), obs_loss.item(), action_loss.item()
 
     def reset(self, dones=None):
@@ -311,11 +287,11 @@ class DiffusionPolicy(nn.Module):
         tgt = torch.zeros_like(noise)
         mask = torch.zeros_like(noise)
         if self.inpaint_obs:
-            tgt[:, : self.T_cond, : self.obs_dim] = data["obs"]
-            mask[:, : self.T_cond, : self.obs_dim] = 1.0
+            tgt[:, : self.T_cond, self.action_dim :] = data["obs"]
+            mask[:, : self.T_cond, self.action_dim :] = 1.0
         if self.inpaint_final_obs:
-            tgt[:, -1, : self.goal_dim] = data["goal"]
-            mask[:, -1, : self.goal_dim] = 1.0
+            tgt[:, -1, self.action_dim :] = data["goal"]
+            mask[:, -1, self.action_dim :] = 1.0
 
         return tgt, mask
 
