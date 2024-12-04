@@ -16,7 +16,7 @@ log_interval: 100
 eval_interval: 1e3
 sim_interval: 5e3
 device: cuda
-ema_decay: 0.995
+ema_decay: 0.999
 use_ema: True
 scaling: linear
 
@@ -40,13 +40,13 @@ policy:
   T_action: ${T_action}
   num_envs: ${num_envs}
   sampling_steps: ${sampling_steps}
-  sampler_type: ddpm
+  sampler_type: ddim
   sigma_data: 0.5
   sigma_min: 0.005
   sigma_max: 1
   cond_lambda: 1
   cond_mask_prob: ${cond_mask_prob}
-  lr: 2e-4
+  lr: 1e-4
   betas: [0.9, 0.999]
   num_iters: ${num_iters}
   inpaint_obs: true
@@ -58,11 +58,11 @@ policy:
 dataset:
   task_name: ${task}
   data_directory: null
-  train_fraction: 0.998
+  train_fraction: 0.995
   T_cond: ${T_cond}
   T: ${T}
-  train_batch_size: 512
-  test_batch_size: 512
+  train_batch_size: 1024
+  test_batch_size: 1024
   num_workers: 4
 
 hydra:
