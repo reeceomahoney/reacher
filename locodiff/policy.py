@@ -100,14 +100,6 @@ class DiffusionPolicy(nn.Module):
         optim_groups = self.model.get_optim_groups()
         self.optimizer = Adam(optim_groups, lr=lr)
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
-
-        diff_betas = cosine_beta_schedule(sampling_steps)
-        alphas = 1.0 - diff_betas
-        alphas_cumprod = torch.cumprod(alphas, dim=0)
-        self.register_buffer("sqrt_alphas_cumprod", torch.sqrt(alphas_cumprod))
-        self.register_buffer(
-            "sqrt_one_minus_alphas_cumprod", torch.sqrt(1.0 - alphas_cumprod)
-        )
         self.to(device)
 
     def forward(self, data: dict) -> torch.Tensor:
@@ -168,38 +160,25 @@ class DiffusionPolicy(nn.Module):
         # create inpainting mask and target
         # tgt, mask = self.create_inpainting_data(noise, data)
         # kwargs = {"tgt": tgt, "mask": mask}
-
-        #     # calculate loss
-        #     if self.sampler_type == "ddpm":
-        #         timesteps = torch.randint(0, self.sampling_steps, (noise.shape[0],))
-        #         noise_trajectory = self.noise_scheduler.add_noise(
-        #             data["input"], noise, timesteps
-        #         )
-        #         timesteps = timesteps.float().to(self.device)
-        #         noise = tgt * mask + noise * (1 - mask)
-        #         pred = self.model(noise_trajectory, timesteps, data)
-        #         pred = tgt * mask + pred * (1 - mask)
-        #         loss = torch.nn.functional.mse_loss(pred, noise)
-        #     else:
-        #         sigma = self.make_sample_density(len(noise))
-        #         loss = self.model.loss(noise, sigma, data, **kwargs)
-
-        x_start = data["input"]
-        t = torch.randint(
-            0, self.sampling_steps, (x_start.shape[0],), device=x_start.device
-        ).long()
         cond = {
-            0: x_start[:, 0, self.action_dim :],
-            self.T - 1: x_start[:, -1, self.action_dim :],
+            0: data["input"][:, 0, self.action_dim :],
+            self.T - 1: data["input"][:, -1, self.action_dim :],
         }
 
-        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
-        x_noisy = apply_conditioning(x_noisy, cond, self.action_dim)
-
-        x_recon = self.model(x_noisy, cond, t)
-        x_recon = apply_conditioning(x_recon, cond, self.action_dim)
-
-        loss = torch.nn.functional.mse_loss(x_recon, x_start)
+        # calculate loss
+        if self.sampler_type == "ddpm":
+            timesteps = torch.randint(0, self.sampling_steps, (noise.shape[0],))
+            noise_trajectory = self.noise_scheduler.add_noise(
+                data["input"], noise, timesteps
+            )
+            timesteps = timesteps.float().to(self.device)
+            noise_trajectory = apply_conditioning(noise_trajectory, cond, self.action_dim)
+            pred = self.model(noise_trajectory, data, timesteps)
+            pred = apply_conditioning(pred, cond, self.action_dim)
+            loss = torch.nn.functional.mse_loss(pred, data["input"])
+        else:
+            sigma = self.make_sample_density(len(noise))
+            loss = self.model.loss(noise, sigma, data, **kwargs)
 
         # update model
         self.optimizer.zero_grad()
