@@ -54,7 +54,7 @@ def sample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
 
     for i in range(num_steps):
         x_t = apply_conditioning(x_t, cond, 2)
-        denoised = model(x_t, sigmas[i] * s_in, data_dict, **kwargs)
+        denoised = model(x_t, sigmas[i] * s_in, data_dict)
         t, t_next = -sigmas[i].log(), -sigmas[i + 1].log()
         h = t_next - t
         x_t = ((-t_next).exp() / (-t).exp()) * x_t - (-h).expm1() * denoised

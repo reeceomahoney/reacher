@@ -60,7 +60,7 @@ class ScalingWrapper(nn.Module):
 
         # calculate target
         c_skip, c_out, c_in = self.get_scalings(sigma)
-        model_output = self.model(noised_x * c_in, sigma, data_dict)
+        model_output = self.model(noised_x * c_in, data_dict, sigma)
         target = (x - c_skip * noised_x) / c_out
 
         # apply inpainting mask
@@ -77,7 +77,7 @@ class ScalingWrapper(nn.Module):
         # mask = kwargs["mask"]
         # x_t = tgt * mask + x_t * (1 - mask)
 
-        return self.model(x_t * c_in, sigma, data_dict, uncond) * c_out + x_t * c_skip
+        return self.model(x_t * c_in, data_dict, sigma) * c_out + x_t * c_skip
 
     def get_params(self):
         return self.model.get_params()
