@@ -160,9 +160,11 @@ class DiffusionPolicy(nn.Module):
         # create inpainting mask and target
         # tgt, mask = self.create_inpainting_data(noise, data)
         # kwargs = {"tgt": tgt, "mask": mask}
-        cond = {
-            0: data["input"][:, 0, self.action_dim :],
-            self.T - 1: data["input"][:, -1, self.action_dim :],
+        kwargs = {
+            "cond": {
+                0: data["input"][:, 0, self.action_dim :],
+                self.T - 1: data["input"][:, -1, self.action_dim :],
+            }
         }
 
         # calculate loss

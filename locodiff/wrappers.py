@@ -1,6 +1,8 @@
 import torch
 import torch.nn as nn
 
+from locodiff.helpers import apply_conditioning
+
 
 class CFGWrapper(nn.Module):
     """
@@ -53,9 +55,8 @@ class ScalingWrapper(nn.Module):
         noised_x = x + noise * sigma.view(-1, 1, 1)
 
         # apply inpainting mask
-        tgt = kwargs["tgt"]
-        mask = kwargs["mask"]
-        noised_x = tgt * mask + noised_x * (1 - mask)
+        cond = kwargs["cond"]
+        noised_x = apply_conditioning(noised_x, cond, 2)
 
         # calculate target
         c_skip, c_out, c_in = self.get_scalings(sigma)
@@ -63,12 +64,10 @@ class ScalingWrapper(nn.Module):
         target = (x - c_skip * noised_x) / c_out
 
         # apply inpainting mask
-        model_output = tgt * mask + model_output * (1 - mask)
+        model_output = apply_conditioning(model_output, cond, 2)
 
         # calculate loss
-        loss = nn.functional.mse_loss(model_output, target)
-        # loss *= 1 - mask
-        return loss.mean()
+        return nn.functional.mse_loss(model_output, target)
 
     def forward(self, x_t, sigma, data_dict, uncond=False, **kwargs):
         c_skip, c_out, c_in = self.get_scalings(sigma)
