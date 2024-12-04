@@ -4,7 +4,7 @@ import os
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
-import minari
+# import minari
 
 log = logging.getLogger(__name__)
 
@@ -15,6 +15,7 @@ class ExpertDataset(Dataset):
         data_directory: str | None,
         T_cond: int,
         task_name: str,
+        env,
         device="cpu",
     ):
         self.T_cond = T_cond
@@ -61,7 +62,8 @@ class ExpertDataset(Dataset):
             actions_splits = self.split_eps(actions, split_indices)
 
         else:
-            dataset = minari.load_dataset("D4RL/pointmaze/medium-v2")
+            # dataset = minari.load_dataset("D4RL/pointmaze/medium-v2")
+            dataset = env.get_dataset()
 
             obs_splits, actions_splits = [], []
             for episode in dataset:
@@ -182,6 +184,7 @@ class SlicerWrapper(Dataset):
 
 
 def get_dataloaders(
+    env,
     task_name: str,
     data_directory: str,
     T_cond: int,
@@ -192,7 +195,7 @@ def get_dataloaders(
     num_workers: int,
 ):
     # Build the datasets
-    dataset = ExpertDataset(data_directory, T_cond, task_name)
+    dataset = ExpertDataset(data_directory, T_cond, task_name, env)
     train, val = random_split(dataset, [train_fraction, 1 - train_fraction])
     train_set = SlicerWrapper(train, T_cond, T)
     test_set = SlicerWrapper(val, T_cond, T)

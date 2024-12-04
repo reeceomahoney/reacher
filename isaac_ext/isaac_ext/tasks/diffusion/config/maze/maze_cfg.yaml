@@ -4,7 +4,8 @@ defaults:
 
 logger: wandb
 wandb_project: locodiff_isaac
-task: PointMaze_Medium-v3
+# task: PointMaze_Medium-v3
+task: maze2d-medium-v1
 num_iters: 5e5
 seed: 42
 resume: false
@@ -39,7 +40,7 @@ policy:
   T_action: ${T_action}
   num_envs: ${num_envs}
   sampling_steps: ${sampling_steps}
-  sampler_type: ddim
+  sampler_type: ddpm
   sigma_data: 0.5
   sigma_min: 0.005
   sigma_max: 1
