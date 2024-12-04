@@ -151,9 +151,9 @@ class DiffusionPolicy(nn.Module):
                 data["input"], noise, timesteps
             )
             timesteps = timesteps.float().to(self.device)
-            noise = tgt * mask + noise * (1 - mask)
+            # noise = tgt * mask + noise * (1 - mask)
             pred = self.model(noise_trajectory, timesteps, data)
-            pred = tgt * mask + pred * (1 - mask)
+            # pred = tgt * mask + pred * (1 - mask)
             loss = torch.nn.functional.mse_loss(pred, noise)
         else:
             sigma = self.make_sample_density(len(noise))
