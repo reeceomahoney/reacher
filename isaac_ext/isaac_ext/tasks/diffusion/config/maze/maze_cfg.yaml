@@ -58,7 +58,7 @@ policy:
 dataset:
   task_name: ${task}
   data_directory: null
-  train_fraction: 0.999
+  train_fraction: 0.998
   T_cond: ${T_cond}
   T: ${T}
   train_batch_size: 1024

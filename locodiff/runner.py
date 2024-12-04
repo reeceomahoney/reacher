@@ -90,7 +90,7 @@ class DiffusionRunner:
             start = time.time()
 
             # simulation
-            if it % self.cfg.sim_interval == 0:
+            if False:
                 t = 0
                 ep_infos = []
                 self.env.reset()
@@ -142,7 +142,7 @@ class DiffusionRunner:
                                 break
 
             # evaluation
-            if it % self.cfg.eval_interval == 0:
+            if False:
                 with InferenceContext(self):
                     test_mse, test_obs_mse, test_act_mse = [], [], []
                     for batch in tqdm(self.test_loader):
@@ -188,7 +188,7 @@ class DiffusionRunner:
             step=locs["it"],
         )
         # evaluation
-        if locs["it"] % self.cfg.eval_interval == 0:
+        if False:
             wandb.log(
                 {
                     "Loss/test_mse": locs["test_mse"],
@@ -198,7 +198,7 @@ class DiffusionRunner:
                 step=locs["it"],
             )
         # simulation
-        if locs["it"] % self.cfg.sim_interval == 0:
+        if False:
             if locs["ep_infos"]:
                 for key in locs["ep_infos"][0]:
                     # get the mean of each ep info value

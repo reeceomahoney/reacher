@@ -155,7 +155,8 @@ class ExpertDataset(Dataset):
     def calculate_norm_data(self, obs_splits, actions_splits):
         all_obs = torch.cat(obs_splits)
         all_actions = torch.cat(actions_splits)
-        all_obs_acts = torch.cat([all_obs, all_actions], dim=-1)
+        # all_obs_acts = torch.cat([all_obs, all_actions], dim=-1)
+        all_obs_acts = torch.cat([all_actions, all_obs], dim=-1)
 
         self.x_mean = all_obs.mean(0)
         self.x_std = all_obs.std(0)

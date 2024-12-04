@@ -112,7 +112,7 @@ class TemporalUnet(nn.Module):
             nn.Conv1d(dim, transition_dim, 1),
         )
 
-    def forward(self, x, time, data_dict):
+    def forward(self, x, cond, time):
         '''
             x : [ batch x horizon x transition ]
         '''

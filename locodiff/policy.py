@@ -6,6 +6,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
+from locodiff.helpers import apply_conditioning, cosine_beta_schedule, extract
 from locodiff.samplers import (
     get_sampler,
     get_sigmas_exponential,
@@ -68,6 +69,7 @@ class DiffusionPolicy(nn.Module):
         # dims
         self.obs_dim = obs_dim
         self.input_dim = obs_dim + act_dim
+        self.action_dim = act_dim
         self.input_len = T + T_cond - 1 if inpaint_obs else T
         self.T = T
         self.T_cond = T_cond
@@ -92,6 +94,16 @@ class DiffusionPolicy(nn.Module):
         optim_groups = self.model.get_optim_groups()
         self.optimizer = AdamW(optim_groups, lr=lr, betas=betas)
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
+
+        diff_betas = cosine_beta_schedule(sampling_steps)
+        alphas = 1.0 - diff_betas
+        alphas_cumprod = torch.cumprod(alphas, dim=0)
+        alphas_cumprod_prev = torch.cat([torch.ones(1), alphas_cumprod[:-1]])
+        self.register_buffer("sqrt_alphas_cumprod", torch.sqrt(alphas_cumprod))
+        self.register_buffer(
+            "sqrt_one_minus_alphas_cumprod", torch.sqrt(1.0 - alphas_cumprod)
+        )
+        self.to(device)
 
     def forward(self, data: dict) -> torch.Tensor:
         B = data["obs"].shape[0]
@@ -140,25 +152,40 @@ class DiffusionPolicy(nn.Module):
         data = self.process(data)
         noise = torch.randn_like(data["input"])
         # create inpainting mask and target
-        # tgt = torch.zeros_like(noise)
-        # mask = torch.zeros_like(noise)
-        tgt, mask = self.create_inpainting_data(noise, data)
-        kwargs = {"tgt": tgt, "mask": mask}
+        # tgt, mask = self.create_inpainting_data(noise, data)
+        # kwargs = {"tgt": tgt, "mask": mask}
 
-        # calculate loss
-        if self.sampler_type == "ddpm":
-            timesteps = torch.randint(0, self.sampling_steps, (noise.shape[0],))
-            noise_trajectory = self.noise_scheduler.add_noise(
-                data["input"], noise, timesteps
-            )
-            timesteps = timesteps.float().to(self.device)
-            noise = tgt * mask + noise * (1 - mask)
-            pred = self.model(noise_trajectory, timesteps, data)
-            pred = tgt * mask + pred * (1 - mask)
-            loss = torch.nn.functional.mse_loss(pred, noise)
-        else:
-            sigma = self.make_sample_density(len(noise))
-            loss = self.model.loss(noise, sigma, data, **kwargs)
+        #     # calculate loss
+        #     if self.sampler_type == "ddpm":
+        #         timesteps = torch.randint(0, self.sampling_steps, (noise.shape[0],))
+        #         noise_trajectory = self.noise_scheduler.add_noise(
+        #             data["input"], noise, timesteps
+        #         )
+        #         timesteps = timesteps.float().to(self.device)
+        #         noise = tgt * mask + noise * (1 - mask)
+        #         pred = self.model(noise_trajectory, timesteps, data)
+        #         pred = tgt * mask + pred * (1 - mask)
+        #         loss = torch.nn.functional.mse_loss(pred, noise)
+        #     else:
+        #         sigma = self.make_sample_density(len(noise))
+        #         loss = self.model.loss(noise, sigma, data, **kwargs)
+
+        x_start = data["input"]
+        t = torch.randint(
+            0, self.sampling_steps, (x_start.shape[0],), device=x_start.device
+        ).long()
+        cond = {
+            0: data["input"][:, 0, self.action_dim :],
+            self.T - 1: data["input"][:, -1, self.action_dim :],
+        }
+
+        x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
+        x_noisy = apply_conditioning(x_noisy, cond, self.action_dim)
+
+        x_recon = self.model(x_noisy, cond, t)
+        x_recon = apply_conditioning(x_recon, cond, self.action_dim)
+
+        loss = torch.nn.functional.mse_loss(x_recon, x_start)
 
         # update model
         self.optimizer.zero_grad()
@@ -167,6 +194,17 @@ class DiffusionPolicy(nn.Module):
         self.lr_scheduler.step()
 
         return loss.item()
+
+    def q_sample(self, x_start, t, noise=None):
+        if noise is None:
+            noise = torch.randn_like(x_start)
+
+        sample = (
+            extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
+            + extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
+        )
+
+        return sample
 
     def test(self, data: dict) -> tuple[float, float, float]:
         data = self.process(data)
@@ -203,9 +241,9 @@ class DiffusionPolicy(nn.Module):
             else:
                 input_obs = raw_obs[:, self.T_cond - 1 : self.T_cond + self.T - 1]
                 input_act = raw_action[:, self.T_cond - 1 : self.T_cond + self.T - 1]
-            input = torch.cat([input_obs, input_act], dim=-1)
+            input = torch.cat([input_act, input_obs], dim=-1)
             input = self.normalizer.scale_output(input)
-            goal = input[:, -1, : self.goal_dim]
+            goal = input[:, -1, -self.goal_dim :]
 
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
         return {"obs": obs, "input": input, "goal": goal}
@@ -226,11 +264,7 @@ class DiffusionPolicy(nn.Module):
             tgt[:, : self.T_cond, : self.obs_dim] = data["obs"]
             mask[:, : self.T_cond, : self.obs_dim] = 1.0
         if self.inpaint_final_obs:
-            if data["input"] is None:
-                tgt_pos = self.normalizer.scale_pos(self.goal)
-                tgt[:, -1, : self.goal_dim] = tgt_pos
-            else:
-                tgt[:, -1, : self.goal_dim] = data["input"][:, -1, : self.goal_dim]
+            tgt[:, -1, : self.goal_dim] = data["goal"]
             mask[:, -1, : self.goal_dim] = 1.0
 
         return tgt, mask
