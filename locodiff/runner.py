@@ -6,10 +6,10 @@ import torch
 from collections import deque
 from tqdm import tqdm, trange
 
-import wandb
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 
+import wandb
 from locodiff.dataset import get_dataloaders
 from locodiff.envs import MazeEnv
 from locodiff.models.transformer import DiffusionTransformer
@@ -38,7 +38,7 @@ class DiffusionRunner:
         #     model=ConditionalUnet1D(**self.cfg.model),
         #     sigma_data=agent_cfg.policy.sigma_data,
         # )
-        model = model=ConditionalUnet1D(**self.cfg.model),
+        model = (ConditionalUnet1D(**self.cfg.model),)
         self.policy = DiffusionPolicy(model, self.normalizer, **self.cfg.policy)
 
         # ema
