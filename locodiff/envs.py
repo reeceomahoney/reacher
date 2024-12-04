@@ -57,7 +57,7 @@ class MazeEnv:
         action = action[0].cpu().numpy()
 
         for _ in range(10):
-            obs, reward, terminated, truncated, info = self.env.step(action)
+            obs, reward, terminated, info = self.env.step(action)
 
         self.obs = (
             torch.tensor(obs, dtype=torch.float)
@@ -65,7 +65,7 @@ class MazeEnv:
             .unsqueeze(0)
         )
         reward = torch.tensor(reward, dtype=torch.float).unsqueeze(0)
-        dones = terminated | truncated
+        dones = terminated
         dones = torch.tensor(dones).to(dtype=torch.long).unsqueeze(0)
 
         return self.obs, reward, dones, info

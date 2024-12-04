@@ -106,6 +106,9 @@ class DiffusionRunner:
                             if i < self.policy.T_action - 1:
                                 self.policy.update_history({"obs": obs})
 
+                            if t == self.num_steps_per_env - 1:
+                                dones = torch.ones_like(dones)
+
                             # move device
                             obs, rewards, dones = (
                                 obs.to(self.device),
@@ -142,7 +145,7 @@ class DiffusionRunner:
             if it % self.cfg.eval_interval == 0:
                 with InferenceContext(self):
                     test_mse, test_obs_mse, test_act_mse = [], [], []
-                    for batch in self.test_loader:
+                    for batch in tqdm(self.test_loader):
                         mse, obs_mse, act_mse = self.policy.test(batch)
                         test_mse.append(mse)
                         test_obs_mse.append(obs_mse)

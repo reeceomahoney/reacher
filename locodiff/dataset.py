@@ -78,9 +78,13 @@ class ExpertDataset(Dataset):
             timeouts[:-1] = at_goal[:-1] * ~at_goal[1:]
             timeouts = np.roll(timeouts, 1)
             timeouts[0] = 0
+            timeouts = torch.tensor(timeouts, dtype=torch.bool)
+            split_indices = torch.where(timeouts == 1)[0]
 
-            obs_splits = self.split_eps(dataset["observations"], timeouts)
-            actions_splits = self.split_eps(dataset["actions"], timeouts)
+            obs = torch.tensor(dataset["observations"], dtype=torch.float32)
+            actions = torch.tensor(dataset["actions"], dtype=torch.float32)
+            obs_splits = self.split_eps(obs, split_indices)
+            actions_splits = self.split_eps(actions, split_indices)
 
         self.calculate_norm_data(obs_splits, actions_splits)
 
@@ -149,7 +153,7 @@ class ExpertDataset(Dataset):
         return masks.to(self.device)
 
     def calculate_norm_data(self, obs_splits, actions_splits):
-        all_obs = torch.cat(obs_splits)[:1000000]
+        all_obs = torch.cat(obs_splits)
         all_actions = torch.cat(actions_splits)
         all_obs_acts = torch.cat([all_obs, all_actions], dim=-1)
 
