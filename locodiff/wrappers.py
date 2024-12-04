@@ -63,11 +63,11 @@ class ScalingWrapper(nn.Module):
         target = (x - c_skip * noised_x) / c_out
 
         # apply inpainting mask
-        # model_output = tgt * mask + model_output * (1 - mask)
+        model_output = tgt * mask + model_output * (1 - mask)
 
         # calculate loss
-        loss = nn.functional.mse_loss(model_output, target, reduction="none")
-        loss *= 1 - mask
+        loss = nn.functional.mse_loss(model_output, target)
+        # loss *= 1 - mask
         return loss.mean()
 
     def forward(self, x_t, sigma, data_dict, uncond=False, **kwargs):
