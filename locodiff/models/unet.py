@@ -193,12 +193,13 @@ class ConditionalUnet1D(nn.Module):
             nn.Conv1d(start_dim, input_dim, 1),
         )
 
-        self.sigma_encoder = nn.Sequential(
-            # SinusoidalPosEmb(cond_embed_dim, device),
-            nn.Linear(cond_embed_dim, cond_embed_dim * 4),
-            nn.Mish(),
-            nn.Linear(cond_embed_dim * 4, cond_embed_dim),
-        )
+        # self.sigma_encoder = nn.Sequential(
+        #     SinusoidalPosEmb(cond_embed_dim, device),
+        #     nn.Linear(cond_embed_dim, cond_embed_dim * 4),
+        #     nn.Mish(),
+        #     nn.Linear(cond_embed_dim * 4, cond_embed_dim),
+        # )
+        self.sigma_encoder = nn.Linear(1, cond_embed_dim)
 
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
