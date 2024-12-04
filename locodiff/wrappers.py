@@ -71,12 +71,6 @@ class ScalingWrapper(nn.Module):
 
     def forward(self, x_t, sigma, data_dict, uncond=False, **kwargs):
         c_skip, c_out, c_in = self.get_scalings(sigma)
-
-        # apply inpainting mask
-        # tgt = kwargs["tgt"]
-        # mask = kwargs["mask"]
-        # x_t = tgt * mask + x_t * (1 - mask)
-
         return self.model(x_t * c_in, data_dict, sigma) * c_out + x_t * c_skip
 
     def get_params(self):

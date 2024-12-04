@@ -1,6 +1,7 @@
 import math
 import torch
 from typing import Callable
+
 from locodiff.helpers import apply_conditioning
 
 
@@ -50,7 +51,6 @@ def sample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
     num_steps = kwargs.get("num_steps", len(sigmas) - 1)
     # inpainting data
     cond = kwargs["cond"]
-
 
     for i in range(num_steps):
         x_t = apply_conditioning(x_t, cond, 2)

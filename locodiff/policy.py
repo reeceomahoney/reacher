@@ -105,8 +105,7 @@ class DiffusionPolicy(nn.Module):
     def forward(self, data: dict) -> torch.Tensor:
         B = data["obs"].shape[0]
         # sample noise
-        noise = torch.randn((B, self.input_len, self.input_dim))
-        noise = noise.to(self.device)
+        noise = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
 
         # create inpainting mask and target
         # tgt, mask = self.create_inpainting_data(noise, data)
@@ -174,7 +173,9 @@ class DiffusionPolicy(nn.Module):
                 data["input"], noise, timesteps
             )
             timesteps = timesteps.float().to(self.device)
-            noise_trajectory = apply_conditioning(noise_trajectory, cond, self.action_dim)
+            noise_trajectory = apply_conditioning(
+                noise_trajectory, cond, self.action_dim
+            )
             pred = self.model(noise_trajectory, data, timesteps)
             pred = apply_conditioning(pred, cond, self.action_dim)
             loss = torch.nn.functional.mse_loss(pred, data["input"])
