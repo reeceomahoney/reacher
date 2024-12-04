@@ -39,7 +39,7 @@ policy:
   T_action: ${T_action}
   num_envs: ${num_envs}
   sampling_steps: ${sampling_steps}
-  sampler_type: ddpm
+  sampler_type: ddim
   sigma_data: 0.5
   sigma_min: 0.005
   sigma_max: 1
@@ -60,8 +60,8 @@ dataset:
   train_fraction: 0.95
   T_cond: ${T_cond}
   T: ${T}
-  train_batch_size: 512
-  test_batch_size: 512
+  train_batch_size: 1024
+  test_batch_size: 1024
   num_workers: 4
 
 hydra:

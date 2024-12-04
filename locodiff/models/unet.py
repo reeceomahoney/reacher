@@ -193,13 +193,13 @@ class ConditionalUnet1D(nn.Module):
             nn.Conv1d(start_dim, input_dim, 1),
         )
 
-        self.sigma_encoder = nn.Sequential(
-            SinusoidalPosEmb(cond_embed_dim, device),
-            nn.Linear(cond_embed_dim, cond_embed_dim * 4),
-            nn.Mish(),
-            nn.Linear(cond_embed_dim * 4, cond_embed_dim),
-        )
-        # self.sigma_encoder = nn.Linear(1, cond_embed_dim)
+        # self.sigma_encoder = nn.Sequential(
+        #     SinusoidalPosEmb(cond_embed_dim, device),
+        #     nn.Linear(cond_embed_dim, cond_embed_dim * 4),
+        #     nn.Mish(),
+        #     nn.Linear(cond_embed_dim * 4, cond_embed_dim),
+        # )
+        self.sigma_encoder = nn.Linear(1, cond_embed_dim)
 
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
@@ -235,8 +235,7 @@ class ConditionalUnet1D(nn.Module):
 
         if self.sample_type != "ddpm":
             sigma = sigma.log() / 4
-        # sigma_emb = self.sigma_encoder(sigma.view(-1, 1))
-        sigma_emb = self.sigma_encoder(sigma).unsqueeze(0)
+        sigma_emb = self.sigma_encoder(sigma.view(-1, 1))
         if self.inapint_obs:
             global_feature = sigma_emb
         else:
