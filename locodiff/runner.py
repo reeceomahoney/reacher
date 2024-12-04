@@ -38,7 +38,7 @@ class DiffusionRunner:
         #     model=ConditionalUnet1D(**self.cfg.model),
         #     sigma_data=agent_cfg.policy.sigma_data,
         # )
-        model = (ConditionalUnet1D(**self.cfg.model),)
+        model = ConditionalUnet1D(**self.cfg.model)
         self.policy = DiffusionPolicy(model, self.normalizer, **self.cfg.policy)
 
         # ema
