@@ -1,12 +1,16 @@
 import math
+import numpy as np
+import wandb
+import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+from torch.optim.adam import Adam
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
-from locodiff.helpers import apply_conditioning, cosine_beta_schedule, extract
+from locodiff.helpers import Losses, apply_conditioning, cosine_beta_schedule, extract
 from locodiff.samplers import (
     get_sampler,
     get_sigmas_exponential,
@@ -21,6 +25,7 @@ class DiffusionPolicy(nn.Module):
         self,
         model,
         normalizer,
+        env,
         obs_dim: int,
         act_dim: int,
         T: int,
@@ -65,6 +70,7 @@ class DiffusionPolicy(nn.Module):
         self.normalizer = normalizer
         self.obs_hist = torch.zeros((num_envs, T_cond, obs_dim), device=device)
         self.device = device
+        self.env = env
 
         # dims
         self.obs_dim = obs_dim
@@ -92,8 +98,10 @@ class DiffusionPolicy(nn.Module):
 
         # optimizer and lr scheduler
         optim_groups = self.model.get_optim_groups()
-        self.optimizer = AdamW(optim_groups, lr=lr, betas=betas)
-        self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
+        self.optimizer = Adam(optim_groups, lr=lr)
+        # self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
+        loss_weights = self.get_loss_weights(1.0, 1.0, None)
+        self.loss_fn = Losses["l2"](loss_weights, self.action_dim)
 
         diff_betas = cosine_beta_schedule(sampling_steps)
         alphas = 1.0 - diff_betas
@@ -104,6 +112,36 @@ class DiffusionPolicy(nn.Module):
             "sqrt_one_minus_alphas_cumprod", torch.sqrt(1.0 - alphas_cumprod)
         )
         self.to(device)
+
+    def get_loss_weights(self, action_weight, discount, weights_dict):
+        """
+        sets loss coefficients for trajectory
+
+        action_weight   : float
+            coefficient on first action loss
+        discount   : float
+            multiplies t^th timestep of trajectory loss by discount**t
+        weights_dict    : dict
+            { i: c } multiplies dimension i of observation loss by c
+        """
+        self.action_weight = action_weight
+
+        dim_weights = torch.ones(self.input_dim, dtype=torch.float32)
+
+        ## set loss coefficients for dimensions of observation
+        if weights_dict is None:
+            weights_dict = {}
+        for ind, w in weights_dict.items():
+            dim_weights[self.action_dim + ind] *= w
+
+        ## decay loss with trajectory timestep: discount**t
+        discounts = discount ** torch.arange(self.T, dtype=torch.float)
+        discounts = discounts / discounts.mean()
+        loss_weights = torch.einsum("h,t->ht", discounts, dim_weights)
+
+        ## manually set a0 weight
+        loss_weights[0, : self.action_dim] = action_weight
+        return loss_weights
 
     def forward(self, data: dict) -> torch.Tensor:
         B = data["obs"].shape[0]
@@ -148,7 +186,7 @@ class DiffusionPolicy(nn.Module):
             action = x[:, : self.T_action, self.obs_dim :]
         return {"action": action, "obs_traj": obs}
 
-    def update(self, data: dict) -> float:
+    def update(self, data):
         data = self.process(data)
         noise = torch.randn_like(data["input"])
         # create inpainting mask and target
@@ -175,8 +213,8 @@ class DiffusionPolicy(nn.Module):
             0, self.sampling_steps, (x_start.shape[0],), device=x_start.device
         ).long()
         cond = {
-            0: data["input"][:, 0, self.action_dim :],
-            self.T - 1: data["input"][:, -1, self.action_dim :],
+            0: x_start[:, 0, self.action_dim :],
+            self.T - 1: x_start[:, -1, self.action_dim :],
         }
 
         x_noisy = self.q_sample(x_start=x_start, t=t, noise=noise)
@@ -185,13 +223,13 @@ class DiffusionPolicy(nn.Module):
         x_recon = self.model(x_noisy, cond, t)
         x_recon = apply_conditioning(x_recon, cond, self.action_dim)
 
-        loss = torch.nn.functional.mse_loss(x_recon, x_start)
+        loss, info = self.loss_fn(x_recon, x_start)
 
         # update model
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
-        self.lr_scheduler.step()
+        # self.lr_scheduler.step()
 
         return loss.item()
 
@@ -206,14 +244,26 @@ class DiffusionPolicy(nn.Module):
 
         return sample
 
-    def test(self, data: dict) -> tuple[float, float, float]:
+    def test(self, data: dict, plot) -> tuple[float, float, float]:
         data = self.process(data)
         x = self.forward(data)
         # calculate loss
         input = self.normalizer.inverse_scale_output(data["input"])
         loss = nn.functional.mse_loss(x, input, reduction="none")
-        obs_loss = loss[:, :, : self.obs_dim].mean()
-        action_loss = loss[:, :, self.obs_dim :].mean()
+        obs_loss = loss[:, :, self.action_dim:].mean()
+        action_loss = loss[:, :, :self.action_dim].mean()
+
+        if plot:
+            obs_traj = x[0, :, self.action_dim:]
+            fig = plt.figure()
+            maze = self.env.env.unwrapped.maze_array
+            maze -= 10
+            maze[np.where(maze == 2)] = 0
+
+            plt.imshow(maze, cmap="gray", extent=(-4, 4, -4, 4))
+            plt.scatter(obs_traj[:, 0], obs_traj[:, 1])
+            wandb.Image(fig)
+        
         return loss.mean().item(), obs_loss.item(), action_loss.item()
 
     def reset(self, dones=None):

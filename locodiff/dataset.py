@@ -5,6 +5,8 @@ import os
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
+from locodiff.datasets.sequence import GoalDataset
+
 # import minari
 
 log = logging.getLogger(__name__)
@@ -67,7 +69,7 @@ class ExpertDataset(Dataset):
             dataset = env.env.unwrapped.get_dataset()
 
             xy = dataset["observations"][:, :2]
-            goal = np.array(env.env.unwrapped.get_target())
+            goal = dataset["infos/goal"]
             distances = np.linalg.norm(xy - goal, axis=-1)
             at_goal = distances < 0.5
             timeouts = np.zeros_like(dataset["timeouts"])
@@ -211,6 +213,15 @@ def get_dataloaders(
 ):
     # Build the datasets
     dataset = ExpertDataset(data_directory, T_cond, task_name, env)
+
+    # dataset = GoalDataset(
+    #     env.env.unwrapped,
+    #     horizon=T,
+    #     normalizer="LimitsNormalizer",
+    #     preprocess_fns=["maze2d_set_terminals"],
+    #     use_padding=False,
+    #     max_path_length=40000,
+    # )
     train, val = random_split(dataset, [train_fraction, 1 - train_fraction])
     train_set = SlicerWrapper(train, T_cond, T)
     test_set = SlicerWrapper(val, T_cond, T)

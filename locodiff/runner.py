@@ -41,7 +41,7 @@ class DiffusionRunner:
         # )
         # model=ConditionalUnet1D(**self.cfg.model)
         model = TemporalUnet(256, 6, 32, 32, (1,4,8)).to(device)
-        self.policy = DiffusionPolicy(model, self.normalizer, **self.cfg.policy)
+        self.policy = DiffusionPolicy(model, self.normalizer, env, **self.cfg.policy)
 
         # ema
         self.ema_helper = ExponentialMovingAverage(
@@ -90,7 +90,7 @@ class DiffusionRunner:
             start = time.time()
 
             # simulation
-            if False:
+            if it % self.cfg.sim_interval == 0:
                 t = 0
                 ep_infos = []
                 self.env.reset()
@@ -142,11 +142,13 @@ class DiffusionRunner:
                                 break
 
             # evaluation
-            if False:
+            if it % self.cfg.eval_interval == 0:
                 with InferenceContext(self):
                     test_mse, test_obs_mse, test_act_mse = [], [], []
+                    plot = True
                     for batch in tqdm(self.test_loader):
-                        mse, obs_mse, act_mse = self.policy.test(batch)
+                        mse, obs_mse, act_mse = self.policy.test(batch, plot)
+                        plot = False
                         test_mse.append(mse)
                         test_obs_mse.append(obs_mse)
                         test_act_mse.append(act_mse)
@@ -188,7 +190,7 @@ class DiffusionRunner:
             step=locs["it"],
         )
         # evaluation
-        if False:
+        if locs["it"] % self.cfg.eval_interval == 0:
             wandb.log(
                 {
                     "Loss/test_mse": locs["test_mse"],
@@ -198,7 +200,7 @@ class DiffusionRunner:
                 step=locs["it"],
             )
         # simulation
-        if False:
+        if locs["it"] % self.cfg.sim_interval == 0:
             if locs["ep_infos"]:
                 for key in locs["ep_infos"][0]:
                     # get the mean of each ep info value
@@ -236,7 +238,7 @@ class DiffusionRunner:
         saved_dict = {
             "model_state_dict": self.policy.state_dict(),
             "optimizer_state_dict": self.policy.optimizer.state_dict(),
-            "norm_state_dict": self.normalizer.state_dict(),
+            # "norm_state_dict": self.normalizer.state_dict(),
             "iter": self.current_learning_iteration,
             "infos": infos,
         }
