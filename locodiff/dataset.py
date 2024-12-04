@@ -1,5 +1,6 @@
 import h5py
 import logging
+import numpy as np
 import os
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
@@ -65,12 +66,21 @@ class ExpertDataset(Dataset):
             # dataset = minari.load_dataset("D4RL/pointmaze/medium-v2")
             dataset = env.env.unwrapped.get_dataset()
 
-            obs_splits, actions_splits = [], []
-            for episode in dataset:
-                obs_splits.append(
-                    torch.tensor(episode.observations, dtype=torch.float)
-                )
-                actions_splits.append(torch.tensor(episode.actions, dtype=torch.float))
+            xy = dataset["observations"][:, :2]
+            goal = np.array(env.env.unwrapped.get_target())
+            distances = np.linalg.norm(xy - goal, axis=-1)
+            at_goal = distances < 0.5
+            timeouts = np.zeros_like(dataset["timeouts"])
+
+            ## timeout at time t iff
+            ##      at goal at time t and
+            ##      not at goal at time t + 1
+            timeouts[:-1] = at_goal[:-1] * ~at_goal[1:]
+            timeouts = np.roll(timeouts, 1)
+            timeouts[0] = 0
+
+            obs_splits = self.split_eps(dataset["observations"], timeouts)
+            actions_splits = self.split_eps(dataset["actions"], timeouts)
 
         self.calculate_norm_data(obs_splits, actions_splits)
 
