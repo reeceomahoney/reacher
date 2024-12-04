@@ -45,13 +45,12 @@ class MazeEnv:
 
     def reset(self):
         obs = self.env.reset()
-        print(obs)
         self.obs = (
-            torch.tensor(obs["observation"], dtype=torch.float)
+            torch.tensor(obs, dtype=torch.float)
             .to(self.device)
             .unsqueeze(0)
         )
-        self.goal = torch.tensor(obs["desired_goal"], dtype=torch.float).to(self.device)
+        self.goal = torch.tensor(self.env.get_target(), dtype=torch.float).to(self.device)
         return self.obs
 
     def step(self, action):
@@ -61,7 +60,7 @@ class MazeEnv:
             obs, reward, terminated, truncated, info = self.env.step(action)
 
         self.obs = (
-            torch.tensor(obs["observation"], dtype=torch.float)
+            torch.tensor(obs, dtype=torch.float)
             .to(self.device)
             .unsqueeze(0)
         )

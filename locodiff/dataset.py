@@ -63,12 +63,12 @@ class ExpertDataset(Dataset):
 
         else:
             # dataset = minari.load_dataset("D4RL/pointmaze/medium-v2")
-            dataset = env.get_dataset()
+            dataset = env.env.unwrapped.get_dataset()
 
             obs_splits, actions_splits = [], []
             for episode in dataset:
                 obs_splits.append(
-                    torch.tensor(episode.observations["observation"], dtype=torch.float)
+                    torch.tensor(episode.observations, dtype=torch.float)
                 )
                 actions_splits.append(torch.tensor(episode.actions, dtype=torch.float))
 
