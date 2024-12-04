@@ -194,7 +194,7 @@ class ConditionalUnet1D(nn.Module):
         )
 
         self.sigma_encoder = nn.Sequential(
-            SinusoidalPosEmb(cond_embed_dim, device),
+            # SinusoidalPosEmb(cond_embed_dim, device),
             nn.Linear(cond_embed_dim, cond_embed_dim * 4),
             nn.Mish(),
             nn.Linear(cond_embed_dim * 4, cond_embed_dim),

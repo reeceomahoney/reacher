@@ -22,9 +22,9 @@ scaling: linear
 #dims
 obs_dim: null
 act_dim: null
-T: 64
+T: 256
 T_cond: 1
-T_action: 64
+T_action: 256
 num_envs: 1
 
 # diffusion
@@ -39,7 +39,7 @@ policy:
   T_action: ${T_action}
   num_envs: ${num_envs}
   sampling_steps: ${sampling_steps}
-  sampler_type: ddpm
+  sampler_type: ddim
   sigma_data: 0.5
   sigma_min: 0.005
   sigma_max: 1
