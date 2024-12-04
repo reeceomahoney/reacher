@@ -34,11 +34,10 @@ class DiffusionRunner:
         # classes
         self.train_loader, self.test_loader = get_dataloaders(**self.cfg.dataset)
         self.normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
-        # model = ScalingWrapper(
-        #     model=ConditionalUnet1D(**self.cfg.model),
-        #     sigma_data=agent_cfg.policy.sigma_data,
-        # )
-        model = ConditionalUnet1D(**self.cfg.model)
+        model = ScalingWrapper(
+            model=ConditionalUnet1D(**self.cfg.model),
+            sigma_data=agent_cfg.policy.sigma_data,
+        )
         self.policy = DiffusionPolicy(model, self.normalizer, **self.cfg.policy)
 
         # ema

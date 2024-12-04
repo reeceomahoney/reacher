@@ -72,9 +72,9 @@ class ScalingWrapper(nn.Module):
         c_skip, c_out, c_in = self.get_scalings(sigma)
 
         # apply inpainting mask
-        tgt = kwargs["tgt"]
-        mask = kwargs["mask"]
-        x_t = tgt * mask + x_t * (1 - mask)
+        # tgt = kwargs["tgt"]
+        # mask = kwargs["mask"]
+        # x_t = tgt * mask + x_t * (1 - mask)
 
         return self.model(x_t * c_in, sigma, data_dict, uncond) * c_out + x_t * c_skip
 
