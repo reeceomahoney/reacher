@@ -140,8 +140,9 @@ class DiffusionPolicy(nn.Module):
         data = self.process(data)
         noise = torch.randn_like(data["input"])
         # create inpainting mask and target
-        tgt = torch.zeros_like(noise)
-        mask = torch.zeros_like(noise)
+        # tgt = torch.zeros_like(noise)
+        # mask = torch.zeros_like(noise)
+        tgt, mask = self.create_inpainting_data(noise, data)
         kwargs = {"tgt": tgt, "mask": mask}
 
         # calculate loss
