@@ -179,8 +179,8 @@ class Normalizer(nn.Module):
         y_bounds = torch.zeros((2, self.y_mean.shape[-1]))
         self.register_buffer("y_bounds", y_bounds)
         if scaling == "linear":
-            self.y_bounds[0, :] = -1.1
-            self.y_bounds[1, :] = 1.1
+            self.y_bounds[0, :] = -1 - 1e-4
+            self.y_bounds[1, :] = 1 + 1e-4
         elif scaling == "gaussian":
             self.y_bounds[0, :] = -5
             self.y_bounds[1, :] = 5
