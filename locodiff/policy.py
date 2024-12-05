@@ -3,20 +3,19 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.optim.adam import Adam
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 import wandb
-from locodiff.helpers import Losses, apply_conditioning, cosine_beta_schedule, extract
 from locodiff.samplers import (
     get_sampler,
     get_sigmas_exponential,
     get_sigmas_linear,
     rand_log_logistic,
 )
+from locodiff.utils import apply_conditioning
 from locodiff.wrappers import CFGWrapper
 
 
@@ -42,8 +41,7 @@ class DiffusionPolicy(nn.Module):
         lr: float,
         betas: tuple,
         num_iters: int,
-        inpaint_obs: bool,
-        inpaint_final_obs: bool,
+        inpaint: bool,
         device: str,
         resampling_steps: int,
         jump_length: int,
@@ -76,7 +74,7 @@ class DiffusionPolicy(nn.Module):
         self.obs_dim = obs_dim
         self.input_dim = obs_dim + act_dim
         self.action_dim = act_dim
-        self.input_len = T + T_cond - 1 if inpaint_obs else T
+        self.input_len = T + T_cond - 1 if inpaint else T
         self.T = T
         self.T_cond = T_cond
         self.T_action = T_action
@@ -91,14 +89,13 @@ class DiffusionPolicy(nn.Module):
         self.inference_sigmas = get_sigmas_exponential(
             sampling_steps, sigma_min, sigma_max, device
         )
-        self.inpaint_obs = inpaint_obs
-        self.inpaint_final_obs = inpaint_final_obs
+        self.inpaint_obs = inpaint
         self.resampling_steps = resampling_steps
         self.jump_length = jump_length
 
         # optimizer and lr scheduler
         optim_groups = self.model.get_optim_groups()
-        self.optimizer = Adam(optim_groups, lr=lr)
+        self.optimizer = AdamW(optim_groups, lr=lr, betas=betas)
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
         self.to(device)
 
@@ -108,17 +105,8 @@ class DiffusionPolicy(nn.Module):
         noise = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
 
         # create inpainting mask and target
-        # tgt, mask = self.create_inpainting_data(noise, data)
-        # kwargs = {"tgt": tgt, "mask": mask}
-        if data["input"] is not None:
-            kwargs = {
-                "cond": {
-                    0: data["input"][:, 0, self.action_dim :],
-                    self.T - 1: data["input"][:, -1, self.action_dim :],
-                }
-            }
-        else:
-            kwargs = {"cond": {0: data["obs"], self.T - 1: data["goal"]}}
+        cond = self.create_conditioning(data)
+        kwargs = {"cond": cond}
 
         # create noise
         if self.sampler_type == "ddpm":
@@ -156,15 +144,7 @@ class DiffusionPolicy(nn.Module):
     def update(self, data):
         data = self.process(data)
         noise = torch.randn_like(data["input"])
-        # create inpainting mask and target
-        # tgt, mask = self.create_inpainting_data(noise, data)
-        # kwargs = {"tgt": tgt, "mask": mask}
-        kwargs = {
-            "cond": {
-                0: data["input"][:, 0, self.action_dim :],
-                self.T - 1: data["input"][:, -1, self.action_dim :],
-            }
-        }
+        cond = self.create_conditioning(data)
 
         # calculate loss
         if self.sampler_type == "ddpm":
@@ -181,7 +161,7 @@ class DiffusionPolicy(nn.Module):
             loss = torch.nn.functional.mse_loss(pred, data["input"])
         else:
             sigma = self.make_sample_density(len(noise))
-            loss = self.model.loss(noise, sigma, data, **kwargs)
+            loss = self.model.loss(noise, sigma, data, cond=cond)
 
         # update model
         self.optimizer.zero_grad()
@@ -190,17 +170,6 @@ class DiffusionPolicy(nn.Module):
         self.lr_scheduler.step()
 
         return loss.item()
-
-    def q_sample(self, x_start, t, noise=None):
-        if noise is None:
-            noise = torch.randn_like(x_start)
-
-        sample = (
-            extract(self.sqrt_alphas_cumprod, t, x_start.shape) * x_start
-            + extract(self.sqrt_one_minus_alphas_cumprod, t, x_start.shape) * noise
-        )
-
-        return sample
 
     def test(self, data: dict, plot) -> tuple[float, float, float]:
         data = self.process(data)
@@ -265,17 +234,19 @@ class DiffusionPolicy(nn.Module):
     def dict_to_device(self, data):
         return {k: v.to(self.device) for k, v in data.items()}
 
-    def create_inpainting_data(self, noise: torch.Tensor, data: dict):
-        tgt = torch.zeros_like(noise)
-        mask = torch.zeros_like(noise)
+    def create_conditioning(self, data: dict) -> dict:
+        cond = {}
         if self.inpaint_obs:
-            tgt[:, : self.T_cond, self.action_dim :] = data["obs"]
-            mask[:, : self.T_cond, self.action_dim :] = 1.0
-        if self.inpaint_final_obs:
-            tgt[:, -1, self.action_dim :] = data["goal"]
-            mask[:, -1, self.action_dim :] = 1.0
+            if data["input"] is not None:
+                # train and test
+                cond[0] = data["input"][:, 0, self.action_dim :]
+                cond[self.T - 1] = data["input"][:, -1, self.action_dim :]
+            else:
+                # sim
+                cond[0] = data["obs"]
+                cond[self.T - 1] = data["goal"]
 
-        return tgt, mask
+        return cond
 
     def set_goal(self, goal):
         self.goal = goal.unsqueeze(0)

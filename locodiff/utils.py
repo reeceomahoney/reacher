@@ -44,6 +44,12 @@ def dynamic_hydra_main(task_name: str):
     return decorator
 
 
+def apply_conditioning(x, conditions, action_dim):
+    for t, val in conditions.items():
+        x[:, t, action_dim:] = val.clone()
+    return x
+
+
 class SinusoidalPosEmb(nn.Module):
     def __init__(self, dim, device):
         super().__init__()

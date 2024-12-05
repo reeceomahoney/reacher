@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from locodiff.helpers import apply_conditioning
+from locodiff.utils import apply_conditioning
 
 
 class CFGWrapper(nn.Module):

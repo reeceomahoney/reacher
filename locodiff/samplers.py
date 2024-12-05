@@ -2,7 +2,7 @@ import math
 import torch
 from typing import Callable
 
-from locodiff.helpers import apply_conditioning
+from locodiff.utils import apply_conditioning
 
 
 def get_sampler(sampler_type: str) -> Callable:
