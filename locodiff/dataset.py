@@ -1,6 +1,5 @@
 import h5py
 import logging
-import numpy as np
 import os
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
@@ -16,7 +15,6 @@ class ExpertDataset(Dataset):
         data_directory: str | None,
         T_cond: int,
         task_name: str,
-        env,
         device="cpu",
     ):
         self.T_cond = T_cond
@@ -63,28 +61,15 @@ class ExpertDataset(Dataset):
             actions_splits = self.split_eps(actions, split_indices)
 
         else:
-            # dataset = minari.load_dataset("D4RL/pointmaze/medium-v2")
-            dataset = env.env.unwrapped.get_dataset()
+            # TODO get this from task name
+            dataset = minari.load_dataset("D4RL/pointmaze/medium-v2")
 
-            xy = dataset["observations"][:, :2]
-            goal = dataset["infos/goal"]
-            distances = np.linalg.norm(xy - goal, axis=-1)
-            at_goal = distances < 0.5
-            timeouts = np.zeros_like(dataset["timeouts"])
-
-            ## timeout at time t iff
-            ##      at goal at time t and
-            ##      not at goal at time t + 1
-            timeouts[:-1] = at_goal[:-1] * ~at_goal[1:]
-            timeouts = np.roll(timeouts, 1)
-            timeouts[0] = 0
-            timeouts = torch.tensor(timeouts, dtype=torch.bool)
-            split_indices = torch.where(timeouts == 1)[0]
-
-            obs = torch.tensor(dataset["observations"], dtype=torch.float32)
-            actions = torch.tensor(dataset["actions"], dtype=torch.float32)
-            obs_splits = self.split_eps(obs, split_indices)
-            actions_splits = self.split_eps(actions, split_indices)
+            obs_splits, actions_splits = [], []
+            for episode in dataset:
+                obs_splits.append(
+                    torch.tensor(episode.observations["observation"], dtype=torch.float)
+                )
+                actions_splits.append(torch.tensor(episode.actions, dtype=torch.float))
 
         self.calculate_norm_data(obs_splits, actions_splits)
 
@@ -153,7 +138,7 @@ class ExpertDataset(Dataset):
         return masks.to(self.device)
 
     def calculate_norm_data(self, obs_splits, actions_splits):
-        all_obs = torch.cat(obs_splits)
+        all_obs = torch.cat(obs_splits)[:1000000]
         all_actions = torch.cat(actions_splits)
         # all_obs_acts = torch.cat([all_obs, all_actions], dim=-1)
         all_obs_acts = torch.cat([all_actions, all_obs], dim=-1)
@@ -199,7 +184,6 @@ class SlicerWrapper(Dataset):
 
 
 def get_dataloaders(
-    env,
     task_name: str,
     data_directory: str,
     T_cond: int,
@@ -210,7 +194,7 @@ def get_dataloaders(
     num_workers: int,
 ):
     # Build the datasets
-    dataset = ExpertDataset(data_directory, T_cond, task_name, env)
+    dataset = ExpertDataset(data_directory, T_cond, task_name)
     train, val = random_split(dataset, [train_fraction, 1 - train_fraction])
     train_set = SlicerWrapper(train, T_cond, T)
     test_set = SlicerWrapper(val, T_cond, T)

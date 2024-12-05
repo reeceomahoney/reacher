@@ -33,7 +33,7 @@ class DiffusionRunner:
         self.device = device
 
         # classes
-        self.train_loader, self.test_loader = get_dataloaders(env, **self.cfg.dataset)
+        self.train_loader, self.test_loader = get_dataloaders(**self.cfg.dataset)
         self.normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
         # model = ScalingWrapper(
         #     # model=ConditionalUnet1D(**self.cfg.model),
@@ -146,7 +146,7 @@ class DiffusionRunner:
                 with InferenceContext(self):
                     test_mse, test_obs_mse, test_act_mse = [], [], []
                     plot = True
-                    for batch in tqdm(self.test_loader):
+                    for batch in tqdm(self.test_loader, desc="Testing...", leave=False):
                         mse, obs_mse, act_mse = self.policy.test(batch, plot)
                         plot = False
                         test_mse.append(mse)
@@ -238,7 +238,7 @@ class DiffusionRunner:
         saved_dict = {
             "model_state_dict": self.policy.state_dict(),
             "optimizer_state_dict": self.policy.optimizer.state_dict(),
-            # "norm_state_dict": self.normalizer.state_dict(),
+            "norm_state_dict": self.normalizer.state_dict(),
             "iter": self.current_learning_iteration,
             "infos": infos,
         }

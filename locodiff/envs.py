@@ -1,29 +1,10 @@
-# import gymnasium as gym
-import gym
+import gymnasium as gym
 import numpy as np
 import torch
-import os
-from contextlib import contextmanager, redirect_stderr, redirect_stdout
 
+import gymnasium_robotics
 
-@contextmanager
-def suppress_output():
-    """
-    A context manager that redirects stdout and stderr to devnull
-    https://stackoverflow.com/a/52442331
-    """
-    with open(os.devnull, "w") as fnull:
-        with redirect_stderr(fnull) as err, redirect_stdout(fnull) as out:
-            yield (err, out)
-
-
-with suppress_output():
-    ## d4rl prints out a variety of warnings
-    import d4rl
-
-# import gymnasium_robotics
-#
-# gym.register_envs(gymnasium_robotics)
+gym.register_envs(gymnasium_robotics)
 
 
 class MazeEnv:
@@ -31,41 +12,32 @@ class MazeEnv:
         render_mode = "human" if render else None
         self.env = gym.make(
             agent_cfg.task,
-            # max_episode_steps=agent_cfg.episode_length * 100,
-            # render_mode=render_mode,
+            max_episode_steps=agent_cfg.episode_length * 100,
+            render_mode=render_mode,
         )
         self.obs = None
         self.goal = None
         self.device = agent_cfg.device
 
-        # self.obs_dim = self.env.observation_space["observation"].shape[0]  # type: ignore
-        self.obs_dim = self.env.observation_space.shape[0]  # type: ignore
+        self.obs_dim = self.env.observation_space["observation"].shape[0]  # type: ignore
         self.act_dim = self.env.action_space.shape[0]  # type: ignore
         self.num_envs = 1
 
     def reset(self):
-        obs = self.env.reset()
-        self.obs = (
-            torch.tensor(obs, dtype=torch.float)
-            .to(self.device)
-            .unsqueeze(0)
-        )
-        self.goal = torch.tensor(self.env.get_target(), dtype=torch.float).to(self.device)
+        obs, _ = self.env.reset()
+        self.obs = self.to_tensor(obs["observation"])
+        self.goal = self.to_tensor(obs["desired_goal"])
         return self.obs
 
     def step(self, action):
         action = action[0].cpu().numpy()
 
         for _ in range(10):
-            obs, reward, terminated, info = self.env.step(action)
+            obs, reward, terminated, trunacted, info = self.env.step(action)
 
-        self.obs = (
-            torch.tensor(obs, dtype=torch.float)
-            .to(self.device)
-            .unsqueeze(0)
-        )
-        reward = torch.tensor(reward, dtype=torch.float).unsqueeze(0)
-        dones = terminated
+        self.obs = self.to_tensor(obs["observation"])
+        reward = self.to_tensor(reward)
+        dones = terminated | trunacted
         dones = torch.tensor(dones).to(dtype=torch.long).unsqueeze(0)
 
         return self.obs, reward, dones, info
@@ -82,3 +54,6 @@ class MazeEnv:
     def get_maze(self):
         maze = np.array(self.env.unwrapped.maze.maze_map)
         return 1 - maze
+
+    def to_tensor(self, x):
+        return torch.tensor(x, dtype=torch.float, device=self.device).unsqueeze(0)

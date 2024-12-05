@@ -181,13 +181,10 @@ class DiffusionPolicy(nn.Module):
         action_loss = loss[:, :, : self.action_dim].mean()
 
         if plot:
+            # TODO: add obs, goal and colours to plot
             obs_traj = x[0, :, self.action_dim :].cpu().numpy()
             fig = plt.figure()
-            maze = self.env.env.unwrapped.maze_arr
-            maze -= 10
-            maze[np.where(maze == 2)] = 1
-
-            plt.imshow(maze, cmap="gray")
+            plt.imshow(self.env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
             plt.scatter(obs_traj[:, 0], obs_traj[:, 1])
             wandb.log({"Image": wandb.Image(fig)})
 
