@@ -125,15 +125,15 @@ class DiffusionPolicy(nn.Module):
     def act(self, data: dict) -> dict[str, torch.Tensor]:
         data = self.process(data)
         x = self.forward(data)
-        obs = x[:, :, : self.obs_dim]
+        obs = x[:, :, self.action_dim :]
 
         # extract action
         if self.inpaint_obs:
             action = x[
-                :, self.T_cond - 1 : self.T_cond + self.T_action - 1, self.obs_dim :
+                :, self.T_cond - 1 : self.T_cond + self.T_action - 1, : self.action_dim
             ]
         else:
-            action = x[:, : self.T_action, self.obs_dim :]
+            action = x[:, : self.T_action, : self.action_dim]
         return {"action": action, "obs_traj": obs}
 
     def update(self, data):
