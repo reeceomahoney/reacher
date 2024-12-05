@@ -62,6 +62,7 @@ class ExpertDataset(Dataset):
 
         else:
             # TODO get this from task name
+            # TODO store and load this result to speedup launch
             dataset = minari.load_dataset("D4RL/pointmaze/medium-v2")
 
             obs_splits, actions_splits = [], []

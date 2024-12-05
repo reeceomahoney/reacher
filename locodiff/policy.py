@@ -9,12 +9,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 import wandb
-from locodiff.samplers import (
-    get_sampler,
-    get_sigmas_exponential,
-    get_sigmas_linear,
-    rand_log_logistic,
-)
+from locodiff.samplers import get_sampler, get_sigmas_exponential, rand_log_logistic
 from locodiff.utils import apply_conditioning
 from locodiff.wrappers import CFGWrapper
 
@@ -111,15 +106,15 @@ class DiffusionPolicy(nn.Module):
         # create noise
         if self.sampler_type == "ddpm":
             self.noise_scheduler.set_timesteps(self.sampling_steps)
-            kwargs["noise_scheduler"] = self.noise_scheduler
+            kwargs["noise_scheduler"] = self.noise_scheduler  # type: ignore
         else:
             noise = noise * self.sigma_max
             inference_sigmas = get_sigmas_exponential(
                 self.sampling_steps, self.sigma_min, self.sigma_max, self.device
             )
-            kwargs["sigmas"] = inference_sigmas
-            kwargs["resampling_steps"] = self.resampling_steps
-            kwargs["jump_length"] = self.jump_length
+            kwargs["sigmas"] = inference_sigmas  # type: ignore
+            kwargs["resampling_steps"] = self.resampling_steps  # type: ignore
+            kwargs["jump_length"] = self.jump_length  # type: ignore
 
         # inference
         x = self.sampler(self.model, noise, data, **kwargs)
@@ -150,7 +145,7 @@ class DiffusionPolicy(nn.Module):
         if self.sampler_type == "ddpm":
             timesteps = torch.randint(0, self.sampling_steps, (noise.shape[0],))
             noise_trajectory = self.noise_scheduler.add_noise(
-                data["input"], noise, timesteps
+                data["input"], noise, timesteps  # type: ignore
             )
             timesteps = timesteps.float().to(self.device)
             noise_trajectory = apply_conditioning(
@@ -161,7 +156,7 @@ class DiffusionPolicy(nn.Module):
             loss = torch.nn.functional.mse_loss(pred, data["input"])
         else:
             sigma = self.make_sample_density(len(noise))
-            loss = self.model.loss(noise, sigma, data, cond=cond)
+            loss = self.model.loss(noise, sigma, data, cond=cond)  # type: ignore
 
         # update model
         self.optimizer.zero_grad()
