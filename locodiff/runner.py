@@ -17,7 +17,6 @@ from locodiff.models.unet import ConditionalUnet1D
 from locodiff.policy import DiffusionPolicy
 from locodiff.utils import ExponentialMovingAverage, InferenceContext, Normalizer
 from locodiff.wrappers import ScalingWrapper
-from locodiff.temporal import TemporalUnet
 
 # A logger for this file
 log = logging.getLogger(__name__)
@@ -35,12 +34,12 @@ class DiffusionRunner:
         # classes
         self.train_loader, self.test_loader = get_dataloaders(**self.cfg.dataset)
         self.normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
+        # TODO: init model with hydra
         # model = ScalingWrapper(
-        #     # model=ConditionalUnet1D(**self.cfg.model),
-        #     model = TemporalUnet(256, 6, 32, 32, (1,4,8)),
+        #     model=ConditionalUnet1D(**self.cfg.model),
         #     sigma_data=agent_cfg.policy.sigma_data,
         # )
-        model = TemporalUnet(256, 6, 32, 32, (1,4,8))
+        model = ConditionalUnet1D(**self.cfg.model)
         self.policy = DiffusionPolicy(model, self.normalizer, env, **self.cfg.policy)
 
         # ema

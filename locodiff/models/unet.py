@@ -123,10 +123,10 @@ class ConditionalUnet1D(nn.Module):
         device,
         cond_mask_prob,
         weight_decay: float,
-        inpaint_obs: bool,
+        inpaint: bool,
         sampler_type: str,
         local_cond_dim=None,
-        kernel_size=3,
+        kernel_size=5,
         n_groups=8,
         cond_predict_scale=False,
     ):
@@ -138,7 +138,7 @@ class ConditionalUnet1D(nn.Module):
 
         # diffusion step embedding and observations
         cond_dim = (
-            cond_embed_dim if inpaint_obs else cond_embed_dim + (obs_dim * T_cond) + 4
+            cond_embed_dim if inpaint else cond_embed_dim + (obs_dim * T_cond + 1)
         )
 
         CondResBlock = partial(
@@ -193,17 +193,19 @@ class ConditionalUnet1D(nn.Module):
             nn.Conv1d(start_dim, input_dim, 1),
         )
 
-        # self.sigma_encoder = nn.Sequential(
-        #     SinusoidalPosEmb(cond_embed_dim, device),
-        #     nn.Linear(cond_embed_dim, cond_embed_dim * 4),
-        #     nn.Mish(),
-        #     nn.Linear(cond_embed_dim * 4, cond_embed_dim),
-        # )
-        self.sigma_encoder = nn.Linear(1, cond_embed_dim)
+        if sampler_type == "ddpm":
+            self.sigma_encoder = nn.Sequential(
+                SinusoidalPosEmb(cond_embed_dim, device),
+                nn.Linear(cond_embed_dim, cond_embed_dim * 4),
+                nn.Mish(),
+                nn.Linear(cond_embed_dim * 4, cond_embed_dim),
+            )
+        else:
+            self.sigma_encoder = nn.Linear(1, cond_embed_dim)
 
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
-        self.inapint_obs = inpaint_obs
+        self.inapint = inpaint
         self.sample_type = sampler_type
 
         self.local_cond_encoder = local_cond_encoder
@@ -233,10 +235,15 @@ class ConditionalUnet1D(nn.Module):
         """
         sample = einops.rearrange(noised_action, "b t h -> b h t")
 
-        if self.sample_type != "ddpm":
+        # embed timestep
+        if self.sample_type == "ddpm":
+            sigma_emb = self.sigma_encoder(sigma).squeeze(0)
+        else:
             sigma = sigma.log() / 4
-        sigma_emb = self.sigma_encoder(sigma.view(-1, 1))
-        if self.inapint_obs:
+            sigma_emb = self.sigma_encoder(sigma.view(-1, 1))
+
+        # create global feature
+        if self.inapint:
             global_feature = sigma_emb
         else:
             obs = data_dict["obs"].reshape(sample.shape[0], -1)

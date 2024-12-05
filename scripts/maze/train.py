@@ -1,3 +1,5 @@
+import numpy as np
+import random
 import torch
 
 import hydra
@@ -23,6 +25,10 @@ def main(agent_cfg: DictConfig):
     # specify directory for logging experiments
     log_dir = HydraConfig.get().runtime.output_dir
     print(f"[INFO] Logging experiment in directory: {log_dir}")
+
+    random.seed(agent_cfg.seed)
+    np.random.seed(agent_cfg.seed)
+    torch.manual_seed(agent_cfg.seed)
 
     # create isaac environment
     env = MazeEnv(agent_cfg)

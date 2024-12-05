@@ -1,6 +1,5 @@
 import math
 import matplotlib.pyplot as plt
-import numpy as np
 import torch
 import torch.nn as nn
 from torch.optim.adamw import AdamW
@@ -156,7 +155,7 @@ class DiffusionPolicy(nn.Module):
             noise_trajectory = apply_conditioning(
                 noise_trajectory, cond, self.action_dim
             )
-            pred = self.model(noise_trajectory, data, timesteps)
+            pred = self.model(noise_trajectory, timesteps, data)
             pred = apply_conditioning(pred, cond, self.action_dim)
             loss = torch.nn.functional.mse_loss(pred, data["input"])
         else:

@@ -159,17 +159,14 @@ def sample_ddpm(model, noise: torch.Tensor, data_dict: dict, **kwargs):
     """
     Perform inference using the DDPM sampler
     """
-    noise_scheduler = kwargs["noise_scheduler"]
     x_t = noise
-    # inpainting mask
-    # tgt = kwargs["tgt"]
-    # mask = kwargs["mask"]
     cond = kwargs["cond"]
+    noise_scheduler = kwargs["noise_scheduler"]
 
-    for idx, t in enumerate(noise_scheduler.timesteps):
+    for t in noise_scheduler.timesteps:
         x_t = apply_conditioning(x_t, cond, 2)
         t_pt = t.float().to(noise.device)
-        output = model(x_t, data_dict, t_pt.expand(x_t.shape[0]))
+        output = model(x_t, t_pt.expand(x_t.shape[0]), data_dict)
         x_t = noise_scheduler.step(output, t, x_t).prev_sample
 
     x_t = apply_conditioning(x_t, cond, 2)
