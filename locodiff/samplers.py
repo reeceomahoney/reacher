@@ -128,13 +128,11 @@ def sample_euler_ancestral(model, noise: torch.Tensor, data_dict: dict, **kwargs
     x_t = noise
     s_in = x_t.new_ones([x_t.shape[0]])
 
-    # inpainting mask
-    tgt = kwargs["tgt"]
-    mask = kwargs["mask"]
-    # unsure if this is necessary
-    # x_t = tgt * mask + x_t * (1 - mask)
+    # inpainting data
+    cond = kwargs["cond"]
 
     for i in range(len(sigmas) - 1):
+        x_t = apply_conditioning(x_t, cond, 2)
         # compute x_{t-1}
         denoised = model(x_t, sigmas[i] * s_in, data_dict)
         # get ancestral steps
@@ -147,10 +145,8 @@ def sample_euler_ancestral(model, noise: torch.Tensor, data_dict: dict, **kwargs
         x_t = x_t + d * dt
         if sigma_down > 0:
             x_t = x_t + torch.randn_like(x_t) * sigma_up
-        # inpaint
-        noised_tgt = tgt + torch.randn_like(tgt) * sigmas[i]
-        x_t = noised_tgt * mask + x_t * (1 - mask)
 
+    x_t = apply_conditioning(x_t, cond, 2)
     return x_t
 
 
