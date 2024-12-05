@@ -44,38 +44,20 @@ def sample_ddim(model, noise: torch.Tensor, data_dict: dict, **kwargs):
     """
     Perform inference using the DDIM sampler
     """
-    # sigmas = kwargs["sigmas"]
-    # x_t = noise
-    # s_in = x_t.new_ones([x_t.shape[0]])
-    #
-    # num_steps = kwargs.get("num_steps", len(sigmas) - 1)
-    # # inpainting data
-    # cond = kwargs["cond"]
-    #
-    # for i in range(num_steps):
-    #     x_t = apply_conditioning(x_t, cond, 2)
-    #     denoised = model(x_t, sigmas[i] * s_in, data_dict)
-    #     t, t_next = -sigmas[i].log(), -sigmas[i + 1].log()
-    #     h = t_next - t
-    #     x_t = ((-t_next).exp() / (-t).exp()) * x_t - (-h).expm1() * denoised
-    #
-    # x_t = apply_conditioning(x_t, cond, 2)
-
     x_t = noise
     cond = kwargs["cond"]
     noise_scheduler = kwargs["noise_scheduler"]
 
-    for t in noise_scheduler.timesteps:
+    for i, t in enumerate(noise_scheduler.timesteps):
         x_t = apply_conditioning(x_t, cond, 2)
         t_pt = t.float().to(noise.device)
-        x_t = noise_scheduler.scale_model_input(x_t, t_pt)
-        output = model(x_t, t_pt.expand(x_t.shape[0]), data_dict)
-        x_t = noise_scheduler.step(output, t, x_t).prev_sample
+        x_t_in = noise_scheduler.scale_model_input(x_t, i)
+        output = model(x_t_in, t_pt.expand(x_t.shape[0]), data_dict)
+        x_t = noise_scheduler.step(output, i, x_t).prev_sample
 
     x_t = apply_conditioning(x_t, cond, 2)
     return x_t
 
-    return x_t
 
 
 @torch.no_grad()

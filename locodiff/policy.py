@@ -62,12 +62,13 @@ class DiffusionPolicy(nn.Module):
                 clip_sample=True,
                 prediction_type="sample",
             )
-        self.noise_scheduler = EDMDPMSolverMultistepScheduler(
-            sigma_min=sigma_min,
-            sigma_max=sigma_max,
-            sigma_data=sigma_data,
-            num_train_timesteps=sampling_steps,
-        )
+        elif sampler_type == "ddim":
+            self.noise_scheduler = EDMDPMSolverMultistepScheduler(
+                sigma_min=sigma_min,
+                sigma_max=sigma_max,
+                sigma_data=sigma_data,
+                num_train_timesteps=sampling_steps,
+            )
 
         self.normalizer = normalizer
         self.obs_hist = torch.zeros((num_envs, T_cond, obs_dim), device=device)
@@ -167,13 +168,12 @@ class DiffusionPolicy(nn.Module):
             loss = torch.nn.functional.mse_loss(pred, data["input"])
         else:
             sigma = self.make_sample_density(len(noise)).view(-1, 1, 1)
-            sigma = sigma.log() / 4
             noised_x = data["input"] + noise * sigma
-            noised_x = self.noise_scheduler.scale_model_input(noised_x, sigma)
-            out = self.model(noised_x, sigma, data)
+            noised_x_in = self.noise_scheduler.precondition_inputs(noised_x, sigma)
+            sigma_in = self.noise_scheduler.precondition_noise(sigma)
+            out = self.model(noised_x_in, sigma_in, data)
             out = self.noise_scheduler.precondition_outputs(noised_x, out, sigma)
             loss = torch.nn.functional.mse_loss(out, data["input"])
-            # loss = self.model.loss(noise, sigma, data, cond=cond)  # type: ignore
 
         # update model
         self.optimizer.zero_grad()
@@ -225,15 +225,15 @@ class DiffusionPolicy(nn.Module):
         raw_action = data.get("action", None)
 
         if raw_action is None:
-            # inference
+            # sim
             data = self.update_history(data)
             raw_obs = data["obs"]
             input = None
             goal = self.normalizer.scale_pos(self.goal)
         else:
-            # training
+            # train and test
             raw_obs = data["obs"]
-            if self.inpaint_obs:
+            if self.inpaint:
                 input_obs, input_act = raw_obs, raw_action
             else:
                 input_obs = raw_obs[:, self.T_cond - 1 : self.T_cond + self.T - 1]
