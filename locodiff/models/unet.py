@@ -239,7 +239,7 @@ class ConditionalUnet1D(nn.Module):
         if self.sample_type == "ddpm":
             sigma_emb = self.sigma_encoder(sigma).squeeze(0)
         else:
-            sigma = sigma.log() / 4
+            # sigma = sigma.log() / 4
             sigma_emb = self.sigma_encoder(sigma.view(-1, 1))
 
         # create global feature

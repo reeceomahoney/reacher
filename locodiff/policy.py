@@ -7,6 +7,9 @@ from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
+    EDMDPMSolverMultistepScheduler,
+)
 
 import wandb
 from locodiff.samplers import get_sampler, get_sigmas_exponential, rand_log_logistic
@@ -59,6 +62,12 @@ class DiffusionPolicy(nn.Module):
                 clip_sample=True,
                 prediction_type="sample",
             )
+        self.noise_scheduler = EDMDPMSolverMultistepScheduler(
+            sigma_min=sigma_min,
+            sigma_max=sigma_max,
+            sigma_data=sigma_data,
+            num_train_timesteps=sampling_steps,
+        )
 
         self.normalizer = normalizer
         self.obs_hist = torch.zeros((num_envs, T_cond, obs_dim), device=device)
@@ -108,13 +117,15 @@ class DiffusionPolicy(nn.Module):
             self.noise_scheduler.set_timesteps(self.sampling_steps)
             kwargs["noise_scheduler"] = self.noise_scheduler  # type: ignore
         else:
-            noise = noise * self.sigma_max
-            inference_sigmas = get_sigmas_exponential(
-                self.sampling_steps, self.sigma_min, self.sigma_max, self.device
-            )
-            kwargs["sigmas"] = inference_sigmas  # type: ignore
-            kwargs["resampling_steps"] = self.resampling_steps  # type: ignore
-            kwargs["jump_length"] = self.jump_length  # type: ignore
+            # noise = noise * self.sigma_max
+            # inference_sigmas = get_sigmas_exponential(
+            #     self.sampling_steps, self.sigma_min, self.sigma_max, self.device
+            # )
+            # kwargs["sigmas"] = inference_sigmas  # type: ignore
+            # kwargs["resampling_steps"] = self.resampling_steps  # type: ignore
+            # kwargs["jump_length"] = self.jump_length  # type: ignore
+            self.noise_scheduler.set_timesteps(self.sampling_steps)
+            kwargs["noise_scheduler"] = self.noise_scheduler  # type: ignore
 
         # inference
         x = self.sampler(self.model, noise, data, **kwargs)
@@ -155,8 +166,14 @@ class DiffusionPolicy(nn.Module):
             pred = apply_conditioning(pred, cond, self.action_dim)
             loss = torch.nn.functional.mse_loss(pred, data["input"])
         else:
-            sigma = self.make_sample_density(len(noise))
-            loss = self.model.loss(noise, sigma, data, cond=cond)  # type: ignore
+            sigma = self.make_sample_density(len(noise)).view(-1, 1, 1)
+            sigma = sigma.log() / 4
+            noised_x = data["input"] + noise * sigma
+            noised_x = self.noise_scheduler.scale_model_input(noised_x, sigma)
+            out = self.model(noised_x, sigma, data)
+            out = self.noise_scheduler.precondition_outputs(noised_x, out, sigma)
+            loss = torch.nn.functional.mse_loss(out, data["input"])
+            # loss = self.model.loss(noise, sigma, data, cond=cond)  # type: ignore
 
         # update model
         self.optimizer.zero_grad()
