@@ -1,5 +1,6 @@
 import math
 import matplotlib.pyplot as plt
+import numpy as np
 import torch
 import torch.nn as nn
 from torch.optim.adamw import AdamW
@@ -173,18 +174,29 @@ class DiffusionPolicy(nn.Module):
     def test(self, data: dict, plot) -> tuple[float, float, float]:
         data = self.process(data)
         x = self.forward(data)
-        # calculate loss
+        # calculate losses
         input = self.normalizer.inverse_scale_output(data["input"])
         loss = nn.functional.mse_loss(x, input, reduction="none")
         obs_loss = loss[:, :, self.action_dim :].mean()
         action_loss = loss[:, :, : self.action_dim].mean()
 
         if plot:
-            # TODO: add obs, goal and colours to plot
             obs_traj = x[0, :, self.action_dim :].cpu().numpy()
             fig = plt.figure()
+            # maze
             plt.imshow(self.env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
-            plt.scatter(obs_traj[:, 0], obs_traj[:, 1])
+            # trajectory
+            colors = plt.cm.inferno(np.linspace(0, 1, len(obs_traj)))  # type: ignore
+            plt.scatter(obs_traj[:, 0], obs_traj[:, 1], c=colors)
+            # obs and goal
+            marker_params = {"markersize": 10, "markeredgewidth": 3}
+            plt.plot(
+                obs_traj[0, 0], obs_traj[0, 1], "x", color="green", **marker_params  # type: ignore
+            )
+            plt.plot(
+                obs_traj[-1, 0], obs_traj[-1, 1], "x", color="red", **marker_params  # type: ignore
+            )
+            # log
             wandb.log({"Image": wandb.Image(fig)})
 
         return loss.mean().item(), obs_loss.item(), action_loss.item()
