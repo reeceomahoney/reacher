@@ -94,7 +94,7 @@ class DiffusionPolicy(nn.Module):
         self.inference_sigmas = get_sigmas_exponential(
             sampling_steps, sigma_min, sigma_max, device
         )
-        self.inpaint_obs = inpaint
+        self.inpaint = inpaint
         self.resampling_steps = resampling_steps
         self.jump_length = jump_length
 
@@ -140,7 +140,7 @@ class DiffusionPolicy(nn.Module):
         obs = x[:, :, self.action_dim :]
 
         # extract action
-        if self.inpaint_obs:
+        if self.inpaint:
             action = x[
                 :, self.T_cond - 1 : self.T_cond + self.T_action - 1, : self.action_dim
             ]
@@ -256,7 +256,7 @@ class DiffusionPolicy(nn.Module):
 
     def create_conditioning(self, data: dict) -> dict:
         cond = {}
-        if self.inpaint_obs:
+        if self.inpaint:
             if data["input"] is not None:
                 # train and test
                 cond[0] = data["input"][:, 0, self.action_dim :]
