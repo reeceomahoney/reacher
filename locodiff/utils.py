@@ -50,6 +50,27 @@ def apply_conditioning(x, conditions, action_dim):
     return x
 
 
+def rand_log_logistic(
+    shape,
+    loc=0.0,
+    scale=1.0,
+    min_value=0.0,
+    max_value=float("inf"),
+    device="cpu",
+    dtype=torch.float32,
+):
+    """Draws samples from an optionally truncated log-logistic distribution."""
+    min_value = torch.as_tensor(min_value, device=device, dtype=torch.float64)
+    max_value = torch.as_tensor(max_value, device=device, dtype=torch.float64)
+    min_cdf = min_value.log().sub(loc).div(scale).sigmoid()
+    max_cdf = max_value.log().sub(loc).div(scale).sigmoid()
+    u = (
+        torch.rand(shape, device=device, dtype=torch.float64) * (max_cdf - min_cdf)
+        + min_cdf
+    )
+    return u.logit().mul(scale).add(loc).exp().to(dtype)
+
+
 class SinusoidalPosEmb(nn.Module):
     def __init__(self, dim, device):
         super().__init__()
@@ -258,3 +279,31 @@ class InferenceContext:
         if self.use_ema:
             self.ema_helper.restore(self.policy.parameters())
         self.inference_mode_context.__exit__(exc_type, exc_value, traceback)
+
+
+class CFGWrapper(nn.Module):
+    """
+    Classifier-free guidance wrapper
+    """
+
+    def __init__(self, model, cond_lambda: int, cond_mask_prob: float):
+        super().__init__()
+        self.model = model
+        self.cond_lambda = cond_lambda
+        self.cond_mask_prob = cond_mask_prob
+
+    def __call__(self, x_t: torch.Tensor, sigma: torch.Tensor, data_dict: dict):
+        out = self.model(x_t, sigma, data_dict)
+        out_uncond = self.model(x_t, sigma, data_dict, uncond=True)
+        out = out_uncond + self.cond_lambda * (out - out_uncond)
+
+        return out
+
+    def loss(self, noise, sigma, data_dict):
+        return self.model.loss(noise, sigma, data_dict)
+
+    def get_params(self):
+        return self.model.get_params()
+
+    def get_optim_groups(self):
+        return self.model.get_optim_groups()

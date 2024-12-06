@@ -39,7 +39,6 @@ policy:
   T_action: ${T_action}
   num_envs: ${num_envs}
   sampling_steps: ${sampling_steps}
-  sampler_type: ddim
   sigma_data: 0.5
   sigma_min: 0.002
   sigma_max: 80
@@ -50,8 +49,6 @@ policy:
   num_iters: ${num_iters}
   inpaint: false
   device: ${device}
-  resampling_steps: 0
-  jump_length: 1
 
 dataset:
   task_name: ${task}

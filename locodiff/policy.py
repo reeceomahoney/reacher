@@ -6,15 +6,12 @@ import torch.nn as nn
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 
 import wandb
-from locodiff.samplers import get_sampler, get_sigmas_exponential, rand_log_logistic
-from locodiff.utils import apply_conditioning
-from locodiff.wrappers import CFGWrapper
+from locodiff.utils import CFGWrapper, apply_conditioning, rand_log_logistic
 
 
 class DiffusionPolicy(nn.Module):
@@ -30,7 +27,6 @@ class DiffusionPolicy(nn.Module):
         T_action: int,
         num_envs: int,
         sampling_steps: int,
-        sampler_type: str,
         sigma_data: float,
         sigma_min: float,
         sigma_max: float,
@@ -41,39 +37,23 @@ class DiffusionPolicy(nn.Module):
         num_iters: int,
         inpaint: bool,
         device: str,
-        resampling_steps: int,
-        jump_length: int,
     ):
         super().__init__()
         # model
         if cond_mask_prob > 0:
             model = CFGWrapper(model, cond_lambda, cond_mask_prob)
         self.model = model
-        self.sampler = get_sampler(sampler_type)
-        self.sampler_type = sampler_type
-        self.sampling_steps = sampling_steps
-        if sampler_type == "ddpm":
-            self.noise_scheduler = DDPMScheduler(
-                num_train_timesteps=sampling_steps,
-                beta_start=0.0001,
-                beta_end=0.02,
-                beta_schedule="squaredcos_cap_v2",
-                variance_type="fixed_small",
-                clip_sample=True,
-                prediction_type="sample",
-            )
-        elif sampler_type == "ddim":
-            self.noise_scheduler = EDMDPMSolverMultistepScheduler(
-                sigma_min=sigma_min,
-                sigma_max=sigma_max,
-                sigma_data=sigma_data,
-                num_train_timesteps=sampling_steps,
-            )
 
+        # other classes
+        self.env = env
         self.normalizer = normalizer
         self.obs_hist = torch.zeros((num_envs, T_cond, obs_dim), device=device)
-        self.device = device
-        self.env = env
+        self.noise_scheduler = EDMDPMSolverMultistepScheduler(
+            sigma_min=sigma_min,
+            sigma_max=sigma_max,
+            sigma_data=sigma_data,
+            num_train_timesteps=sampling_steps,
+        )
 
         # dims
         self.obs_dim = obs_dim
@@ -87,52 +67,24 @@ class DiffusionPolicy(nn.Module):
         self.goal_dim = 4
 
         # diffusion
+        self.sampling_steps = sampling_steps
         self.sigma_data = sigma_data
         self.sigma_min = sigma_min
         self.sigma_max = sigma_max
         self.cond_mask_prob = cond_mask_prob
-        self.inference_sigmas = get_sigmas_exponential(
-            sampling_steps, sigma_min, sigma_max, device
-        )
         self.inpaint = inpaint
-        self.resampling_steps = resampling_steps
-        self.jump_length = jump_length
 
         # optimizer and lr scheduler
         optim_groups = self.model.get_optim_groups()
         self.optimizer = AdamW(optim_groups, lr=lr, betas=betas)
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
+
+        self.device = device
         self.to(device)
 
-    def forward(self, data: dict) -> torch.Tensor:
-        B = data["obs"].shape[0]
-        # sample noise
-        noise = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
-
-        # create inpainting mask and target
-        cond = self.create_conditioning(data)
-        kwargs = {"cond": cond}
-
-        # create noise
-        if self.sampler_type == "ddpm":
-            self.noise_scheduler.set_timesteps(self.sampling_steps)
-            kwargs["noise_scheduler"] = self.noise_scheduler  # type: ignore
-        else:
-            # noise = noise * self.sigma_max
-            # inference_sigmas = get_sigmas_exponential(
-            #     self.sampling_steps, self.sigma_min, self.sigma_max, self.device
-            # )
-            # kwargs["sigmas"] = inference_sigmas  # type: ignore
-            # kwargs["resampling_steps"] = self.resampling_steps  # type: ignore
-            # kwargs["jump_length"] = self.jump_length  # type: ignore
-            self.noise_scheduler.set_timesteps(self.sampling_steps)
-            kwargs["noise_scheduler"] = self.noise_scheduler  # type: ignore
-
-        # inference
-        x = self.sampler(self.model, noise, data, **kwargs)
-        x = self.normalizer.clip(x)
-        x = self.normalizer.inverse_scale_output(x)
-        return x
+    ############
+    # Main API #
+    ############
 
     def act(self, data: dict) -> dict[str, torch.Tensor]:
         data = self.process(data)
@@ -146,34 +98,27 @@ class DiffusionPolicy(nn.Module):
             ]
         else:
             action = x[:, : self.T_action, : self.action_dim]
+
         return {"action": action, "obs_traj": obs}
 
     def update(self, data):
+        # preprocess data
         data = self.process(data)
-        noise = torch.randn_like(data["input"])
         cond = self.create_conditioning(data)
 
+        # noise data
+        noise = torch.randn_like(data["input"])
+        sigma = self.sample_training_density(len(noise)).view(-1, 1, 1)
+        x_noise = data["input"] + noise * sigma
+        x_noise = apply_conditioning(x_noise, cond, self.action_dim)
+        # compute modle output
+        noised_x_in = self.noise_scheduler.precondition_inputs(x_noise, sigma)
+        sigma_in = self.noise_scheduler.precondition_noise(sigma)
+        out = self.model(noised_x_in, sigma_in, data)
+        out = self.noise_scheduler.precondition_outputs(x_noise, out, sigma)
+        out = apply_conditioning(out, cond, self.action_dim)
         # calculate loss
-        if self.sampler_type == "ddpm":
-            timesteps = torch.randint(0, self.sampling_steps, (noise.shape[0],))
-            noise_trajectory = self.noise_scheduler.add_noise(
-                data["input"], noise, timesteps  # type: ignore
-            )
-            timesteps = timesteps.float().to(self.device)
-            noise_trajectory = apply_conditioning(
-                noise_trajectory, cond, self.action_dim
-            )
-            pred = self.model(noise_trajectory, timesteps, data)
-            pred = apply_conditioning(pred, cond, self.action_dim)
-            loss = torch.nn.functional.mse_loss(pred, data["input"])
-        else:
-            sigma = self.make_sample_density(len(noise)).view(-1, 1, 1)
-            noised_x = data["input"] + noise * sigma
-            noised_x_in = self.noise_scheduler.precondition_inputs(noised_x, sigma)
-            sigma_in = self.noise_scheduler.precondition_noise(sigma)
-            out = self.model(noised_x_in, sigma_in, data)
-            out = self.noise_scheduler.precondition_outputs(noised_x, out, sigma)
-            loss = torch.nn.functional.mse_loss(out, data["input"])
+        loss = torch.nn.functional.mse_loss(out, data["input"])
 
         # update model
         self.optimizer.zero_grad()
@@ -219,6 +164,41 @@ class DiffusionPolicy(nn.Module):
         else:
             self.obs_hist.zero_()
 
+    #####################
+    # Inference backend #
+    #####################
+
+    @torch.no_grad()
+    def forward(self, data: dict) -> torch.Tensor:
+        # sample noise
+        B = data["obs"].shape[0]
+        x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
+        # we should need this but performance is better without it
+        # noise = noise * self.sigma_max
+
+        # create inpainting conditioning
+        cond = self.create_conditioning(data)
+        # this needs to called every time we do inference
+        self.noise_scheduler.set_timesteps(self.sampling_steps)
+
+        # inference loop
+        for t in self.noise_scheduler.timesteps:
+            x = apply_conditioning(x, cond, 2)
+            x_in = self.noise_scheduler.scale_model_input(x, t)
+            output = self.model(x_in, t.expand(B), data)
+            x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
+
+        # final conditioning
+        x = apply_conditioning(x, cond, 2)
+        # denormalize
+        x = self.normalizer.clip(x)
+        x = self.normalizer.inverse_scale_output(x)
+        return x
+
+    ###################
+    # Data processing #
+    ###################
+
     @torch.no_grad()
     def process(self, data: dict) -> dict:
         data = self.dict_to_device(data)
@@ -236,23 +216,14 @@ class DiffusionPolicy(nn.Module):
             if self.inpaint:
                 input_obs, input_act = raw_obs, raw_action
             else:
-                input_obs = raw_obs[:, self.T_cond - 1 : self.T_cond + self.T - 1]
-                input_act = raw_action[:, self.T_cond - 1 : self.T_cond + self.T - 1]
+                input_obs = raw_obs[:, self.T_cond - 1 :]
+                input_act = raw_action[:, self.T_cond - 1 :]
             input = torch.cat([input_act, input_obs], dim=-1)
             input = self.normalizer.scale_output(input)
             goal = input[:, -1, -self.goal_dim :]
 
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
         return {"obs": obs, "input": input, "goal": goal}
-
-    def update_history(self, x):
-        self.obs_hist[:, :-1] = self.obs_hist[:, 1:].clone()
-        self.obs_hist[:, -1] = x["obs"]
-        x["obs"] = self.obs_hist.clone()
-        return x
-
-    def dict_to_device(self, data):
-        return {k: v.to(self.device) for k, v in data.items()}
 
     def create_conditioning(self, data: dict) -> dict:
         cond = {}
@@ -268,12 +239,12 @@ class DiffusionPolicy(nn.Module):
 
         return cond
 
-    def set_goal(self, goal):
-        self.goal = goal.unsqueeze(0)
-        self.goal = torch.cat([self.goal, torch.zeros_like(self.goal)], dim=-1)
+    ###########
+    # Helpers #
+    ###########
 
     @torch.no_grad()
-    def make_sample_density(self, size):
+    def sample_training_density(self, size):
         """
         Generate a density function for training sigmas
         """
@@ -282,6 +253,19 @@ class DiffusionPolicy(nn.Module):
             (size,), loc, 0.5, self.sigma_min, self.sigma_max, self.device
         )
         return density
+
+    def update_history(self, x):
+        self.obs_hist[:, :-1] = self.obs_hist[:, 1:].clone()
+        self.obs_hist[:, -1] = x["obs"]
+        x["obs"] = self.obs_hist.clone()
+        return x
+
+    def set_goal(self, goal):
+        self.goal = goal.unsqueeze(0)
+        self.goal = torch.cat([self.goal, torch.zeros_like(self.goal)], dim=-1)
+
+    def dict_to_device(self, data):
+        return {k: v.to(self.device) for k, v in data.items()}
 
     def get_params(self):
         return self.model.get_params()

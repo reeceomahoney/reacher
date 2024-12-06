@@ -124,7 +124,6 @@ class ConditionalUnet1D(nn.Module):
         cond_mask_prob,
         weight_decay: float,
         inpaint: bool,
-        sampler_type: str,
         local_cond_dim=None,
         kernel_size=5,
         n_groups=8,
@@ -193,20 +192,11 @@ class ConditionalUnet1D(nn.Module):
             nn.Conv1d(start_dim, input_dim, 1),
         )
 
-        if sampler_type == "ddpm":
-            self.sigma_encoder = nn.Sequential(
-                SinusoidalPosEmb(cond_embed_dim, device),
-                nn.Linear(cond_embed_dim, cond_embed_dim * 4),
-                nn.Mish(),
-                nn.Linear(cond_embed_dim * 4, cond_embed_dim),
-            )
-        else:
-            self.sigma_encoder = nn.Linear(1, cond_embed_dim)
+        self.sigma_encoder = nn.Linear(1, cond_embed_dim)
 
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
-        self.inapint = inpaint
-        self.sample_type = sampler_type
+        self.inpaint = inpaint
 
         self.local_cond_encoder = local_cond_encoder
         self.up_modules = up_modules
@@ -236,14 +226,11 @@ class ConditionalUnet1D(nn.Module):
         sample = einops.rearrange(noised_action, "b t h -> b h t")
 
         # embed timestep
-        if self.sample_type == "ddpm":
-            sigma_emb = self.sigma_encoder(sigma).squeeze(0)
-        else:
-            # sigma = sigma.log() / 4
-            sigma_emb = self.sigma_encoder(sigma.view(-1, 1))
+        sigma = sigma.to(noised_action.device)
+        sigma_emb = self.sigma_encoder(sigma.view(-1, 1))
 
         # create global feature
-        if self.inapint:
+        if self.inpaint:
             global_feature = sigma_emb
         else:
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
