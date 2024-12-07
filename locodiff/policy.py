@@ -112,9 +112,9 @@ class DiffusionPolicy(nn.Module):
         x_noise = data["input"] + noise * sigma
         x_noise = apply_conditioning(x_noise, cond, self.action_dim)
         # compute modle output
-        noised_x_in = self.noise_scheduler.precondition_inputs(x_noise, sigma)
+        x_noise_in = self.noise_scheduler.precondition_inputs(x_noise, sigma)
         sigma_in = self.noise_scheduler.precondition_noise(sigma)
-        out = self.model(noised_x_in, sigma_in, data)
+        out = self.model(x_noise_in, sigma_in, data)
         out = self.noise_scheduler.precondition_outputs(x_noise, out, sigma)
         out = apply_conditioning(out, cond, self.action_dim)
         # calculate loss
@@ -226,18 +226,10 @@ class DiffusionPolicy(nn.Module):
         return {"obs": obs, "input": input, "goal": goal}
 
     def create_conditioning(self, data: dict) -> dict:
-        cond = {}
         if self.inpaint:
-            if data["input"] is not None:
-                # train and test
-                cond[0] = data["input"][:, 0, self.action_dim :]
-                cond[self.T - 1] = data["input"][:, -1, self.action_dim :]
-            else:
-                # sim
-                cond[0] = data["obs"]
-                cond[self.T - 1] = data["goal"]
-
-        return cond
+            return {0: data["obs"].squeeze(1), self.T - 1: data["goal"]}
+        else:
+            return {}
 
     ###########
     # Helpers #
