@@ -110,9 +110,9 @@ class DiffusionPolicy(nn.Module):
         noise = torch.randn_like(data["input"])
         sigma = self.sample_training_density(len(noise)).view(-1, 1, 1)
         x_noise = data["input"] + noise * sigma
-        x_noise = apply_conditioning(x_noise, cond, self.action_dim)
         # compute modle output
         x_noise_in = self.noise_scheduler.precondition_inputs(x_noise, sigma)
+        x_noise_in = apply_conditioning(x_noise_in, cond, self.action_dim)
         sigma_in = self.noise_scheduler.precondition_noise(sigma)
         out = self.model(x_noise_in, sigma_in, data)
         out = self.noise_scheduler.precondition_outputs(x_noise, out, sigma)
@@ -174,7 +174,7 @@ class DiffusionPolicy(nn.Module):
         B = data["obs"].shape[0]
         x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
         # we should need this but performance is better without it
-        # noise = noise * self.sigma_max
+        # x *= self.sigma_max
 
         # create inpainting conditioning
         cond = self.create_conditioning(data)
@@ -183,8 +183,8 @@ class DiffusionPolicy(nn.Module):
 
         # inference loop
         for t in self.noise_scheduler.timesteps:
-            x = apply_conditioning(x, cond, 2)
             x_in = self.noise_scheduler.scale_model_input(x, t)
+            x_in = apply_conditioning(x_in, cond, 2)
             output = self.model(x_in, t.expand(B), data)
             x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
 
