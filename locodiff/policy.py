@@ -6,6 +6,7 @@ import torch.nn as nn
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
@@ -48,11 +49,20 @@ class DiffusionPolicy(nn.Module):
         self.env = env
         self.normalizer = normalizer
         self.obs_hist = torch.zeros((num_envs, T_cond, obs_dim), device=device)
-        self.noise_scheduler = EDMDPMSolverMultistepScheduler(
-            sigma_min=sigma_min,
-            sigma_max=sigma_max,
-            sigma_data=sigma_data,
+        # self.noise_scheduler = EDMDPMSolverMultistepScheduler(
+        #     sigma_min=sigma_min,
+        #     sigma_max=sigma_max,
+        #     sigma_data=sigma_data,
+        #     num_train_timesteps=sampling_steps,
+        # )
+        self.noise_scheduler = DDPMScheduler(
             num_train_timesteps=sampling_steps,
+            beta_start=0.0001,
+            beta_end=0.02,
+            beta_schedule="squaredcos_cap_v2",
+            variance_type="fixed_small",
+            clip_sample=True,
+            prediction_type="sample",
         )
 
         # dims
@@ -108,14 +118,17 @@ class DiffusionPolicy(nn.Module):
 
         # noise data
         noise = torch.randn_like(data["input"])
-        sigma = self.sample_training_density(len(noise)).view(-1, 1, 1)
-        x_noise = data["input"] + noise * sigma
+        # sigma = self.sample_training_density(len(noise)).view(-1, 1, 1)
+        # x_noise = data["input"] + noise * sigma
+        timesteps = torch.randint(0, self.sampling_steps, (noise.shape[0],))
+        x_noise = self.noise_scheduler.add_noise(data["input"], noise, timesteps)
         x_noise = apply_conditioning(x_noise, cond, self.action_dim)
         # compute modle output
-        noised_x_in = self.noise_scheduler.precondition_inputs(x_noise, sigma)
-        sigma_in = self.noise_scheduler.precondition_noise(sigma)
-        out = self.model(noised_x_in, sigma_in, data)
-        out = self.noise_scheduler.precondition_outputs(x_noise, out, sigma)
+        # x_noise_in = self.noise_scheduler.precondition_inputs(x_noise, sigma)
+        # sigma_in = self.noise_scheduler.precondition_noise(sigma)
+        timesteps = timesteps.float().to(self.device)
+        out = self.model(x_noise, timesteps, data)
+        # out = self.noise_scheduler.precondition_outputs(x_noise, out, sigma)
         out = apply_conditioning(out, cond, self.action_dim)
         # calculate loss
         loss = torch.nn.functional.mse_loss(out, data["input"])
@@ -174,7 +187,7 @@ class DiffusionPolicy(nn.Module):
         B = data["obs"].shape[0]
         x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
         # we should need this but performance is better without it
-        # noise = noise * self.sigma_max
+        # x *= self.sigma_max
 
         # create inpainting conditioning
         cond = self.create_conditioning(data)
@@ -184,8 +197,8 @@ class DiffusionPolicy(nn.Module):
         # inference loop
         for t in self.noise_scheduler.timesteps:
             x = apply_conditioning(x, cond, 2)
-            x_in = self.noise_scheduler.scale_model_input(x, t)
-            output = self.model(x_in, t.expand(B), data)
+            # x_in = self.noise_scheduler.scale_model_input(x, t)
+            output = self.model(x, t.float().expand(B), data)
             x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
 
         # final conditioning
@@ -226,18 +239,10 @@ class DiffusionPolicy(nn.Module):
         return {"obs": obs, "input": input, "goal": goal}
 
     def create_conditioning(self, data: dict) -> dict:
-        cond = {}
         if self.inpaint:
-            if data["input"] is not None:
-                # train and test
-                cond[0] = data["input"][:, 0, self.action_dim :]
-                cond[self.T - 1] = data["input"][:, -1, self.action_dim :]
-            else:
-                # sim
-                cond[0] = data["obs"]
-                cond[self.T - 1] = data["goal"]
-
-        return cond
+            return {0: data["obs"].squeeze(1), self.T - 1: data["goal"]}
+        else:
+            return {}
 
     ###########
     # Helpers #
