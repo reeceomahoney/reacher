@@ -1,4 +1,7 @@
 import matplotlib.pyplot as plt
+import statistics
+from tqdm import tqdm
+import numpy as np
 import os
 import sys
 import torch
@@ -44,50 +47,64 @@ def main(agent_cfg: DictConfig):
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(resume_path)
 
-    # obtain the trained policy for inference
-    policy = runner.get_inference_policy(device=env.device)
+    test_type = "mse"
 
-    # make figure
-    plt.figure(figsize=(8, 8))
+    if test_type == "mse":
+        test_mse = []
+        for batch in tqdm(runner.test_loader, desc="Testing...", leave=False):
+            mse, obs_mse, act_mse = runner.policy.test(batch, plot=False)
+            test_mse.append(mse)
+        test_mse = statistics.mean(test_mse)
+        print(f"[INFO]: Test MSE: {test_mse}")
 
-    # reset environment
-    obs = env.reset()
-    runner.policy.set_goal(env.goal)
-    timestep = 0
-    # simulate environment
-    while True:
-        # run everything in inference mode
-        with torch.inference_mode():
-            # agent stepping
-            output = policy({"obs": obs})
+    elif test_type == "play":
+        # obtain the trained policy for inference
+        policy = runner.get_inference_policy(device=env.device)
 
-            # plot trajectory
-            plt.clf()
-            obs_traj = output["obs_traj"].cpu().numpy()
-            plt.imshow(env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
-            plt.plot(obs_traj[0, :, 0], obs_traj[0, :, 1])
-            # plot current and goal position
-            obs_np = obs.cpu().numpy()
-            goal_np = env.goal.cpu().numpy()
-            plt.plot(obs_np[0, 0], obs_np[0, 1], "go")
-            plt.plot(goal_np[0], goal_np[1], "ro")
-            # draw
-            plt.draw()
-            plt.pause(0.1)
+        # make figure
+        plt.figure(figsize=(8, 8))
 
-            # env stepping
-            for i in range(runner.policy.T_action):
-                obs, _, dones, _ = env.step(output["action"][:, i])
-                env.render()
-                if i < runner.policy.T_action - 1:
-                    runner.policy.update_history({"obs": obs})
+        # reset environment
+        obs = env.reset()
+        runner.policy.set_goal(env.goal)
+        timestep = 0
+        # simulate environment
+        while True:
+            # run everything in inference mode
+            with torch.inference_mode():
+                # agent stepping
+                output = policy({"obs": obs})
 
-                if dones.any():
-                    env.reset()
-                    runner.policy.reset(dones)
-                    break
+                # plot trajectory
+                plt.clf()
+                obs_traj = output["obs_traj"][0].cpu().numpy()
+                plt.imshow(env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
+                colors = plt.cm.inferno(np.linspace(0, 1, len(obs_traj)))  # type: ignore
+                plt.scatter(obs_traj[:, 0], obs_traj[:, 1], c=colors)
+                # plot current and goal position
+                obs_np = obs.cpu().numpy()
+                goal_np = env.goal.cpu().numpy()
+                marker_params = {"markersize": 10, "markeredgewidth": 3}
+                plt.plot(obs_np[0, 0], obs_np[0, 1], "x", color="green", **marker_params)  # type: ignore
+                plt.plot(goal_np[0, 0], goal_np[0, 1], "x", color="red", **marker_params)  # type: ignore
+                # draw
+                plt.draw()
+                plt.pause(0.1)
 
-        timestep += 1
+                # env stepping
+                for i in range(runner.policy.T_action):
+                    obs, _, dones, _ = env.step(output["action"][:, i])
+                    env.render()
+                    if i < runner.policy.T_action - 1:
+                        runner.policy.update_history({"obs": obs})
+
+                    if dones.any():
+                        obs = env.reset()
+                        runner.policy.reset(dones)
+                        runner.policy.set_goal(env.goal)
+                        break
+
+            timestep += 1
 
     # close the simulator
     env.close()
