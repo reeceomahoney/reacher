@@ -6,11 +6,11 @@ import torch.nn as nn
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
+import wandb
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 
-import wandb
 from locodiff.utils import CFGWrapper, apply_conditioning, rand_log_logistic
 
 
@@ -209,7 +209,7 @@ class DiffusionPolicy(nn.Module):
             data = self.update_history(data)
             raw_obs = data["obs"]
             input = None
-            goal = self.normalizer.scale_pos(self.goal)
+            goal = self.normalizer.scale_input(self.goal)
         else:
             # train and test
             raw_obs = data["obs"]

@@ -226,8 +226,8 @@ class Normalizer(nn.Module):
     def scale_pos(self, x) -> torch.Tensor:
         dim = x.shape[-1]
         if self.scaling == "linear":
-            return (x - self.y_min[:dim]) / (
-                self.y_max[:dim] - self.y_min[:dim]
+            return (x - self.y_min[2:]) / (
+                self.y_max[2:] - self.y_min[2:]
             ) * 2 - 1
         elif self.scaling == "gaussian":
             return (x - self.y_mean[:dim]) / self.y_std[:dim]
