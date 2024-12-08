@@ -12,7 +12,7 @@ class MazeEnv:
         render_mode = "human" if render else None
         self.env = gym.make(
             agent_cfg.task,
-            max_episode_steps=agent_cfg.episode_length * 100,
+            max_episode_steps=int(agent_cfg.episode_length * 100),
             render_mode=render_mode,
         )
         self.obs = None
@@ -32,8 +32,7 @@ class MazeEnv:
     def step(self, action):
         action = action[0].cpu().numpy()
 
-        for _ in range(10):
-            obs, reward, terminated, trunacted, info = self.env.step(action)
+        obs, reward, terminated, trunacted, info = self.env.step(action)
 
         self.obs = self.to_tensor(obs["observation"])
         reward = self.to_tensor(reward)
