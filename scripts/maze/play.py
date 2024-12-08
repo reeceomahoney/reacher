@@ -47,7 +47,7 @@ def main(agent_cfg: DictConfig):
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(resume_path)
 
-    test_type = "mse"
+    test_type = "play"
 
     if test_type == "mse":
         test_mse = []
