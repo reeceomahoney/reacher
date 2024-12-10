@@ -155,6 +155,7 @@ class DiffusionPolicy(nn.Module):
             )
             # log
             wandb.log({"Image": wandb.Image(fig)})
+            plt.close(fig)
 
         return loss.mean().item(), obs_loss.item(), action_loss.item()
 
