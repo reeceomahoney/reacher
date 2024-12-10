@@ -56,12 +56,15 @@ def main(agent_cfg: DictConfig):
     test_type = "play"
 
     if test_type == "mse":
-        test_mse = []
-        for batch in tqdm(runner.test_loader, desc="Testing...", leave=False):
-            mse, obs_mse, act_mse = runner.policy.test(batch, plot=False)
-            test_mse.append(mse)
-        test_mse = statistics.mean(test_mse)
-        print(f"[INFO]: Test MSE: {test_mse}")
+        samplings_steps = [3, 10, 20, 50, 100, 256]
+        for steps in samplings_steps:
+            test_mse = []
+            runner.policy.sampling_steps = steps
+            for batch in tqdm(runner.test_loader, desc="Testing...", leave=False):
+                mse, obs_mse, act_mse = runner.policy.test(batch, plot=False)
+                test_mse.append(mse)
+            test_mse = statistics.mean(test_mse)
+            print(f"Sampling steps: {steps}, Test MSE: {test_mse}")
 
     elif test_type == "play":
         # obtain the trained policy for inference
