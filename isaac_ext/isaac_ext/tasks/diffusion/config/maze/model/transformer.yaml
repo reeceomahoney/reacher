@@ -9,5 +9,5 @@ cond_mask_prob: ${cond_mask_prob}
 emb_dropout: 0.0
 attn_dropout: 0.0
 weight_decay: 1e-3
-inpaint_obs: ${policy.inpaint_obs}
+inpaint: ${policy.inpaint}
 device: ${device}

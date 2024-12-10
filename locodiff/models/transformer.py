@@ -21,7 +21,7 @@ class DiffusionTransformer(nn.Module):
         emb_dropout: float,
         attn_dropout: float,
         weight_decay: float,
-        inpaint_obs: bool,
+        inpaint: bool,
         device: str,
     ):
         super().__init__()
@@ -29,7 +29,7 @@ class DiffusionTransformer(nn.Module):
         input_dim = obs_dim + act_dim
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
-        self.inpaint_obs = inpaint_obs
+        self.inpaint = inpaint
         self.device = device
 
         # embeddings
@@ -38,8 +38,8 @@ class DiffusionTransformer(nn.Module):
         self.sigma_emb = nn.Linear(1, d_model)
 
         # change dims depending on if we're inpainting the obs
-        input_len = T + T_cond - 1 if inpaint_obs else T
-        cond_len = 1 if inpaint_obs else T_cond + 2
+        input_len = T + T_cond - 1 if inpaint else T
+        cond_len = 1 if inpaint else T_cond + 2
 
         # dropout and position encoding
         self.pos_emb = SinusoidalPosEmb(d_model, device)(torch.arange(input_len))
@@ -171,7 +171,7 @@ class DiffusionTransformer(nn.Module):
         x_emb = self.input_emb(x)
 
         # create conditioning
-        if self.inpaint_obs:
+        if self.inpaint:
             cond_emb = sigma_emb
         else:
             obs_emb = self.obs_emb(data_dict["obs"])
