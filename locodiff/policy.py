@@ -6,11 +6,11 @@ import torch.nn as nn
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-import wandb
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 
+import wandb
 from locodiff.utils import CFGWrapper, apply_conditioning, rand_log_logistic
 
 
@@ -78,6 +78,9 @@ class DiffusionPolicy(nn.Module):
         optim_groups = self.model.get_optim_groups()
         self.optimizer = AdamW(optim_groups, lr=lr, betas=betas)
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
+
+        # reward guidance
+        self.gammas = torch.tensor([0.99**i for i in range(self.T)]).to(self.device)
 
         self.device = device
         self.to(device)
@@ -220,17 +223,29 @@ class DiffusionPolicy(nn.Module):
                 input_obs = raw_obs[:, self.T_cond - 1 :]
                 input_act = raw_action[:, self.T_cond - 1 :]
             input = torch.cat([input_act, input_obs], dim=-1)
+
+            returns = self.calculate_return(input)
+
             input = self.normalizer.scale_output(input)
             goal = input[:, -1, -self.goal_dim :]
 
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
-        return {"obs": obs, "input": input, "goal": goal}
+        return {"obs": obs, "input": input, "goal": goal, "returns": returns}
 
     def create_conditioning(self, data: dict) -> dict:
         if self.inpaint:
             return {0: data["obs"].squeeze(1), self.T - 1: data["goal"]}
         else:
             return {}
+
+    def calculate_return(self, input):
+        vel = input[:, :, -2:]
+        rewards = vel.abs().sum(dim=-1)
+
+        returns = (rewards * self.gammas).sum(dim=-1)
+        returns = (returns - returns.min()) / (returns.max() - returns.min())
+
+        return returns.unsqueeze(-1)
 
     ###########
     # Helpers #

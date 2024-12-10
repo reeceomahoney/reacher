@@ -292,9 +292,12 @@ class CFGWrapper(nn.Module):
         self.cond_lambda = cond_lambda
         self.cond_mask_prob = cond_mask_prob
 
-    def __call__(self, x_t: torch.Tensor, sigma: torch.Tensor, data_dict: dict):
-        out = self.model(x_t, sigma, data_dict)
-        out_uncond = self.model(x_t, sigma, data_dict, uncond=True)
+    def __call__(self, x_t: torch.Tensor, sigma: torch.Tensor, data: dict):
+        out = self.model(x_t, sigma, data)
+
+        data["returns"] = torch.zeros_like(data["returns"])
+        out_uncond = self.model(x_t, sigma, data)
+
         out = out_uncond + self.cond_lambda * (out - out_uncond)
 
         return out
