@@ -166,7 +166,7 @@ class DiffusionTransformer(nn.Module):
 
     def forward(self, x, sigma, data_dict, uncond=False):
         # embeddings
-        sigma = sigma.log() / 4
+        sigma = sigma.to(self.device)
         sigma_emb = self.sigma_emb(sigma.view(-1, 1, 1))
         x_emb = self.input_emb(x)
 
@@ -182,7 +182,7 @@ class DiffusionTransformer(nn.Module):
         x_emb = self.drop(x_emb + self.pos_emb)
 
         # output
-        x = self.decoder(tgt=x_emb, memory=cond_emb, tgt_mask=self.mask)
+        x = self.decoder(tgt=x_emb, memory=cond_emb)
         x = self.ln_f(x)
         return self.output_pred(x)
 
