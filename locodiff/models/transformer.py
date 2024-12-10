@@ -164,7 +164,7 @@ class DiffusionTransformer(nn.Module):
         ]
         return optim_groups
 
-    def forward(self, x, sigma, data_dict, uncond=False):
+    def forward(self, x, sigma, data_dict):
         # embeddings
         sigma = sigma.to(self.device)
         sigma_emb = self.sigma_emb(sigma.view(-1, 1, 1))

@@ -299,9 +299,6 @@ class CFGWrapper(nn.Module):
 
         return out
 
-    def loss(self, noise, sigma, data_dict):
-        return self.model.loss(noise, sigma, data_dict)
-
     def get_params(self):
         return self.model.get_params()
 

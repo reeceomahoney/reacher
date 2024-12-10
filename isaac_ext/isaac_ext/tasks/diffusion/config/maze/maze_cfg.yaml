@@ -1,5 +1,5 @@
 defaults:
-  - model: transformer
+  - model: unet
   - _self_
 
 logger: wandb
@@ -56,8 +56,8 @@ dataset:
   train_fraction: 0.995
   T_cond: ${T_cond}
   T: ${T}
-  train_batch_size: 512
-  test_batch_size: 512
+  train_batch_size: 1024
+  test_batch_size: 1024
   num_workers: 4
 
 hydra:

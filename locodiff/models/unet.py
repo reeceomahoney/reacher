@@ -292,3 +292,133 @@ class ConditionalUnet1D(nn.Module):
 
     def get_params(self):
         return self.parameters()
+
+
+class ValueUnet1D(nn.Module):
+    def __init__(
+        self,
+        obs_dim,
+        act_dim,
+        T_cond,
+        cond_embed_dim,
+        down_dims,
+        device,
+        cond_mask_prob,
+        weight_decay: float,
+        inpaint: bool,
+        local_cond_dim=None,
+        kernel_size=5,
+        n_groups=8,
+        cond_predict_scale=False,
+    ):
+        super().__init__()
+        input_dim = obs_dim + act_dim
+        all_dims = [input_dim] + list(down_dims)
+        start_dim = down_dims[0]
+        in_out = list(zip(all_dims[:-1], all_dims[1:]))
+
+        # diffusion step embedding and observations
+        cond_dim = (
+            cond_embed_dim if inpaint else cond_embed_dim + obs_dim * (T_cond + 1)
+        )
+
+        CondResBlock = partial(
+            ConditionalResidualBlock1D,
+            cond_dim=cond_dim,
+            kernel_size=kernel_size,
+            n_groups=n_groups,
+            cond_predict_scale=cond_predict_scale,
+        )
+
+        down_modules = nn.ModuleList([])
+        for ind, (dim_in, dim_out) in enumerate(in_out):
+            is_last = ind >= (len(in_out) - 1)
+            down_modules.append(
+                nn.ModuleList(
+                    [
+                        CondResBlock(dim_in, dim_out),
+                        CondResBlock(dim_out, dim_out),
+                        Downsample1d(dim_out) if not is_last else nn.Identity(),
+                    ]
+                )
+            )
+
+        fc_dim = all_dims[-1] * 64
+
+        self.final_block = nn.Sequential(
+            nn.Linear(fc_dim + cond_embed_dim, fc_dim // 2),
+            nn.Mish(),
+            nn.Linear(fc_dim // 2, 1),
+        )
+
+        self.sigma_encoder = nn.Linear(1, cond_embed_dim)
+
+        self.cond_mask_prob = cond_mask_prob
+        self.weight_decay = weight_decay
+        self.inpaint = inpaint
+
+        self.down_modules = down_modules
+
+        self.to(device)
+
+        logger.info(
+            "number of parameters: %e", sum(p.numel() for p in self.parameters())
+        )
+
+    def forward(
+        self,
+        noised_action: torch.Tensor,
+        sigma: torch.Tensor,
+        data_dict: dict,
+    ):
+        """
+        x: (B,T,input_dim)
+        timestep: (B,) or int, diffusion step
+        local_cond: (B,T,local_cond_dim)
+        global_cond: (B,global_cond_dim)
+        output: (B,T,input_dim)
+        """
+        sample = einops.rearrange(noised_action, "b t h -> b h t")
+
+        # embed timestep
+        sigma = sigma.to(noised_action.device)
+        sigma_emb = self.sigma_encoder(sigma.view(-1, 1))
+
+        # create global feature
+        if self.inpaint:
+            global_feature = sigma_emb
+        else:
+            obs = data_dict["obs"].reshape(sample.shape[0], -1)
+            goal = data_dict["goal"].squeeze(1)
+            global_feature = torch.cat([sigma_emb, obs, goal], dim=-1)
+
+        x = sample
+        h = []
+        for resnet, resnet2, downsample in self.down_modules:
+            x = resnet(x, global_feature)
+            x = resnet2(x, global_feature)
+            h.append(x)
+            x = downsample(x)
+
+        x = x.view(x.shape[0], -1)
+        x = self.final_block(torch.cat([x, global_feature], dim=-1))
+        return x
+
+    def mask_cond(self, cond, force_mask=False):
+        cond = cond.clone()
+        if force_mask:
+            cond[...] = 0
+            return cond
+        elif self.training and self.cond_mask_prob > 0:
+            mask = (torch.rand(cond.shape[0], 1) > self.cond_mask_prob).float()
+            mask = mask.expand_as(cond)
+            cond[mask == 0] = 0
+            return cond
+        else:
+            return cond
+
+    def get_optim_groups(self):
+        return [{"params": self.parameters(), "weight_decay": self.weight_decay}]
+
+    def get_params(self):
+        return self.parameters()
