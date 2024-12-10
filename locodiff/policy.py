@@ -80,7 +80,7 @@ class DiffusionPolicy(nn.Module):
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
 
         # reward guidance
-        self.gammas = torch.tensor([0.99**i for i in range(self.T)]).to(self.device)
+        self.gammas = torch.tensor([0.99**i for i in range(self.T)]).to(device)
 
         self.device = device
         self.to(device)
@@ -214,6 +214,7 @@ class DiffusionPolicy(nn.Module):
             raw_obs = data["obs"]
             input = None
             goal = self.normalizer.scale_input(self.goal)
+            returns = torch.ones_like(raw_obs[:, :1])
         else:
             # train and test
             raw_obs = data["obs"]
@@ -240,7 +241,7 @@ class DiffusionPolicy(nn.Module):
 
     def calculate_return(self, input):
         vel = input[:, :, -2:]
-        rewards = vel.abs().sum(dim=-1)
+        rewards = -vel.abs().sum(dim=-1)
 
         returns = (rewards * self.gammas).sum(dim=-1)
         returns = (returns - returns.min()) / (returns.max() - returns.min())
