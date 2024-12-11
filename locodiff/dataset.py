@@ -1,4 +1,5 @@
 import h5py
+import pickle
 import logging
 import os
 import torch
@@ -61,16 +62,23 @@ class ExpertDataset(Dataset):
             actions_splits = self.split_eps(actions, split_indices)
 
         else:
-            # TODO get this from task name
-            # TODO store and load this result to speedup launch
-            dataset = minari.load_dataset("D4RL/pointmaze/medium-v2")
-
-            obs_splits, actions_splits = [], []
-            for episode in dataset:
-                obs_splits.append(
-                    torch.tensor(episode.observations["observation"], dtype=torch.float)
-                )
-                actions_splits.append(torch.tensor(episode.actions, dtype=torch.float))
+            if os.path.exists('dataset.pkl'):
+                # load pre-processed dataset
+                obs_splits, actions_splits = self.load_dataset()
+                print("[INFO] Loaded pre-processed dataset")
+            else:
+                # process the dataset
+                # TODO get this from task name
+                dataset = minari.load_dataset("D4RL/pointmaze/medium-v2")
+                obs_splits, actions_splits = [], []
+                for episode in dataset:
+                    obs_splits.append(
+                        torch.tensor(episode.observations["observation"], dtype=torch.float)
+                    )
+                    actions_splits.append(torch.tensor(episode.actions, dtype=torch.float))
+                
+                # save the dataset to speedup launch
+                self.save_dataset(obs_splits, actions_splits)
 
         self.calculate_norm_data(obs_splits, actions_splits)
 
@@ -153,6 +161,18 @@ class ExpertDataset(Dataset):
         self.y_std = all_obs_acts.std(0)
         self.y_min = all_obs_acts.min(0).values
         self.y_max = all_obs_acts.max(0).values
+
+    # Save the dataset
+    def save_dataset(self, obs_splits, actions_splits, filename='dataset.pkl'):
+        with open(filename, 'wb') as f:
+            pickle.dump((obs_splits, actions_splits), f)
+
+    # Load the dataset if it exists
+    def load_dataset(self, filename='dataset.pkl'):
+        if os.path.exists(filename):
+            with open(filename, 'rb') as f:
+                return pickle.load(f)
+        return None
 
 
 class SlicerWrapper(Dataset):
