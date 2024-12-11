@@ -52,6 +52,7 @@ def main(agent_cfg: DictConfig):
     resume_path = os.path.join(get_latest_run(log_root_path), "models/model.pt")
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(resume_path)
+    runner.eval_mode()
 
     # TODO: make plotting function
 
