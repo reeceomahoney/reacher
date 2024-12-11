@@ -53,7 +53,9 @@ def main(agent_cfg: DictConfig):
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(resume_path)
 
-    test_type = "play"
+    # TODO: make plotting function
+
+    test_type = "cfg"
 
     if test_type == "mse":
         samplings_steps = [3, 10, 20, 50, 100, 256]
@@ -65,6 +67,32 @@ def main(agent_cfg: DictConfig):
                 test_mse.append(mse)
             test_mse = statistics.mean(test_mse)
             print(f"Sampling steps: {steps}, Test MSE: {test_mse}")
+
+    if test_type == "cfg":
+        cond_lambda = [1, 2, 3, 5]
+        batch = next(iter(runner.test_loader))
+        data = {"obs": batch["obs"][:1, 0]}
+        runner.policy.set_goal(batch["obs"][:1, -1, :2].to(runner.device))
+
+        fig, axes = plt.subplots(1, len(cond_lambda), figsize=(16, 6))
+
+        for i, lam in enumerate(cond_lambda):
+            runner.policy.model.cond_lambda = lam
+            obs_traj = runner.policy.act(data)["obs_traj"][0].cpu().numpy()
+
+            # plot trajectory
+            axes[i].imshow(env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
+            colors = plt.cm.inferno(np.linspace(0, 1, len(obs_traj)))  # type: ignore
+            axes[i].scatter(obs_traj[:, 0], obs_traj[:, 1], c=colors)
+            # plot current and goal position
+            marker_params = {"markersize": 10, "markeredgewidth": 3}
+            axes[i].plot(obs_traj[0, 0], obs_traj[0, 1], "x", color="green", **marker_params)  # type: ignore
+            axes[i].plot(obs_traj[-1, 0], obs_traj[-1, 1], "x", color="red", **marker_params)  # type: ignore
+            axes[i].set_title(f"cond_lambda={lam}")
+            axes[i].set_axis_off()
+
+        fig.tight_layout()
+        plt.show()
 
     elif test_type == "play":
         # obtain the trained policy for inference
