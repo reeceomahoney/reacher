@@ -137,7 +137,7 @@ class ConditionalUnet1D(nn.Module):
 
         # diffusion step embedding and observations
         cond_dim = (
-            cond_embed_dim if inpaint else cond_embed_dim + obs_dim * (T_cond + 1) + 1
+            cond_embed_dim + 1 if inpaint else cond_embed_dim + obs_dim * (T_cond + 1) + 1
         )
 
         CondResBlock = partial(
