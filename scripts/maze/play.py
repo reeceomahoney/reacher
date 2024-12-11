@@ -70,10 +70,10 @@ def main(agent_cfg: DictConfig):
             print(f"Sampling steps: {steps}, Test MSE: {test_mse}")
 
     if test_type == "cfg":
-        cond_lambda = [1, 2, 3, 5]
+        cond_lambda = [1, 2, 3, 5, 10]
         batch = next(iter(runner.test_loader))
         data = {"obs": batch["obs"][:1, 0]}
-        runner.policy.set_goal(batch["obs"][:1, -1, :2].to(runner.device))
+        runner.policy.set_goal(batch["obs"][:1, 100, :2].to(runner.device))
 
         fig, axes = plt.subplots(1, len(cond_lambda), figsize=(16, 6))
 
@@ -89,7 +89,9 @@ def main(agent_cfg: DictConfig):
             marker_params = {"markersize": 10, "markeredgewidth": 3}
             axes[i].plot(obs_traj[0, 0], obs_traj[0, 1], "x", color="green", **marker_params)  # type: ignore
             axes[i].plot(obs_traj[-1, 0], obs_traj[-1, 1], "x", color="red", **marker_params)  # type: ignore
-            axes[i].set_title(f"cond_lambda={lam}")
+            # create title
+            rewards = -np.abs(obs_traj[..., -2:]).sum(axis=-1)
+            axes[i].set_title(f"cond_lambda={lam}, reward={rewards.mean():.2f}")
             axes[i].set_axis_off()
 
         fig.tight_layout()

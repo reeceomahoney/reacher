@@ -296,8 +296,9 @@ class CFGWrapper(nn.Module):
         out = self.model(x_t, sigma, data)
 
         if not self.training:
-            data["returns"] = torch.zeros_like(data["returns"])
-            out_uncond = self.model(x_t, sigma, data)
+            data_uncond = data.copy()
+            data_uncond["returns"] = torch.zeros_like(data_uncond["returns"])
+            out_uncond = self.model(x_t, sigma, data_uncond)
 
             out = out_uncond + self.cond_lambda * (out - out_uncond)
 
