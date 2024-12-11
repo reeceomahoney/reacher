@@ -249,16 +249,14 @@ class DiffusionPolicy(nn.Module):
     def calculate_return(self, input):
         # vel = input[:, :, -2:]
         # rewards = -vel.abs().sum(dim=-1)
+        #
+        # # TODO: get the true min and max from dataset
+        # returns = (rewards * self.gammas).sum(dim=-1)
+        # returns = (returns - returns.min()) / (returns.max() - returns.min())
+        #
+        # return returns.unsqueeze(-1)
 
-        goal = input[:, -1, 2:4].unsqueeze(1)
-        dist = torch.norm(goal - input[..., 2:4], dim=-1)
-        rewards = (dist < 0.5).float()
-
-        # TODO: get the true min and max from dataset
-        returns = (rewards * self.gammas).sum(dim=-1)
-        returns = (returns - returns.min()) / (returns.max() - returns.min())
-
-        return returns.unsqueeze(-1)
+        return torch.zeros_like(input[:, :, 0:1])
 
     ###########
     # Helpers #
