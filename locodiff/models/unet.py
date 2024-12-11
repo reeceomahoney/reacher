@@ -214,7 +214,6 @@ class ConditionalUnet1D(nn.Module):
         noised_action: torch.Tensor,
         sigma: torch.Tensor,
         data_dict: dict,
-        uncond: bool = False,
     ):
         """
         x: (B,T,input_dim)
@@ -231,7 +230,8 @@ class ConditionalUnet1D(nn.Module):
 
         # create global feature
         if self.inpaint:
-            global_feature = sigma_emb
+            returns = data_dict["returns"]
+            global_feature = torch.cat([sigma_emb, returns], dim=-1)
         else:
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
             goal = data_dict["goal"].squeeze(1)
