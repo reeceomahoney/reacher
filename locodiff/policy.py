@@ -113,10 +113,17 @@ class DiffusionPolicy(nn.Module):
         noise = torch.randn_like(data["input"])
         sigma = self.sample_training_density(len(noise)).view(-1, 1, 1)
         x_noise = data["input"] + noise * sigma
-        # compute modle output
+        # scale inputs
         x_noise_in = self.noise_scheduler.precondition_inputs(x_noise, sigma)
         x_noise_in = apply_conditioning(x_noise_in, cond, self.action_dim)
         sigma_in = self.noise_scheduler.precondition_noise(sigma)
+
+        # cfg masking
+        if self.cond_mask_prob > 0:
+            cond_mask = torch.rand_like(data["returns"]) < self.cond_mask_prob
+            data["returns"][cond_mask] = 0
+
+        # compute model output
         out = self.model(x_noise_in, sigma_in, data)
         out = self.noise_scheduler.precondition_outputs(x_noise, out, sigma)
         out = apply_conditioning(out, cond, self.action_dim)
