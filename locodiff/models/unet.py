@@ -137,7 +137,7 @@ class ConditionalUnet1D(nn.Module):
 
         # diffusion step embedding and observations
         cond_dim = (
-            cond_embed_dim if inpaint else cond_embed_dim + obs_dim * (T_cond + 1)
+            cond_embed_dim if inpaint else cond_embed_dim + obs_dim * (T_cond + 1) + 1
         )
 
         CondResBlock = partial(
@@ -235,7 +235,8 @@ class ConditionalUnet1D(nn.Module):
         else:
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
             goal = data_dict["goal"].squeeze(1)
-            global_feature = torch.cat([sigma_emb, obs, goal], dim=-1)
+            returns = data_dict["returns"]
+            global_feature = torch.cat([sigma_emb, obs, goal, returns], dim=-1)
 
         # encode local features
         h_local = list()
