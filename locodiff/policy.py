@@ -235,7 +235,7 @@ class DiffusionPolicy(nn.Module):
             returns = self.calculate_return(input)
 
             input = self.normalizer.scale_output(input)
-            goal = input[:, -1, -self.goal_dim :]
+            goal = input[:, -1, self.action_dim :]
 
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
         return {"obs": obs, "input": input, "goal": goal, "returns": returns}
@@ -247,9 +247,14 @@ class DiffusionPolicy(nn.Module):
             return {}
 
     def calculate_return(self, input):
-        vel = input[:, :, -2:]
-        rewards = -vel.abs().sum(dim=-1)
+        # vel = input[:, :, -2:]
+        # rewards = -vel.abs().sum(dim=-1)
 
+        goal = input[:, -1, 2:4].unsqueeze(1)
+        dist = torch.norm(goal - input[..., 2:4], dim=-1)
+        rewards = (dist < 0.5).float()
+
+        # TODO: get the true min and max from dataset
         returns = (rewards * self.gammas).sum(dim=-1)
         returns = (returns - returns.min()) / (returns.max() - returns.min())
 
