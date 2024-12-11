@@ -234,7 +234,7 @@ class ConditionalUnet1D(nn.Module):
             global_feature = torch.cat([sigma_emb, returns], dim=-1)
         else:
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
-            goal = data_dict["goal"].squeeze(1)
+            goal = data_dict["goal"]
             returns = data_dict["returns"]
             global_feature = torch.cat([sigma_emb, obs, goal, returns], dim=-1)
 

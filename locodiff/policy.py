@@ -221,7 +221,7 @@ class DiffusionPolicy(nn.Module):
             raw_obs = data["obs"]
             input = None
             goal = self.normalizer.scale_input(self.goal)
-            returns = torch.ones_like(raw_obs[:, :1])
+            returns = torch.ones_like(raw_obs[:, 0, :1])
         else:
             # train and test
             raw_obs = data["obs"]
@@ -277,8 +277,7 @@ class DiffusionPolicy(nn.Module):
         return x
 
     def set_goal(self, goal):
-        self.goal = goal.unsqueeze(0)
-        self.goal = torch.cat([self.goal, torch.zeros_like(self.goal)], dim=-1)
+        self.goal = torch.cat([goal, torch.zeros_like(goal)], dim=-1)
 
     def dict_to_device(self, data):
         return {k: v.to(self.device) for k, v in data.items()}
