@@ -70,7 +70,7 @@ def main(agent_cfg: DictConfig):
             print(f"Sampling steps: {steps}, Test MSE: {test_mse}")
 
     if test_type == "cfg":
-        cond_lambda = [1, 2, 3, 5, 10]
+        cond_lambda = [0, 1, 2, 3, 4, 5]
         batch = next(iter(runner.test_loader))
         data = {"obs": batch["obs"][:1, 0]}
         runner.policy.set_goal(batch["obs"][:1, 100, :2].to(runner.device))
