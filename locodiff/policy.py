@@ -256,7 +256,7 @@ class DiffusionPolicy(nn.Module):
         #
         # return returns.unsqueeze(-1)
 
-        return torch.zeros_like(input[:, 0:1])
+        return torch.zeros_like(input[:, 0, 0:1])
 
     ###########
     # Helpers #
