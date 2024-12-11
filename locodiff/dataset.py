@@ -62,14 +62,15 @@ class ExpertDataset(Dataset):
             actions_splits = self.split_eps(actions, split_indices)
 
         else:
-            if os.path.exists('dataset.pkl'):
+            dataset_path = f"dataset_{task_name}.pkl"
+            if os.path.exists(dataset_path):
                 # load pre-processed dataset
-                obs_splits, actions_splits = self.load_dataset()
+                obs_splits, actions_splits = self.load_dataset(dataset_path)
                 print("[INFO] Loaded pre-processed dataset")
             else:
                 # process the dataset
-                # TODO get this from task name
-                dataset = minari.load_dataset("D4RL/pointmaze/medium-v2")
+                dataset_name = self.get_dataset_name(task_name)
+                dataset = minari.load_dataset(dataset_name)
                 obs_splits, actions_splits = [], []
                 for episode in dataset:
                     obs_splits.append(
@@ -78,7 +79,7 @@ class ExpertDataset(Dataset):
                     actions_splits.append(torch.tensor(episode.actions, dtype=torch.float))
                 
                 # save the dataset to speedup launch
-                self.save_dataset(obs_splits, actions_splits)
+                self.save_dataset(obs_splits, actions_splits, dataset_path)
 
         self.calculate_norm_data(obs_splits, actions_splits)
 
@@ -173,6 +174,10 @@ class ExpertDataset(Dataset):
             with open(filename, 'rb') as f:
                 return pickle.load(f)
         return None
+
+    def get_dataset_name(self, task_name):
+        difficulty = task_name.split('_')[1].lower().split('-')[0]
+        return f'D4RL/pointmaze/{difficulty}-v2'
 
 
 class SlicerWrapper(Dataset):
