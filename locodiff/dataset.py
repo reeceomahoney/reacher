@@ -1,7 +1,7 @@
 import h5py
-import pickle
 import logging
 import os
+import pickle
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
@@ -74,10 +74,14 @@ class ExpertDataset(Dataset):
                 obs_splits, actions_splits = [], []
                 for episode in dataset:
                     obs_splits.append(
-                        torch.tensor(episode.observations["observation"], dtype=torch.float)
+                        torch.tensor(
+                            episode.observations["observation"], dtype=torch.float
+                        )
                     )
-                    actions_splits.append(torch.tensor(episode.actions, dtype=torch.float))
-                
+                    actions_splits.append(
+                        torch.tensor(episode.actions, dtype=torch.float)
+                    )
+
                 # save the dataset to speedup launch
                 self.save_dataset(obs_splits, actions_splits, dataset_path)
 
@@ -101,7 +105,9 @@ class ExpertDataset(Dataset):
     def __getitem__(self, idx):
         T = self.data["mask"][idx].sum().int().item()
         return {
-            key: tensor[idx, :T] for key, tensor in self.data.items() if key != "mask"
+            "obs": self.data["obs"][idx],
+            "action": self.data["action"][idx],
+            "length": T,
         }
 
     def split_eps(self, x, split_indices):
@@ -164,20 +170,20 @@ class ExpertDataset(Dataset):
         self.y_max = all_obs_acts.max(0).values
 
     # Save the dataset
-    def save_dataset(self, obs_splits, actions_splits, filename='dataset.pkl'):
-        with open(filename, 'wb') as f:
+    def save_dataset(self, obs_splits, actions_splits, filename="dataset.pkl"):
+        with open(filename, "wb") as f:
             pickle.dump((obs_splits, actions_splits), f)
 
     # Load the dataset if it exists
-    def load_dataset(self, filename='dataset.pkl'):
+    def load_dataset(self, filename="dataset.pkl"):
         if os.path.exists(filename):
-            with open(filename, 'rb') as f:
+            with open(filename, "rb") as f:
                 return pickle.load(f)
         return None
 
     def get_dataset_name(self, task_name):
-        difficulty = task_name.split('_')[1].lower().split('-')[0]
-        return f'D4RL/pointmaze/{difficulty}-v2'
+        difficulty = task_name.split("_")[1].lower().split("-")[0]
+        return f"D4RL/pointmaze/{difficulty}-v2"
 
 
 class SlicerWrapper(Dataset):
@@ -191,11 +197,14 @@ class SlicerWrapper(Dataset):
         slices = []
         window = T_cond + T - 1
         for i in range(len(self.dataset)):
-            length = len(self.dataset[i]["obs"])
+            length = self.dataset[i]["length"]
             if length >= window:
                 slices += [
                     (i, start, start + window) for start in range(length - window + 1)
                 ]
+            else:
+                # add a padded slice
+                slices += [(i, start, start + window) for start in range(length - 1)]
         return slices
 
     def __len__(self):
@@ -204,9 +213,7 @@ class SlicerWrapper(Dataset):
     def __getitem__(self, idx):
         i, start, end = self.slices[idx]
         x = self.dataset[i]
-
-        # This is to handle data without a time dimension (e.g. skills)
-        return {k: v[start:end] if v.ndim > 1 else v for k, v in x.items()}
+        return {k: v[start:end] for k, v in x.items() if k != "length"}
 
 
 def get_dataloaders(

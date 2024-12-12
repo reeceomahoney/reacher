@@ -29,7 +29,7 @@ num_envs: 1
 
 # diffusion
 sampling_steps: 20
-cond_mask_prob: 0.1
+cond_mask_prob: 0
 
 policy:
   obs_dim: ${obs_dim}
@@ -47,7 +47,7 @@ policy:
   lr: 1e-4
   betas: [0.9, 0.999]
   num_iters: ${num_iters}
-  inpaint: true
+  inpaint: false
   device: ${device}
 
 dataset:
