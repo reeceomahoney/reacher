@@ -70,10 +70,18 @@ def main(agent_cfg: DictConfig):
             print(f"Sampling steps: {steps}, Test MSE: {test_mse}")
 
     if test_type == "cfg":
-        cond_lambda = [0, 1, 2, 3, 4, 5]
+        cond_lambda = [0, 1, 2, 3, 5]
         batch = next(iter(runner.test_loader))
+
+        # for medium maze
         data = {"obs": batch["obs"][:1, 0]}
         runner.policy.set_goal(batch["obs"][:1, 100, :2].to(runner.device))
+
+        # for open maze
+        # obs = torch.tensor([-2, 0, 0, 0]).unsqueeze(0).to(runner.device)
+        # goal = torch.tensor([2, 0]).unsqueeze(0).to(runner.device)
+        # data = {"obs": obs}
+        # runner.policy.set_goal(goal)
 
         fig, axes = plt.subplots(1, len(cond_lambda), figsize=(16, 6))
 
@@ -91,6 +99,7 @@ def main(agent_cfg: DictConfig):
             axes[i].plot(obs_traj[-1, 0], obs_traj[-1, 1], "x", color="red", **marker_params)  # type: ignore
             # create title
             rewards = -np.abs(obs_traj[..., -2:]).sum(axis=-1)
+            # rewards = np.linalg.norm(obs_traj[..., :2], axis=-1)
             axes[i].set_title(f"cond_lambda={lam}, reward={rewards.mean():.2f}")
             axes[i].set_axis_off()
 

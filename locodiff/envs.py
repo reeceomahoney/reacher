@@ -56,3 +56,25 @@ class MazeEnv:
 
     def to_tensor(self, x):
         return torch.tensor(x, dtype=torch.float, device=self.device).unsqueeze(0)
+
+
+class PointEnv:
+    def __init__(self, agent_cfg, render=False):
+        self.obs = None
+        self.device = agent_cfg.device
+
+        self.obs_dim = 4
+        self.act_dim = 2
+        self.num_envs = agent_cfg.num_envs
+        self.dt = 1/50
+
+    def reset(self):
+        pos = torch.rand(self.num_envs, 2) * 8 - 4
+        self.obs = torch.cat([pos, torch.zeros(self.num_envs, 2)], dim=-1)
+        return self.obs
+
+    def step(self, action):
+        self.obs[:, 2:4] += torch.clamp(action * self.dt, -1, 1)
+        self.obs[:, :2] = torch.clamp(self.obs[:, :2], -4, 4)
+        dones = torch.zeros(self.num_envs, dtype=torch.long).to(self.device)
+        return self.obs, torch.zeros(self.num_envs, dtype=torch.float).to(self.device), dones, None

@@ -4,7 +4,7 @@ defaults:
 
 logger: wandb
 wandb_project: locodiff_isaac
-task: PointMaze_Open-v3
+task: PointMaze_Medium-v3
 num_iters: 5e5
 seed: 42
 resume: false

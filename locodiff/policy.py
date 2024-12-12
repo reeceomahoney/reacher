@@ -247,16 +247,16 @@ class DiffusionPolicy(nn.Module):
             return {}
 
     def calculate_return(self, input):
-        pos = input[:, :, 2:4]
-        rewards = pos.norm(dim=-1)
+        # pos = input[:, :, 2:4]
+        # rewards = pos.norm(dim=-1)
+        #
+        # # TODO: get the true min and max from dataset
+        # returns = (rewards * self.gammas).sum(dim=-1)
+        # returns = (returns - returns.min()) / (returns.max() - returns.min())
+        #
+        # return returns.unsqueeze(-1)
 
-        # TODO: get the true min and max from dataset
-        returns = (rewards * self.gammas).sum(dim=-1)
-        returns = (returns - returns.min()) / (returns.max() - returns.min())
-
-        return returns.unsqueeze(-1)
-
-        # return torch.zeros_like(input[:, 0, 0:1])
+        return torch.zeros_like(input[:, 0, 0:1])
 
     ###########
     # Helpers #
