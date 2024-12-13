@@ -6,11 +6,11 @@ import torch.nn as nn
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
+import wandb
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 
-import wandb
 from locodiff.utils import CFGWrapper, apply_conditioning, rand_log_logistic
 
 
@@ -252,13 +252,23 @@ class DiffusionPolicy(nn.Module):
 
     def calculate_return(self, input):
         pos = input[:, :, 2:4]
-        rewards = pos.norm(dim=-1)
+        # rewards = pos.norm(dim=-1)
 
-        # TODO: get the true min and max from dataset
-        returns = (rewards * self.gammas).sum(dim=-1)
-        returns = (returns - returns.min()) / (returns.max() - returns.min())
+        # # TODO: get the true min and max from dataset
+        # returns = (rewards * self.gammas).sum(dim=-1)
+        # returns = (returns - returns.min()) / (returns.max() - returns.min())
 
-        return returns.unsqueeze(-1)
+        # return returns.unsqueeze(-1)
+
+        colliison = (
+            (-1 < pos[..., 0])
+            & (pos[..., 0] < 0)
+            & (0 < pos[..., 1])
+            & (pos[..., 1] < 1)
+        )
+
+        return colliison.float().unsqueeze(-1)
+
 
         # return torch.zeros_like(input[:, 0, 0:1])
 
