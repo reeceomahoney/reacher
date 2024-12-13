@@ -265,7 +265,7 @@ class DiffusionPolicy(nn.Module):
             & (pos[..., 0] < 0)
             & (0 < pos[..., 1])
             & (pos[..., 1] < 1)
-        )
+        ).any(dim=-1)
 
         return colliison.float().unsqueeze(-1)
 
