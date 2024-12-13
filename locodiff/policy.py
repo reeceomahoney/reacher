@@ -6,11 +6,11 @@ import torch.nn as nn
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-import wandb
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 
+import wandb
 from locodiff.utils import CFGWrapper, apply_conditioning, rand_log_logistic
 
 
@@ -260,15 +260,16 @@ class DiffusionPolicy(nn.Module):
 
         # return returns.unsqueeze(-1)
 
-        colliison = (
+        collision = (
             (-1 < pos[..., 0])
             & (pos[..., 0] < 0)
             & (0 < pos[..., 1])
             & (pos[..., 1] < 1)
         ).any(dim=-1)
+        collision = 1 - collision.float()
+        collision = 2 * collision - 1
 
-        return colliison.float().unsqueeze(-1)
-
+        return collision.unsqueeze(-1)
 
         # return torch.zeros_like(input[:, 0, 0:1])
 
