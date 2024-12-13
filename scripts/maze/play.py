@@ -70,24 +70,20 @@ def main(agent_cfg: DictConfig):
             print(f"Sampling steps: {steps}, Test MSE: {test_mse}")
 
     if test_type == "cfg":
-        cond_lambda = [0, 1, 2, 3, 5]
-        batch = next(iter(runner.test_loader))
-
-        # for medium maze
-        data = {"obs": batch["obs"][:1, 0]}
-        runner.policy.set_goal(batch["obs"][:1, 100, :2].to(runner.device))
-
-        # for open maze
-        # obs = torch.tensor([-2, 0, 0, 0]).unsqueeze(0).to(runner.device)
-        # goal = torch.tensor([2, 0]).unsqueeze(0).to(runner.device)
-        # data = {"obs": obs}
-        # runner.policy.set_goal(goal)
-
+        # set up the figure
+        cond_lambda = [0, 1, 5]
         fig, axes = plt.subplots(1, len(cond_lambda), figsize=(16, 6))
 
+        # set observation and goal
+        obs = torch.tensor([[-1.5, 0.5, 0, 0]]).to(runner.device)
+        goal = torch.tensor([[0.5, 0.5]]).to(runner.device)
+        runner.policy.set_goal(goal)
+        goal = goal.cpu().numpy()
+
         for i, lam in enumerate(cond_lambda):
+            # compute trajectory
             runner.policy.model.cond_lambda = lam
-            obs_traj = runner.policy.act(data)["obs_traj"][0].cpu().numpy()
+            obs_traj = runner.policy.act({"obs": obs})["obs_traj"][0].cpu().numpy()
 
             # plot trajectory
             axes[i].imshow(env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
@@ -96,10 +92,9 @@ def main(agent_cfg: DictConfig):
             # plot current and goal position
             marker_params = {"markersize": 10, "markeredgewidth": 3}
             axes[i].plot(obs_traj[0, 0], obs_traj[0, 1], "x", color="green", **marker_params)  # type: ignore
-            axes[i].plot(obs_traj[-1, 0], obs_traj[-1, 1], "x", color="red", **marker_params)  # type: ignore
+            axes[i].plot(goal[0, 0], goal[0, 1], "x", color="red", **marker_params)  # type: ignore
             # create title
-            rewards = -np.abs(obs_traj[..., -2:]).sum(axis=-1)
-            # rewards = np.linalg.norm(obs_traj[..., :2], axis=-1)
+            rewards = np.linalg.norm(obs_traj[..., :2], axis=-1)
             axes[i].set_title(f"cond_lambda={lam}, reward={rewards.mean():.2f}")
             axes[i].set_axis_off()
 
