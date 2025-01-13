@@ -255,7 +255,7 @@ class DiffusionPolicy(nn.Module):
             & (0 < pos[..., 1])
             & (pos[..., 1] < 1)
         ).float()
-        rewards *= mask
+        rewards = (1- rewards) * mask
 
         # TODO: get the true min and max from dataset
         returns = (rewards * self.gammas).sum(dim=-1)
