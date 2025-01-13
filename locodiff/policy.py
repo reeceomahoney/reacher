@@ -259,7 +259,7 @@ class DiffusionPolicy(nn.Module):
         lengths = mask.sum(dim=-1)
 
         # TODO: get the true min and max from dataset
-        returns = (rewards * self.gammas).sum(dim=-1) / lengths
+        returns = rewards.sum(dim=-1) / lengths
         returns = (returns - returns.min()) / (returns.max() - returns.min())
 
         return returns.unsqueeze(-1)
