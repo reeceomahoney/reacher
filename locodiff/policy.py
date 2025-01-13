@@ -235,7 +235,7 @@ class DiffusionPolicy(nn.Module):
             returns = self.calculate_return(input, data["mask"])
             input = self.normalizer.scale_output(input)
 
-            lengths = data["mask"].sum(dim=-1)
+            lengths = data["mask"].sum(dim=-1).int()
             goal = input[range(input.shape[0]), lengths - 1, self.action_dim :]
 
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
