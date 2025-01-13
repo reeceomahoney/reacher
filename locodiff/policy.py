@@ -220,6 +220,7 @@ class DiffusionPolicy(nn.Module):
             data = self.update_history(data)
             raw_obs = data["obs"]
             input = None
+            obstacles = torch.zeros_like(raw_obs[:, 0, :2])
             goal = self.normalizer.scale_input(self.goal)
             returns = torch.ones_like(raw_obs[:, 0, :1])
         else:
@@ -232,14 +233,21 @@ class DiffusionPolicy(nn.Module):
                 input_act = raw_action[:, self.T_cond - 1 :]
             input = torch.cat([input_act, input_obs], dim=-1)
 
-            returns = self.calculate_return(input, data["mask"])
+            obstacles = self.calculate_obstacles(input.shape[0])
+            returns = self.calculate_return(input, data["mask"], obstacles)
             input = self.normalizer.scale_output(input)
 
             lengths = data["mask"].sum(dim=-1).int()
             goal = input[range(input.shape[0]), lengths - 1, self.action_dim :]
 
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
-        return {"obs": obs, "input": input, "goal": goal, "returns": returns}
+        return {
+            "obs": obs,
+            "input": input,
+            "goal": goal,
+            "returns": returns,
+            "obstacles": obstacles,
+        }
 
     def create_conditioning(self, data: dict) -> dict:
         if self.inpaint:
@@ -247,23 +255,30 @@ class DiffusionPolicy(nn.Module):
         else:
             return {}
 
-    def calculate_return(self, input, mask):
-        pos = input[:, :, 2:4]
-        collision = (
-            (-1 < pos[..., 0])
-            & (pos[..., 0] < 0)
-            & (0 < pos[..., 1])
-            & (pos[..., 1] < 1)
-        )
+    def calculate_return(self, input, mask, obstacles):
+        collision = self.check_collisions(input[:, :, 2:4], obstacles)
         collision = (collision * mask).any(dim=-1).float()
         # 1 = no collision, -1 = collision
         collision = -(2 * collision - 1)
-
-        # TODO: get the true min and max from dataset
-        # returns = rewards.sum(dim=-1) / lengths
-        # returns = (returns - returns.min()) / (returns.max() - returns.min())
-
         return collision.unsqueeze(-1)
+
+    def calculate_obstacles(self, size: int) -> torch.Tensor:
+        # Sample random coordinates within the maze (bottom left corner)
+        numbers = torch.arange(-3, 3)
+        indices = torch.randint(0, len(numbers), (size, 2))
+        samples = numbers[indices]
+        return samples.to(self.device)
+
+    def check_collisions(
+        self, trajectories: torch.Tensor, box_corners: torch.Tensor
+    ) -> torch.Tensor:
+        # Expand box corners to match trajectory timesteps
+        box_corners_tr = (box_corners + 1.0).unsqueeze(1)
+        box_corners_bl = box_corners.unsqueeze(1)
+        # Check if any point in each trajectory is inside its box
+        inside_box = (trajectories > box_corners_bl) & (trajectories < box_corners_tr)
+        # Both x and y coordinates must be inside for a collision
+        return inside_box.all(dim=2)
 
     ###########
     # Helpers #
