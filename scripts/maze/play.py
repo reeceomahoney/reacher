@@ -71,7 +71,7 @@ def main(agent_cfg: DictConfig):
 
     if test_type == "cfg":
         # set up the figure
-        cond_lambda = [0, 1, 5]
+        cond_lambda = [0, 1, 2, 3, 5]
         fig, axes = plt.subplots(1, len(cond_lambda), figsize=(16, 6))
 
         # set observation and goal
