@@ -1,5 +1,6 @@
 import numpy as np
 import random
+import sys
 import torch
 
 import hydra
@@ -23,8 +24,10 @@ torch.backends.cudnn.benchmark = False
 def main(agent_cfg: DictConfig):
     """Train with RSL-RL agent."""
     # specify directory for logging experiments
-    log_dir = HydraConfig.get().runtime.output_dir
-    print(f"[INFO] Logging experiment in directory: {log_dir}")
+    log_dir = None
+    if sys.gettrace() is None:
+        log_dir = HydraConfig.get().runtime.output_dir
+        print(f"[INFO] Logging experiment in directory: {log_dir}")
 
     # set random seed
     random.seed(agent_cfg.seed)

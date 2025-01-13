@@ -6,11 +6,11 @@ import torch.nn as nn
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
+import wandb
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 
-import wandb
 from locodiff.utils import CFGWrapper, apply_conditioning, rand_log_logistic
 
 
@@ -232,7 +232,7 @@ class DiffusionPolicy(nn.Module):
                 input_act = raw_action[:, self.T_cond - 1 :]
             input = torch.cat([input_act, input_obs], dim=-1)
 
-            returns = self.calculate_return(input)
+            returns = self.calculate_return(input, data["mask"])
 
             # find last non-zero value
             mask = input[..., self.action_dim :].sum(dim=-1) != 0
@@ -250,28 +250,21 @@ class DiffusionPolicy(nn.Module):
         else:
             return {}
 
-    def calculate_return(self, input):
+    def calculate_return(self, input, mask):
         pos = input[:, :, 2:4]
-        # rewards = pos.norm(dim=-1)
-
-        # # TODO: get the true min and max from dataset
-        # returns = (rewards * self.gammas).sum(dim=-1)
-        # returns = (returns - returns.min()) / (returns.max() - returns.min())
-
-        # return returns.unsqueeze(-1)
-
-        collision = (
+        rewards = (
             (-1 < pos[..., 0])
             & (pos[..., 0] < 0)
             & (0 < pos[..., 1])
             & (pos[..., 1] < 1)
-        ).any(dim=-1)
-        collision = 1 - collision.float()
-        collision = 2 * collision - 1
+        ).float()
+        rewards *= mask
 
-        return collision.unsqueeze(-1)
+        # TODO: get the true min and max from dataset
+        returns = (rewards * self.gammas).sum(dim=-1)
+        returns = (returns - returns.min()) / (returns.max() - returns.min())
 
-        # return torch.zeros_like(input[:, 0, 0:1])
+        return returns.unsqueeze(-1)
 
     ###########
     # Helpers #

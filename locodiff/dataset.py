@@ -103,11 +103,10 @@ class ExpertDataset(Dataset):
         return len(self.data["obs"])
 
     def __getitem__(self, idx):
-        T = self.data["mask"][idx].sum().int().item()
         return {
             "obs": self.data["obs"][idx],
             "action": self.data["action"][idx],
-            "length": T,
+            "mask": self.data["mask"][idx],
         }
 
     def split_eps(self, x, split_indices):
@@ -197,7 +196,7 @@ class SlicerWrapper(Dataset):
         slices = []
         window = T_cond + T - 1
         for i in range(len(self.dataset)):
-            length = self.dataset[i]["length"]
+            length = self.dataset[i]["mask"].sum().int().item()
             if length >= window:
                 slices += [
                     (i, start, start + window) for start in range(length - window + 1)
@@ -213,7 +212,7 @@ class SlicerWrapper(Dataset):
     def __getitem__(self, idx):
         i, start, end = self.slices[idx]
         x = self.dataset[i]
-        return {k: v[start:end] for k, v in x.items() if k != "length"}
+        return {k: v[start:end] for k, v in x.items()}
 
 
 def get_dataloaders(
