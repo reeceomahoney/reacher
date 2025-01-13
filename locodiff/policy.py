@@ -249,20 +249,21 @@ class DiffusionPolicy(nn.Module):
 
     def calculate_return(self, input, mask):
         pos = input[:, :, 2:4]
-        rewards = (
+        collision = (
             (-1 < pos[..., 0])
             & (pos[..., 0] < 0)
             & (0 < pos[..., 1])
             & (pos[..., 1] < 1)
-        ).float()
-        rewards = (1 - rewards) * mask
-        lengths = mask.sum(dim=-1)
+        )
+        collision = (collision * mask).any(dim=-1).float()
+        # 1 = no collision, -1 = collision
+        collision = -(2 * collision - 1)
 
         # TODO: get the true min and max from dataset
-        returns = rewards.sum(dim=-1) / lengths
-        returns = (returns - returns.min()) / (returns.max() - returns.min())
+        # returns = rewards.sum(dim=-1) / lengths
+        # returns = (returns - returns.min()) / (returns.max() - returns.min())
 
-        return returns.unsqueeze(-1)
+        return collision.unsqueeze(-1)
 
     ###########
     # Helpers #
