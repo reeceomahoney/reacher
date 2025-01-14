@@ -178,7 +178,7 @@ class DiffusionTransformer(nn.Module):
         else:
             obs_emb = self.obs_emb(data_dict["obs"])
             goal_emb = self.obs_emb(data_dict["goal"]).unsqueeze(1)
-            obstacle_emb = self.obstacle_emb(data_dict["obstacles"])
+            obstacle_emb = self.obstacle_emb(data_dict["obstacles"]).unsqueeze(1)
             cond_emb = torch.cat([sigma_emb, obs_emb, goal_emb, obstacle_emb], dim=1)
         # add position encoding and dropout
         cond_emb = self.drop(cond_emb + self.cond_pos_emb)
