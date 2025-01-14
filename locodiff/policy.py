@@ -11,14 +11,14 @@ from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 
-from locodiff.utils import CFGWrapper, apply_conditioning, rand_log_logistic
+from locodiff.utils import CFGWrapper, apply_conditioning, rand_log_logistic, Normalizer
 
 
 class DiffusionPolicy(nn.Module):
     def __init__(
         self,
         model,
-        normalizer,
+        normalizer: Normalizer,
         env,
         obs_dim: int,
         act_dim: int,
@@ -234,6 +234,7 @@ class DiffusionPolicy(nn.Module):
             input = torch.cat([input_act, input_obs], dim=-1)
 
             obstacles = self.calculate_obstacles(input.shape[0])
+            obstacles = self.normalizer.scale_pos(obstacles)
             returns = self.calculate_return(input, data["mask"], obstacles)
             input = self.normalizer.scale_output(input)
 
