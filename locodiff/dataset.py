@@ -1,11 +1,11 @@
-import h5py
 import logging
 import os
 import pickle
+
+import h5py
+import minari
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
-
-import minari
 
 log = logging.getLogger(__name__)
 

@@ -2,17 +2,16 @@ import logging
 import os
 import statistics
 import time
-import torch
 from collections import deque
-from tqdm import tqdm, trange
 
+import torch
 import wandb
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
+from tqdm import tqdm, trange
 
 from locodiff.dataset import get_dataloaders
 from locodiff.envs import MazeEnv
-from locodiff.models.transformer import DiffusionTransformer
 from locodiff.models.unet import ConditionalUnet1D
 from locodiff.policy import DiffusionPolicy
 from locodiff.utils import ExponentialMovingAverage, InferenceContext, Normalizer

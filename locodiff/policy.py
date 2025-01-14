@@ -1,17 +1,17 @@
 import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.optim.adamw import AdamW
-from torch.optim.lr_scheduler import CosineAnnealingLR
-
 import wandb
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
+from torch.optim.adamw import AdamW
+from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from locodiff.utils import CFGWrapper, apply_conditioning, rand_log_logistic, Normalizer
+from locodiff.utils import CFGWrapper, Normalizer, apply_conditioning, rand_log_logistic
 
 
 class DiffusionPolicy(nn.Module):

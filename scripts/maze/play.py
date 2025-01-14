@@ -1,15 +1,15 @@
-import matplotlib.pyplot as plt
-import numpy as np
 import os
 import random
 import statistics
 import sys
-import torch
-from tqdm import tqdm
 
 import hydra
+import matplotlib.pyplot as plt
+import numpy as np
+import torch
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
+from tqdm import tqdm
 
 from locodiff.envs import MazeEnv
 from locodiff.runner import DiffusionRunner
@@ -76,7 +76,7 @@ def main(agent_cfg: DictConfig):
 
         # set observation and goal
         obs = torch.tensor([[-1.5, 0.5, 0, 0]]).to(runner.device)
-        goal = torch.tensor([[0.5, 0.5]]).to(runner.device)
+        goal = torch.tensor([[2.0, 2.0]]).to(runner.device)
         runner.policy.set_goal(goal)
         goal = goal.cpu().numpy()
 
@@ -94,8 +94,7 @@ def main(agent_cfg: DictConfig):
             axes[i].plot(obs_traj[0, 0], obs_traj[0, 1], "x", color="green", **marker_params)  # type: ignore
             axes[i].plot(goal[0, 0], goal[0, 1], "x", color="red", **marker_params)  # type: ignore
             # create title
-            rewards = np.linalg.norm(obs_traj[..., :2], axis=-1)
-            axes[i].set_title(f"cond_lambda={lam}, reward={rewards.mean():.2f}")
+            axes[i].set_title(f"cond_lambda={lam}")
             axes[i].set_axis_off()
 
         fig.tight_layout()
