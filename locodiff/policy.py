@@ -257,11 +257,12 @@ class DiffusionPolicy(nn.Module):
             return {}
 
     def calculate_return(self, input, mask, obstacles):
-        collision = self.check_collisions(input[:, :, 2:4], obstacles)
-        collision = (collision * mask).any(dim=-1).float()
-        # 1 = no collision, -1 = collision
-        collision = -(2 * collision - 1)
-        return collision.unsqueeze(-1)
+        dist = self.calculate_distances(input[:, :, 2:4], obstacles)
+        dist *= mask
+        lengths = mask.sum(dim=-1)
+        returns = dist.sum(dim=-1) / lengths
+        returns = (returns - returns.min()) / (returns.max() - returns.min())
+        return returns.unsqueeze(-1)
 
     def calculate_obstacles(self, size: int) -> torch.Tensor:
         # Sample random coordinates within the maze (bottom left corner)
@@ -280,6 +281,14 @@ class DiffusionPolicy(nn.Module):
         inside_box = (trajectories > box_corners_bl) & (trajectories < box_corners_tr)
         # Both x and y coordinates must be inside for a collision
         return inside_box.all(dim=2)
+    
+    def calculate_distances(
+        self, trajectories: torch.Tensor, box_corners: torch.Tensor
+    ) -> torch.Tensor:
+        box_centers = (box_corners + 0.5).unsqueeze(1)
+        distances = torch.norm(trajectories - box_centers, dim=2)
+        return distances
+
 
     ###########
     # Helpers #
