@@ -226,9 +226,9 @@ class DiffusionPolicy(nn.Module):
         if raw_action is None:
             # sim
             data = self.update_history(data)
-            raw_obs = data["obs"]
             input = None
-            obstacles = torch.zeros_like(raw_obs[:, 0, :2])
+            raw_obs = data["obs"]
+            obstacles = self.normalizer.scale_pos(data["obstacles"])
             goal = self.normalizer.scale_input(self.goal)
             returns = torch.ones_like(raw_obs[:, 0, :1])
         else:

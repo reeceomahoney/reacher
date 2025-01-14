@@ -71,19 +71,21 @@ def main(agent_cfg: DictConfig):
 
     if test_type == "cfg":
         # set up the figure
-        cond_lambda = [0, 1, 2, 3, 5]
+        cond_lambda = [0, 1, 2, 3, 5, 10, 20]
         fig, axes = plt.subplots(1, len(cond_lambda), figsize=(16, 6))
 
         # set observation and goal
-        obs = torch.tensor([[-1.5, 0.5, 0, 0]]).to(runner.device)
-        goal = torch.tensor([[2.0, 2.0]]).to(runner.device)
+        obs = torch.tensor([[-2.5, -2.5, 0, 0]]).to(runner.device)
+        goal = torch.tensor([[2.5, 2.5]]).to(runner.device)
+        obstacle = torch.tensor([[-1, -2]]).to(runner.device)
         runner.policy.set_goal(goal)
         goal = goal.cpu().numpy()
 
         for i, lam in enumerate(cond_lambda):
             # compute trajectory
             runner.policy.model.cond_lambda = lam
-            obs_traj = runner.policy.act({"obs": obs})["obs_traj"][0].cpu().numpy()
+            obs_traj = runner.policy.act({"obs": obs, "obstacles": obstacle})
+            obs_traj = obs_traj["obs_traj"][0].cpu().numpy()
 
             # plot trajectory
             axes[i].imshow(env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
@@ -91,7 +93,9 @@ def main(agent_cfg: DictConfig):
             axes[i].scatter(obs_traj[:, 0], obs_traj[:, 1], c=colors)
             # plot current and goal position
             marker_params = {"markersize": 10, "markeredgewidth": 3}
-            axes[i].plot(obs_traj[0, 0], obs_traj[0, 1], "x", color="green", **marker_params)  # type: ignore
+            axes[i].plot(
+                obs_traj[0, 0], obs_traj[0, 1], "x", color="green", **marker_params
+            )
             axes[i].plot(goal[0, 0], goal[0, 1], "x", color="red", **marker_params)  # type: ignore
             # create title
             axes[i].set_title(f"cond_lambda={lam}")
@@ -128,8 +132,12 @@ def main(agent_cfg: DictConfig):
                 obs_np = obs.cpu().numpy()
                 goal_np = env.goal.cpu().numpy()
                 marker_params = {"markersize": 10, "markeredgewidth": 3}
-                plt.plot(obs_np[0, 0], obs_np[0, 1], "x", color="green", **marker_params)  # type: ignore
-                plt.plot(goal_np[0, 0], goal_np[0, 1], "x", color="red", **marker_params)  # type: ignore
+                plt.plot(
+                    obs_np[0, 0], obs_np[0, 1], "x", color="green", **marker_params
+                )  # type: ignore
+                plt.plot(
+                    goal_np[0, 0], goal_np[0, 1], "x", color="red", **marker_params
+                )  # type: ignore
                 # draw
                 plt.draw()
                 plt.pause(0.1)

@@ -46,7 +46,8 @@ class DiffusionRunner:
         # variables
         if isinstance(env, VecEnv):
             self.num_steps_per_env = int(
-                self.cfg.episode_length / (self.env.cfg.decimation * self.env.cfg.sim.dt)  # type: ignore
+                self.cfg.episode_length
+                / (self.env.cfg.decimation * self.env.cfg.sim.dt)  # type: ignore
             )
         elif isinstance(env, MazeEnv):
             self.num_steps_per_env = int(self.cfg.episode_length / 0.1)
@@ -89,12 +90,15 @@ class DiffusionRunner:
                 ep_infos = []
                 self.env.reset()
                 self.policy.set_goal(self.env.goal)
+                obstacle = torch.tensor([[-1.0, -2.0]]).to(self.device)
 
                 with InferenceContext(self) and tqdm(
                     total=self.num_steps_per_env, desc="Simulating...", leave=False
                 ) as pbar:
                     while t < self.num_steps_per_env:
-                        actions = self.policy.act({"obs": obs})["action"]
+                        actions = self.policy.act({"obs": obs, "obstacles": obstacle})[
+                            "action"
+                        ]
                         for i in range(self.policy.T_action):
                             obs, rewards, dones, infos = self.env.step(actions[:, i])
                             if i < self.policy.T_action - 1:
