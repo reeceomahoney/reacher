@@ -145,13 +145,13 @@ class DiffusionTransformer(nn.Module):
         param_dict = {pn: p for pn, p in self.named_parameters()}
         inter_params = decay & no_decay
         union_params = decay | no_decay
-        assert (
-            len(inter_params) == 0
-        ), "parameters %s made it into both decay/no_decay sets!" % (str(inter_params),)
-        assert (
-            len(param_dict.keys() - union_params) == 0
-        ), "parameters %s were not separated into either decay/no_decay set!" % (
-            str(param_dict.keys() - union_params),
+        assert len(inter_params) == 0, (
+            "parameters %s made it into both decay/no_decay sets!"
+            % (str(inter_params),)
+        )
+        assert len(param_dict.keys() - union_params) == 0, (
+            "parameters %s were not separated into either decay/no_decay set!"
+            % (str(param_dict.keys() - union_params),)
         )
 
         # create the pytorch optimizer object
@@ -181,7 +181,9 @@ class DiffusionTransformer(nn.Module):
             goal_emb = self.obs_emb(data_dict["goal"]).unsqueeze(1)
             returns_emb = self.returns_emb(data_dict["returns"]).unsqueeze(1)
             obstacle_emb = self.obstacle_emb(data_dict["obstacles"]).unsqueeze(1)
-            cond_emb = torch.cat([sigma_emb, obs_emb, goal_emb, returns_emb, obstacle_emb], dim=1)
+            cond_emb = torch.cat(
+                [sigma_emb, obs_emb, goal_emb, returns_emb, obstacle_emb], dim=1
+            )
         # add position encoding and dropout
         cond_emb = self.drop(cond_emb + self.cond_pos_emb)
         x_emb = self.drop(x_emb + self.pos_emb)
