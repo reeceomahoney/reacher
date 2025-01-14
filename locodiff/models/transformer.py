@@ -189,7 +189,7 @@ class DiffusionTransformer(nn.Module):
         x_emb = self.drop(x_emb + self.pos_emb)
 
         # output
-        x = self.decoder(tgt=x_emb, memory=cond_emb)
+        x = self.decoder(tgt=x_emb, memory=cond_emb, tgt_mask=self.mask)
         x = self.ln_f(x)
         return self.output_pred(x)
 
