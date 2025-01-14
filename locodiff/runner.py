@@ -13,6 +13,7 @@ from tqdm import tqdm, trange
 from locodiff.dataset import get_dataloaders
 from locodiff.envs import MazeEnv
 from locodiff.models.unet import ConditionalUnet1D
+from locodiff.models.transformer import DiffusionTransformer
 from locodiff.policy import DiffusionPolicy
 from locodiff.utils import ExponentialMovingAverage, InferenceContext, Normalizer
 
@@ -33,8 +34,8 @@ class DiffusionRunner:
         self.train_loader, self.test_loader = get_dataloaders(**self.cfg.dataset)
         self.normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
         # TODO: init model with hydra
-        model = ConditionalUnet1D(**self.cfg.model)
-        # model = DiffusionTransformer(**self.cfg.model)
+        # model = ConditionalUnet1D(**self.cfg.model)
+        model = DiffusionTransformer(**self.cfg.model)
         self.policy = DiffusionPolicy(model, self.normalizer, env, **self.cfg.policy)
 
         # ema
