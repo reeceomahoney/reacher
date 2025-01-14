@@ -158,10 +158,18 @@ class DiffusionPolicy(nn.Module):
             # obs and goal
             marker_params = {"markersize": 10, "markeredgewidth": 3}
             plt.plot(
-                obs_traj[0, 0], obs_traj[0, 1], "x", color="green", **marker_params  # type: ignore
+                obs_traj[0, 0],
+                obs_traj[0, 1],
+                "x",
+                color="green",
+                **marker_params,  # type: ignore
             )
             plt.plot(
-                obs_traj[-1, 0], obs_traj[-1, 1], "x", color="red", **marker_params  # type: ignore
+                obs_traj[-1, 0],
+                obs_traj[-1, 1],
+                "x",
+                color="red",
+                **marker_params,  # type: ignore
             )
             # log
             wandb.log({"Image": wandb.Image(fig)})
@@ -281,14 +289,13 @@ class DiffusionPolicy(nn.Module):
         inside_box = (trajectories > box_corners_bl) & (trajectories < box_corners_tr)
         # Both x and y coordinates must be inside for a collision
         return inside_box.all(dim=2)
-    
+
     def calculate_distances(
         self, trajectories: torch.Tensor, box_corners: torch.Tensor
     ) -> torch.Tensor:
         box_centers = (box_corners + 0.5).unsqueeze(1)
         distances = torch.norm(trajectories - box_centers, dim=2)
         return distances
-
 
     ###########
     # Helpers #
