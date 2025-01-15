@@ -4,7 +4,7 @@ import torch
 
 
 def plot_maze(maze: torch.Tensor, figsize: tuple = (8, 8)):
-    fig, ax = plt.subplots(figsize)
+    fig, ax = plt.subplots(1, 1, figsize)
     ax.imshow(maze, cmap="gray", extent=(-4, 4, -4, 4))
     return fig, ax
 
