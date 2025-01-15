@@ -28,8 +28,6 @@ torch.backends.cudnn.benchmark = False
 )
 def main(agent_cfg: DictConfig):
     """Train with RSL-RL agent."""
-    # override configurations with non-hydra CLI arguments
-
     # specify directory for logging experiments
     log_dir = HydraConfig.get().runtime.output_dir
     print(f"[INFO] Logging experiment in directory: {log_dir}")
@@ -75,9 +73,11 @@ def main(agent_cfg: DictConfig):
         fig, axes = plt.subplots(1, len(cond_lambda), figsize=(16, 6))
 
         # set observation and goal
-        obs = torch.tensor([[-2.5, -2.5, 0, 0]]).to(runner.device)
+        obs = torch.tensor([[-1.5, 0.5, 0, 0]]).to(runner.device)
         goal = torch.tensor([[2.5, 2.5]]).to(runner.device)
-        obstacle = torch.tensor([[-1, -2]]).to(runner.device)
+        # obs = torch.tensor([[-2.5, -2.5, 0, 0]]).to(runner.device)
+        # goal = torch.tensor([[-0.5, -2.5]]).to(runner.device)
+        obstacle = torch.tensor([[-1, 0]]).to(runner.device)
         runner.policy.set_goal(goal)
         goal = goal.cpu().numpy()
 
@@ -87,8 +87,19 @@ def main(agent_cfg: DictConfig):
             obs_traj = runner.policy.act({"obs": obs, "obstacles": obstacle})
             obs_traj = obs_traj["obs_traj"][0].cpu().numpy()
 
-            # plot trajectory
+            # plot grid
             axes[i].imshow(env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
+            # plot obstacle
+            obstacle_square = plt.Rectangle(
+                (obstacle[0, 0].item(), obstacle[0, 1].item()),
+                1.0,
+                1.0,
+                facecolor="red",
+                alpha=0.5,
+            )
+            axes[i].add_patch(obstacle_square)
+
+            # plot trajectory
             colors = plt.cm.inferno(np.linspace(0, 1, len(obs_traj)))  # type: ignore
             axes[i].scatter(obs_traj[:, 0], obs_traj[:, 1], c=colors)
             # plot current and goal position
