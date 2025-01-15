@@ -62,7 +62,7 @@ class ExpertDataset(Dataset):
             actions_splits = self.split_eps(actions, split_indices)
 
         else:
-            dataset_path = f"dataset_{task_name}.pkl"
+            dataset_path = f"data/dataset_{task_name}.pkl"
             if os.path.exists(dataset_path):
                 # load pre-processed dataset
                 obs_splits, actions_splits = self.load_dataset(dataset_path)
