@@ -5,22 +5,22 @@ description = "Reacher IsaacLab Project"
 requires-python = ">=3.10"
 
 dependencies = [
-    "torch==2.4.0",
-    "isaacsim==4.2.0.2",
-    "isaacsim-extscache-physics==4.2.0.2",
-    "isaacsim-extscache-kit==4.2.0.2",
-    "isaacsim-extscache-kit-sdk==4.2.0.2",
-    "omni-isaac-lab",
-    "omni-isaac-lab_assets",
-    "omni-isaac-lab_tasks[all]",
-    "isaac_ext",
-    "locodiff",
-    "pip>=24.3.1",
-    "gymnasium-robotics>=1.2.4",
-    "wandb==0.12.21",
-    "minari[all]>=0.5.2",
-    "diffusers>=0.32.1",
-    "pyqt6>=6.8.0",
+  "torch==2.4.0",
+  "isaacsim==4.2.0.2",
+  "isaacsim-extscache-physics==4.2.0.2",
+  "isaacsim-extscache-kit==4.2.0.2",
+  "isaacsim-extscache-kit-sdk==4.2.0.2",
+  "omni-isaac-lab",
+  "omni-isaac-lab_assets",
+  "omni-isaac-lab_tasks[all]",
+  "isaac_ext",
+  "locodiff",
+  "pip>=24.3.1",
+  "gymnasium-robotics>=1.2.4",
+  "wandb==0.12.21",
+  "minari[all]>=0.5.2",
+  "diffusers>=0.32.1",
+  "pyqt6>=6.8.0",
 ]
 
 [tool.uv.sources]
@@ -29,11 +29,11 @@ isaacsim = { index = "nvidia" }
 isaacsim-extscache-physics = { index = "nvidia" }
 isaacsim-extscache-kit = { index = "nvidia" }
 isaacsim-extscache-kit-sdk = { index = "nvidia" }
-omni-isaac-lab_assets = { path = "IsaacLab/source/extensions/omni.isaac.lab_assets", editable = true}
-omni-isaac-lab_tasks = { path = "IsaacLab/source/extensions/omni.isaac.lab_tasks", editable = true}
+omni-isaac-lab_assets = { path = "IsaacLab/source/extensions/omni.isaac.lab_assets", editable = true }
+omni-isaac-lab_tasks = { path = "IsaacLab/source/extensions/omni.isaac.lab_tasks", editable = true }
 omni-isaac-lab = { path = "IsaacLab/source/extensions/omni.isaac.lab", editable = true }
-isaac_ext = {path = "isaac_ext", editable = true}
-locodiff = {path = "locodiff", editable = true}
+isaac_ext = { path = "isaac_ext", editable = true }
+locodiff = { path = "locodiff", editable = true }
 
 [[tool.uv.index]]
 name = "pytorch"
@@ -55,13 +55,7 @@ ignore = ["E402"]
 
 [tool.pyright]
 
-exclude = [
-    "**/__pycache__",
-    "**/docs",
-    "**/logs",
-    ".git",
-    ".vscode",
-]
+exclude = ["**/__pycache__", "**/docs", "**/logs", ".git", ".vscode"]
 
 typeCheckingMode = "basic"
 pythonVersion = "3.10"
@@ -86,4 +80,3 @@ quiet-level = 0
 ignore-words-list = "haa,slq,collapsable,buss"
 # todo: this is hack to deal with incorrect spelling of "Environment" in the Isaac Sim grid world asset
 exclude-file = "source/extensions/omni.isaac.lab/omni/isaac/lab/sim/spawners/from_files/from_files.py"
-
