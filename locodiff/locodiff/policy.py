@@ -266,12 +266,20 @@ class DiffusionPolicy(nn.Module):
 
     def calculate_obstacles(self, size: int) -> torch.Tensor:
         # Sample random coordinates within the maze (bottom left corner)
-        numbers = torch.arange(-3, 3)
-        indices = torch.randint(0, len(numbers), (size, 2))
-        samples = numbers[indices]
+        # random
+        # numbers = torch.arange(-3, 3)
+        # indices = torch.randint(0, len(numbers), (size, 2))
+        # samples = numbers[indices]
+
+        # fixed
         # x_vals = -1 * torch.ones(size, dtype=torch.float32)
         # y_vals = torch.zeros(size, dtype=torch.float32)
         # samples = torch.stack((x_vals, y_vals), dim=1)
+
+        # 2 random
+        points = torch.tensor([[0, -1], [-1, 0]])
+        indices = torch.randint(0, 2, (size,))
+        samples = points[indices]
 
         return samples.to(self.device)
 
