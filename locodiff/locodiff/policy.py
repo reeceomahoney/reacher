@@ -3,13 +3,13 @@ import math
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+import wandb
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-import wandb
 from locodiff.plotting import plot_maze, plot_trajectory
 from locodiff.utils import CFGWrapper, Normalizer, apply_conditioning, rand_log_logistic
 

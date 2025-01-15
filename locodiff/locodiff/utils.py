@@ -128,7 +128,7 @@ class ExponentialMovingAverage:
         one_minus_decay = 1.0 - decay
         with torch.no_grad():
             parameters = [p for p in parameters if p.requires_grad]
-            for s_param, param in zip(self.shadow_params, parameters):
+            for s_param, param in zip(self.shadow_params, parameters, strict=False):
                 s_param.sub_(one_minus_decay * (s_param - param))
 
     def copy_to(self, parameters):
@@ -139,7 +139,7 @@ class ExponentialMovingAverage:
             updated with the stored moving averages.
         """
         parameters = [p for p in parameters if p.requires_grad]
-        for s_param, param in zip(self.shadow_params, parameters):
+        for s_param, param in zip(self.shadow_params, parameters, strict=False):
             if param.requires_grad:
                 param.data.copy_(s_param.data)
 
@@ -163,7 +163,7 @@ class ExponentialMovingAverage:
           parameters: Iterable of `torch.nn.Parameter`; the parameters to be
             updated with the stored parameters.
         """
-        for c_param, param in zip(self.collected_params, parameters):
+        for c_param, param in zip(self.collected_params, parameters, strict=False):
             param.data.copy_(c_param.data)
 
     def state_dict(self):
@@ -175,7 +175,7 @@ class ExponentialMovingAverage:
 
     def load_shadow_params(self, parameters):
         parameters = [p for p in parameters if p.requires_grad]
-        for s_param, param in zip(self.shadow_params, parameters):
+        for s_param, param in zip(self.shadow_params, parameters, strict=False):
             if param.requires_grad:
                 s_param.data.copy_(param.data)
 
@@ -226,9 +226,7 @@ class Normalizer(nn.Module):
     def scale_pos(self, x) -> torch.Tensor:
         dim = x.shape[-1]
         if self.scaling == "linear":
-            return (x - self.y_min[2:4]) / (
-                self.y_max[2:4] - self.y_min[2:4]
-            ) * 2 - 1
+            return (x - self.y_min[2:4]) / (self.y_max[2:4] - self.y_min[2:4]) * 2 - 1
         elif self.scaling == "gaussian":
             return (x - self.y_mean[:dim]) / self.y_std[:dim]
         else:

@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from matplotlib.patches import Rectangle
 
 
 def plot_maze(maze: torch.Tensor, figsize: tuple = (8, 8)):
@@ -9,8 +10,8 @@ def plot_maze(maze: torch.Tensor, figsize: tuple = (8, 8)):
     return fig, ax
 
 
-def plot_obstacle(ax: plt.Axes, obstacle: torch.Tensor):
-    obstacle_square = plt.Rectangle(
+def plot_obstacle(ax, obstacle: torch.Tensor):
+    obstacle_square = Rectangle(
         (obstacle[0, 0].item(), obstacle[0, 1].item()),
         1.0,
         1.0,
@@ -21,15 +22,15 @@ def plot_obstacle(ax: plt.Axes, obstacle: torch.Tensor):
 
 
 def plot_trajectory(
-    ax: plt.Axes,
+    ax,
     obs_traj: np.ndarray,
-    start_pos: np.ndarray,
-    goal_pos: np.ndarray,
+    start_pos: tuple,
+    goal_pos: tuple,
 ):
     marker_params = {"markersize": 10, "markeredgewidth": 3}
     # Plot trajectory with color gradient
-    colors = plt.cm.inferno(np.linspace(0, 1, len(obs_traj)))
-    ax.scatter(obs_traj[:, 0], obs_traj[:, 1], c=colors)
+    gradient = np.linspace(0, 1, len(obs_traj))
+    ax.scatter(obs_traj[:, 0], obs_traj[:, 1], c=gradient, cmap="inferno")
     # Plot start and goal positions
     ax.plot(start_pos[0], start_pos[1], "x", color="green", **marker_params)
     ax.plot(goal_pos[0], goal_pos[1], "x", color="red", **marker_params)
