@@ -1,4 +1,4 @@
 # TODO:
 
-- [ ] Create single pyproject.toml
-- [ ] Rename envs to make more sense
+- [x] Create single pyproject.toml
+- [ ] Refactor config directories
