@@ -1,6 +1,47 @@
-[build-system]
-requires = ["setuptools", "toml"]
-build-backend = "setuptools.build_meta"
+[project]
+name = "reacher"
+version = "0.1.0"
+description = "Reacher IsaacLab Project"
+requires-python = ">=3.10"
+
+dependencies = [
+    "torch==2.4.0",
+    "isaacsim==4.2.0.2",
+    "isaacsim-extscache-physics==4.2.0.2",
+    "isaacsim-extscache-kit==4.2.0.2",
+    "isaacsim-extscache-kit-sdk==4.2.0.2",
+    "omni-isaac-lab",
+    "omni-isaac-lab_assets",
+    "omni-isaac-lab_tasks[all]",
+    "pip>=24.3.1",
+    "isaac_ext",
+    "gymnasium-robotics>=1.2.4",
+    "wandb>=0.19.3",
+    "minari[all]>=0.5.2",
+    "diffusers>=0.32.1",
+    "pyqt6>=6.8.0",
+]
+
+[tool.uv.sources]
+torch = { index = "pytorch" }
+isaacsim = { index = "nvidia" }
+isaacsim-extscache-physics = { index = "nvidia" }
+isaacsim-extscache-kit = { index = "nvidia" }
+isaacsim-extscache-kit-sdk = { index = "nvidia" }
+omni-isaac-lab_assets = { path = "IsaacLab/source/extensions/omni.isaac.lab_assets", editable = true}
+omni-isaac-lab_tasks = { path = "IsaacLab/source/extensions/omni.isaac.lab_tasks", editable = true}
+omni-isaac-lab = { path = "IsaacLab/source/extensions/omni.isaac.lab", editable = true }
+isaac_ext = {path = "isaac_ext", editable = true}
+
+[[tool.uv.index]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com"
+explicit = true
 
 [tool.ruff]
 exclude = ["docs/*", "logs/*"]
