@@ -13,8 +13,9 @@ dependencies = [
     "omni-isaac-lab",
     "omni-isaac-lab_assets",
     "omni-isaac-lab_tasks[all]",
-    "pip>=24.3.1",
     "isaac_ext",
+    "locodiff",
+    "pip>=24.3.1",
     "gymnasium-robotics>=1.2.4",
     "wandb>=0.19.3",
     "minari[all]>=0.5.2",
@@ -32,6 +33,7 @@ omni-isaac-lab_assets = { path = "IsaacLab/source/extensions/omni.isaac.lab_asse
 omni-isaac-lab_tasks = { path = "IsaacLab/source/extensions/omni.isaac.lab_tasks", editable = true}
 omni-isaac-lab = { path = "IsaacLab/source/extensions/omni.isaac.lab", editable = true }
 isaac_ext = {path = "isaac_ext", editable = true}
+locodiff = {path = "locodiff", editable = true}
 
 [[tool.uv.index]]
 name = "pytorch"
