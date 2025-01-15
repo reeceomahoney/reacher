@@ -1,7 +1,6 @@
 import math
 
 import matplotlib.pyplot as plt
-import numpy as np
 import torch
 import torch.nn as nn
 import wandb
@@ -11,6 +10,7 @@ from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
+from locodiff.plotting import plot_maze, plot_trajectory
 from locodiff.utils import CFGWrapper, Normalizer, apply_conditioning, rand_log_logistic
 
 
@@ -148,28 +148,13 @@ class DiffusionPolicy(nn.Module):
         action_loss = loss[:, :, : self.action_dim].mean()
 
         if plot:
+            fig, ax = plot_maze(self.env.get_maze())
             obs_traj = x[0, :, self.action_dim :].cpu().numpy()
-            fig = plt.figure()
-            # maze
-            plt.imshow(self.env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
-            # trajectory
-            colors = plt.cm.inferno(np.linspace(0, 1, len(obs_traj)))  # type: ignore
-            plt.scatter(obs_traj[:, 0], obs_traj[:, 1], c=colors)
-            # obs and goal
-            marker_params = {"markersize": 10, "markeredgewidth": 3}
-            plt.plot(
-                obs_traj[0, 0],
-                obs_traj[0, 1],
-                "x",
-                color="green",
-                **marker_params,  # type: ignore
-            )
-            plt.plot(
-                obs_traj[-1, 0],
-                obs_traj[-1, 1],
-                "x",
-                color="red",
-                **marker_params,  # type: ignore
+            plot_trajectory(
+                ax,
+                obs_traj,
+                start_pos=(obs_traj[0, 0], obs_traj[0, 1]),
+                goal_pos=(obs_traj[-1, 0], obs_traj[-1, 1]),
             )
             # log
             wandb.log({"Image": wandb.Image(fig)})
@@ -287,7 +272,7 @@ class DiffusionPolicy(nn.Module):
         # x_vals = -1 * torch.ones(size, dtype=torch.float32)
         # y_vals = torch.zeros(size, dtype=torch.float32)
         # samples = torch.stack((x_vals, y_vals), dim=1)
-        
+
         return samples.to(self.device)
 
     def check_collisions(

@@ -3,6 +3,12 @@ import numpy as np
 import torch
 
 
+def plot_maze(maze: torch.Tensor):
+    fig, ax = plt.subplots(figsize=(8, 8))
+    ax.imshow(maze, cmap="gray", extent=(-4, 4, -4, 4))
+    return fig, ax
+
+
 def plot_obstacle(ax: plt.Axes, obstacle: torch.Tensor):
     obstacle_square = plt.Rectangle(
         (obstacle[0, 0].item(), obstacle[0, 1].item()),
@@ -65,8 +71,7 @@ def plot_cfg_analysis(
 
 
 def plot_interactive_trajectory(env, runner, obs: torch.Tensor):
-    _, ax = plt.subplots(figsize=(8, 8))
-    ax.imshow(env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
+    _, ax = plot_maze(env.get_maze())
 
     # Get current observation and goal positions
     obs_np = obs.cpu().numpy()
