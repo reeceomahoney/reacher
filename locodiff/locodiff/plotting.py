@@ -3,8 +3,8 @@ import numpy as np
 import torch
 
 
-def plot_maze(maze: torch.Tensor):
-    fig, ax = plt.subplots(figsize=(8, 8))
+def plot_maze(maze: torch.Tensor, figsize: tuple = (8, 8)):
+    fig, ax = plt.subplots(figsize)
     ax.imshow(maze, cmap="gray", extent=(-4, 4, -4, 4))
     return fig, ax
 
