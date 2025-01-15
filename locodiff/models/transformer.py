@@ -37,12 +37,12 @@ class DiffusionTransformer(nn.Module):
         self.input_emb = nn.Linear(input_dim, d_model)
         self.obs_emb = nn.Linear(obs_dim, d_model)
         self.sigma_emb = nn.Linear(1, d_model)
-        self.returns_emb = nn.Linear(1, d_model)
+        self.returns_emb = nn.Linear(3, d_model)
         self.obstacle_emb = nn.Linear(2, d_model)
 
         # change dims depending on if we're inpainting the obs
         input_len = T + T_cond - 1 if inpaint else T
-        cond_len = 1 if inpaint else T_cond + 4
+        cond_len = 1 if inpaint else T_cond + 3
 
         # dropout and position encoding
         self.pos_emb = SinusoidalPosEmb(d_model, device)(torch.arange(input_len))
@@ -180,9 +180,9 @@ class DiffusionTransformer(nn.Module):
             obs_emb = self.obs_emb(data_dict["obs"])
             goal_emb = self.obs_emb(data_dict["goal"]).unsqueeze(1)
             returns_emb = self.returns_emb(data_dict["returns"]).unsqueeze(1)
-            obstacle_emb = self.obstacle_emb(data_dict["obstacles"]).unsqueeze(1)
+            # obstacle_emb = self.obstacle_emb(data_dict["obstacles"]).unsqueeze(1)
             cond_emb = torch.cat(
-                [sigma_emb, obs_emb, goal_emb, returns_emb, obstacle_emb], dim=1
+                [sigma_emb, obs_emb, goal_emb, returns_emb], dim=1
             )
         # add position encoding and dropout
         cond_emb = self.drop(cond_emb + self.cond_pos_emb)
