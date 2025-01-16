@@ -37,7 +37,7 @@ def plot_trajectory(
 
 
 def plot_cfg_analysis(
-    runner,
+    policy,
     env,
     obs: torch.Tensor,
     goal: torch.Tensor,
@@ -45,13 +45,13 @@ def plot_cfg_analysis(
     cond_lambda: list,
 ):
     fig, axes = plt.subplots(1, len(cond_lambda), figsize=(16, 6))
-    runner.policy.set_goal(goal)
+    policy.set_goal(goal)
     goal_np = goal.cpu().numpy()
 
     for i, lam in enumerate(cond_lambda):
         # Compute trajectory
-        runner.policy.model.cond_lambda = lam
-        obs_traj = runner.policy.act({"obs": obs, "obstacles": obstacle})
+        policy.model.cond_lambda = lam
+        obs_traj = policy.act({"obs": obs, "obstacles": obstacle})
         obs_traj = obs_traj["obs_traj"][0].cpu().numpy()
 
         # Plot maze and trajectory
