@@ -120,8 +120,8 @@ class DiffusionPolicy(nn.Module):
 
         # cfg masking
         if self.cond_mask_prob > 0:
-            cond_mask = torch.rand_like(data["returns"]) < self.cond_mask_prob
-            data["returns"][cond_mask] = 0
+            cond_mask = torch.rand(noise.shape[0], 1) < self.cond_mask_prob
+            data["returns"][cond_mask.expand_as(data["returns"])] = 0
 
         # compute model output
         out = self.model(x_noise_in, sigma_in, data)
@@ -233,7 +233,7 @@ class DiffusionPolicy(nn.Module):
             lengths = data["mask"].sum(dim=-1).int()
             goal = input[range(input.shape[0]), lengths - 1, self.action_dim :]
 
-        # returns = torch.cat([returns, obstacles], dim=-1)
+        returns = torch.cat([returns, obstacles], dim=-1)
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
         return {
             "obs": obs,
