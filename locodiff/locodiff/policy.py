@@ -3,13 +3,13 @@ import math
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-import wandb
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
+import wandb
 from locodiff.plotting import plot_cfg_analysis
 from locodiff.utils import (
     CFGWrapper,
@@ -282,9 +282,9 @@ class DiffusionPolicy(nn.Module):
     def calculate_obstacles(self, size: int) -> torch.Tensor:
         # Sample random coordinates within the maze (bottom left corner)
         # random
-        numbers = torch.arange(-3, 3)
-        indices = torch.randint(0, len(numbers), (size, 2))
-        samples = numbers[indices]
+        samples = self.open_squares[
+            torch.randint(0, len(self.open_squares), (size,))
+        ].to(self.device)
 
         # fixed
         # x_vals = -1 * torch.ones(size, dtype=torch.float32)
