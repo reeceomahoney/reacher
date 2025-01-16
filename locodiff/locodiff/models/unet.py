@@ -137,7 +137,7 @@ class ConditionalUnet1D(nn.Module):
 
         # diffusion step embedding and observations
         cond_dim = (
-            cond_embed_dim + 3 if inpaint else cond_embed_dim + obs_dim * (T_cond + 1) + 3
+            cond_embed_dim + 3 if inpaint else obs_dim * (T_cond + 1) + 4
         )
 
         CondResBlock = partial(
@@ -192,7 +192,7 @@ class ConditionalUnet1D(nn.Module):
             nn.Conv1d(start_dim, input_dim, 1),
         )
 
-        self.sigma_encoder = nn.Linear(1, cond_embed_dim)
+        # self.sigma_encoder = nn.Linear(1, cond_embed_dim)
 
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
@@ -226,7 +226,8 @@ class ConditionalUnet1D(nn.Module):
 
         # embed timestep
         sigma = sigma.to(noised_action.device)
-        sigma_emb = self.sigma_encoder(sigma.view(-1, 1))
+        # sigma_emb = self.sigma_encoder(sigma.view(-1, 1))
+        sigma_emb = sigma.view(-1, 1)
 
         # create global feature
         if self.inpaint:
@@ -237,7 +238,7 @@ class ConditionalUnet1D(nn.Module):
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
             goal = data_dict["goal"]
             returns = data_dict["returns"]
-            obstacles = data_dict["obstacles"]
+            # obstacles = data_dict["obstacles"]
             global_feature = torch.cat([sigma_emb, obs, goal, returns], dim=-1)
 
         # encode local features
