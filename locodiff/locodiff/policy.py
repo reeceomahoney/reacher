@@ -233,7 +233,7 @@ class DiffusionPolicy(nn.Module):
             lengths = data["mask"].sum(dim=-1).int()
             goal = input[range(input.shape[0]), lengths - 1, self.action_dim :]
 
-        returns = torch.cat([returns, obstacles], dim=-1)
+        # returns = torch.cat([returns, obstacles], dim=-1)
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
         return {
             "obs": obs,
