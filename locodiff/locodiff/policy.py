@@ -287,14 +287,14 @@ class DiffusionPolicy(nn.Module):
         # samples = numbers[indices]
 
         # fixed
-        x_vals = -1 * torch.ones(size, dtype=torch.float32)
-        y_vals = torch.zeros(size, dtype=torch.float32)
-        samples = torch.stack((x_vals, y_vals), dim=1)
+        # x_vals = -1 * torch.ones(size, dtype=torch.float32)
+        # y_vals = torch.zeros(size, dtype=torch.float32)
+        # samples = torch.stack((x_vals, y_vals), dim=1)
 
         # 2 random
-        # points = torch.tensor([[0, -1], [-1, 0]])
-        # indices = torch.randint(0, 2, (size,))
-        # samples = points[indices]
+        points = torch.tensor([[0, -1], [-1, 0]])
+        indices = torch.randint(0, 2, (size,))
+        samples = points[indices]
 
         return samples.to(self.device)
 
