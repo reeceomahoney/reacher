@@ -325,10 +325,11 @@ class ValueUnet1D(nn.Module):
         cond_dim = (
             cond_embed_dim if inpaint else cond_embed_dim + obs_dim * (T_cond + 1)
         )
+        self.cond_encoder = nn.Linear(cond_dim, 256)
 
         CondResBlock = partial(
             ConditionalResidualBlock1D,
-            cond_dim=cond_dim,
+            cond_dim=256,
             kernel_size=kernel_size,
             n_groups=n_groups,
             cond_predict_scale=cond_predict_scale,
@@ -395,6 +396,7 @@ class ValueUnet1D(nn.Module):
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
             goal = data_dict["goal"].squeeze(1)
             global_feature = torch.cat([sigma_emb, obs, goal], dim=-1)
+            global_feature = self.cond_encoder(global_feature)
 
         x = sample
         h = []

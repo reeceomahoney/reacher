@@ -157,7 +157,7 @@ class DiffusionPolicy(nn.Module):
         if plot:
             obs = torch.tensor([[-0.5, -2.5, 0, 0]]).to(self.device)
             goal = torch.tensor([[2.5, 2.5]]).to(self.device)
-            obstacle = torch.tensor([[0, -1]]).to(self.device)
+            obstacle = torch.tensor([[-1, 0]]).to(self.device)
             cond_lambda = [0, 1, 2, 3, 5, 10]
             # Generate plots
             fig = plot_cfg_analysis(self, self.env, obs, goal, obstacle, cond_lambda)
