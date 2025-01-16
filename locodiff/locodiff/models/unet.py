@@ -241,8 +241,8 @@ class ConditionalUnet1D(nn.Module):
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
             goal = data_dict["goal"]
             returns = data_dict["returns"]
-            # obstacles = data_dict["obstacles"]
-            global_feature = torch.cat([sigma_emb, obs, goal, returns], dim=-1)
+            obstacles = data_dict["obstacles"]
+            global_feature = torch.cat([sigma_emb, obs, goal, obstacles, returns], dim=-1)
             global_feature = self.cond_encoder(global_feature)
 
         # encode local features
