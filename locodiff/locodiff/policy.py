@@ -10,7 +10,7 @@ from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 import wandb
-from locodiff.plotting import plot_cfg_analysis, plot_maze, plot_trajectory
+from locodiff.plotting import plot_cfg_analysis
 from locodiff.utils import CFGWrapper, Normalizer, apply_conditioning, rand_log_logistic
 
 
