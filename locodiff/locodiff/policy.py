@@ -155,7 +155,7 @@ class DiffusionPolicy(nn.Module):
         action_loss = loss[:, :, : self.action_dim].mean()
 
         if plot:
-            obs = torch.tensor([[-0.5, -2.5, 0, 0]]).to(self.device)
+            obs = torch.tensor([[-2.5, -0.5, 0, 0]]).to(self.device)
             goal = torch.tensor([[2.5, 2.5]]).to(self.device)
             obstacle = torch.tensor([[-1, 0]]).to(self.device)
             cond_lambda = [0, 1, 2, 3, 5, 10]
@@ -354,11 +354,11 @@ class DiffusionPolicy(nn.Module):
         goal = self.open_squares[
             torch.randint(0, len(self.open_squares), (batch_size,))
         ].to(self.device)
-        # obstacle = self.open_squares[
-        #     torch.randint(0, len(self.open_squares), (batch_size,))
-        # ].to(self.device)
-        obstacle = torch.zeros(batch_size, 2).to(self.device)
-        obstacle[:, 0] = -1
+        obstacle = self.open_squares[
+            torch.randint(0, len(self.open_squares), (batch_size,))
+        ].to(self.device)
+        # obstacle = torch.zeros(batch_size, 2).to(self.device)
+        # obstacle[:, 0] = -1
 
         self.set_goal(goal)
 
