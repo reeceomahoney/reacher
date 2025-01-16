@@ -219,7 +219,7 @@ class DiffusionPolicy(nn.Module):
             # sim
             # data = self.update_history(data)
             input = None
-            raw_obs = data["obs"]
+            raw_obs = data["obs"].unsqueeze(1)
             obstacles = self.normalizer.scale_pos(data["obstacles"])
             goal = self.normalizer.scale_input(self.goal)
             returns = torch.ones_like(raw_obs[:, 0, :1])
