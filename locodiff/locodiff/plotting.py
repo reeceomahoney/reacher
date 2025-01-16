@@ -44,7 +44,7 @@ def plot_cfg_analysis(
     obstacle: torch.Tensor,
     cond_lambda: list,
 ):
-    fig, axes = plt.subplots(1, len(cond_lambda), figsize=(16, 6))
+    fig, axes = plt.subplots(1, len(cond_lambda), figsize=(16, 4))
     policy.set_goal(goal)
     goal_np = goal.cpu().numpy()
 
