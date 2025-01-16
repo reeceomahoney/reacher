@@ -282,14 +282,14 @@ class DiffusionPolicy(nn.Module):
     def calculate_obstacles(self, size: int) -> torch.Tensor:
         # Sample random coordinates within the maze (bottom left corner)
         # random
-        numbers = torch.arange(-3, 3)
-        indices = torch.randint(0, len(numbers), (size, 2))
-        samples = numbers[indices]
+        # numbers = torch.arange(-3, 3)
+        # indices = torch.randint(0, len(numbers), (size, 2))
+        # samples = numbers[indices]
 
         # fixed
-        # x_vals = torch.zeros(size, dtype=torch.float32)
-        # y_vals = -1 * torch.ones(size, dtype=torch.float32)
-        # samples = torch.stack((x_vals, y_vals), dim=1)
+        x_vals = -1 * torch.ones(size, dtype=torch.float32)
+        y_vals = torch.zeros(size, dtype=torch.float32)
+        samples = torch.stack((x_vals, y_vals), dim=1)
 
         # 2 random
         # points = torch.tensor([[0, -1], [-1, 0]])
@@ -354,9 +354,11 @@ class DiffusionPolicy(nn.Module):
         goal = self.open_squares[
             torch.randint(0, len(self.open_squares), (batch_size,))
         ].to(self.device)
-        obstacle = self.open_squares[
-            torch.randint(0, len(self.open_squares), (batch_size,))
-        ].to(self.device)
+        # obstacle = self.open_squares[
+        #     torch.randint(0, len(self.open_squares), (batch_size,))
+        # ].to(self.device)
+        obstacle = torch.zeros(batch_size, 2).to(self.device)
+        obstacle[:, 0] = -1
 
         self.set_goal(goal)
 
