@@ -68,7 +68,7 @@ def plot_cfg_analysis(
         axes[i].set_axis_off()
 
     fig.tight_layout()
-    plt.show()
+    return fig
 
 
 def plot_interactive_trajectory(env, runner, obs: torch.Tensor):

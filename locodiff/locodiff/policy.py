@@ -3,14 +3,14 @@ import math
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-import wandb
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-from locodiff.plotting import plot_maze, plot_trajectory
+import wandb
+from locodiff.plotting import plot_cfg_analysis, plot_maze, plot_trajectory
 from locodiff.utils import CFGWrapper, Normalizer, apply_conditioning, rand_log_logistic
 
 
@@ -148,14 +148,12 @@ class DiffusionPolicy(nn.Module):
         action_loss = loss[:, :, : self.action_dim].mean()
 
         if plot:
-            fig, ax = plot_maze(self.env.get_maze(), figsize=(5, 5))
-            obs_traj = x[0, :, self.action_dim :].cpu().numpy()
-            plot_trajectory(
-                ax,
-                obs_traj,
-                start_pos=(obs_traj[0, 0], obs_traj[0, 1]),
-                goal_pos=(obs_traj[-1, 0], obs_traj[-1, 1]),
-            )
+            obs = torch.tensor([[-0.5, -2.5, 0, 0]]).to(self.device)
+            goal = torch.tensor([[2.5, 2.5]]).to(self.device)
+            obstacle = torch.tensor([[0, -1]]).to(self.device)
+            cond_lambda = [0, 1, 2, 3, 5, 10]
+            # Generate plots
+            fig = plot_cfg_analysis(self, self.env, obs, goal, obstacle, cond_lambda)
             # log
             wandb.log({"Image": wandb.Image(fig)})
             plt.close(fig)
