@@ -258,10 +258,17 @@ class DiffusionPolicy(nn.Module):
         # return returns.unsqueeze(-1)
 
         collision = self.check_collisions(input[:, :, 2:4], obstacles)
-        collision = (collision * mask).any(dim=-1).float()
+        collision = ((~collision) * mask).float()
+        lengths = mask.sum(dim=-1)
+        returns = collision.sum(dim=-1) / lengths
+        returns = (returns - returns.min()) / (returns.max() - returns.min())
+        return returns.unsqueeze(-1)
+
+        # collision = self.check_collisions(input[:, :, 2:4], obstacles)
+        # collision = (collision * mask).any(dim=-1).float()
         # 1 = no collision, -1 = collision
-        collision = -(2 * collision - 1)
-        return collision.unsqueeze(-1)
+        # collision = -(2 * collision - 1)
+        # return collision.unsqueeze(-1)
 
     def calculate_obstacles(self, size: int) -> torch.Tensor:
         # Sample random coordinates within the maze (bottom left corner)
