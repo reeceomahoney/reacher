@@ -135,7 +135,13 @@ class ConditionalUnet1D(nn.Module):
 
         # diffusion step embedding and observations
         cond_dim = cond_embed_dim + 3 if inpaint else obs_dim * (T_cond + 1) + 4
-        self.cond_encoder = nn.Linear(cond_dim, 256)
+        self.cond_encoder = nn.Sequential(
+            nn.Linear(cond_dim, 256),
+            nn.Mish(),
+            nn.Linear(256, 256),
+            nn.Mish(),
+            nn.Linear(256, 256),
+        )
 
         CondResBlock = partial(
             ConditionalResidualBlock1D,
