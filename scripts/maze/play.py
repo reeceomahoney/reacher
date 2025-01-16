@@ -4,6 +4,7 @@ import statistics
 import sys
 
 import hydra
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from hydra.core.hydra_config import HydraConfig
@@ -11,8 +12,9 @@ from omegaconf import DictConfig
 from tqdm import tqdm
 
 from locodiff.envs import MazeEnv
-from locodiff.plotting import plot_cfg_analysis, plot_interactive_trajectory
+from locodiff.plotting import plot_interactive_trajectory
 from locodiff.runner import DiffusionRunner
+from locodiff.utils import get_open_maze_squares
 from vae.utils import get_latest_run
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -43,6 +45,8 @@ def main(agent_cfg: DictConfig):
     agent_cfg.act_dim = env.act_dim
 
     # create runner from rsl-rl
+    num_envs = 50
+    agent_cfg.policy.num_envs = num_envs
     runner = DiffusionRunner(env, agent_cfg, device=agent_cfg.device)
 
     # load the checkpoint
@@ -66,13 +70,37 @@ def main(agent_cfg: DictConfig):
             print(f"Sampling steps: {steps}, Test MSE: {test_mse}")
 
     elif test_type == "cfg":
-        obs = torch.tensor([[-1.5, 0.5, 0, 0]]).to(runner.device)
-        goal = torch.tensor([[2.5, 2.5]]).to(runner.device)
-        obstacle = torch.tensor([[-1, 0]]).to(runner.device)
-        cond_lambda = [0, 1, 2, 3, 5, 10, 20]
+        cond_lambda = [0, 1, 2, 3, 5, 10, 20, 40]
+        open_squares = get_open_maze_squares(env.get_maze())
+        obs = open_squares[torch.randint(0, len(open_squares), (num_envs,))]
+        obs = torch.cat([obs, torch.zeros(num_envs, 2)], dim=1).to(runner.device)
+        goal = open_squares[torch.randint(0, len(open_squares), (num_envs,))].to(
+            runner.device
+        )
+        obstacle = open_squares[torch.randint(0, len(open_squares), (num_envs,))].to(
+            runner.device
+        )
+
+        # obs = torch.tensor([[-0.5, -2.5, 0, 0]]).to(runner.device)
+        # goal = torch.tensor([[2.5, 2.5]]).to(runner.device)
+        # obstacle = torch.tensor([[0, -1]]).to(runner.device)
+
+        runner.policy.set_goal(goal)
+
+        total_collisions = []
+        for lam in cond_lambda:
+            runner.policy.model.cond_lambda = lam
+            obs_traj = runner.policy.act({"obs": obs, "obstacles": obstacle})
+            collisions = runner.policy.check_collisions(
+                obs_traj["obs_traj"][..., :2], obstacle
+            )
+            total_collisions.append(collisions.sum().item())
+
+        plt.plot(cond_lambda, total_collisions)
 
         # Generate plots
-        plot_cfg_analysis(runner, env, obs, goal, obstacle, cond_lambda)
+        # plot_cfg_analysis(runner.policy, env, obs, goal, obstacle, cond_lambda)
+        plt.show()
 
     elif test_type == "play":
         obs = env.reset()

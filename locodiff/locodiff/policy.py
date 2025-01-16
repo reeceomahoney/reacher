@@ -3,15 +3,21 @@ import math
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+import wandb
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-import wandb
 from locodiff.plotting import plot_cfg_analysis
-from locodiff.utils import CFGWrapper, Normalizer, apply_conditioning, rand_log_logistic
+from locodiff.utils import (
+    CFGWrapper,
+    Normalizer,
+    apply_conditioning,
+    get_open_maze_squares,
+    rand_log_logistic,
+)
 
 
 class DiffusionPolicy(nn.Module):
@@ -81,6 +87,7 @@ class DiffusionPolicy(nn.Module):
 
         # reward guidance
         self.gammas = torch.tensor([0.99**i for i in range(self.T)]).to(device)
+        self.open_squares = get_open_maze_squares(self.env.get_maze())
 
         self.device = device
         self.to(device)
@@ -155,8 +162,10 @@ class DiffusionPolicy(nn.Module):
             # Generate plots
             fig = plot_cfg_analysis(self, self.env, obs, goal, obstacle, cond_lambda)
             # log
-            wandb.log({"Image": wandb.Image(fig)})
+            wandb.log({"CFG Trajectory": wandb.Image(fig)})
             plt.close(fig)
+
+            self.plot_collsion_rate(100)
 
         return loss.mean().item(), obs_loss.item(), action_loss.item()
 
@@ -208,7 +217,7 @@ class DiffusionPolicy(nn.Module):
 
         if raw_action is None:
             # sim
-            data = self.update_history(data)
+            # data = self.update_history(data)
             input = None
             raw_obs = data["obs"]
             obstacles = self.normalizer.scale_pos(data["obstacles"])
@@ -336,3 +345,28 @@ class DiffusionPolicy(nn.Module):
 
     def get_params(self):
         return self.model.get_params()
+
+    def plot_collsion_rate(self, batch_size):
+        cond_lambda = [0, 1, 2, 3, 5, 10]
+
+        obs = self.open_squares[torch.randint(0, len(self.open_squares), (batch_size,))]
+        obs = torch.cat([obs, torch.zeros(batch_size, 2)], dim=1).to(self.device)
+        goal = self.open_squares[
+            torch.randint(0, len(self.open_squares), (batch_size,))
+        ].to(self.device)
+        obstacle = self.open_squares[
+            torch.randint(0, len(self.open_squares), (batch_size,))
+        ].to(self.device)
+
+        self.set_goal(goal)
+
+        total_collisions = []
+        for lam in cond_lambda:
+            self.model.cond_lambda = lam
+            obs_traj = self.act({"obs": obs, "obstacles": obstacle})
+            collisions = self.check_collisions(obs_traj["obs_traj"][..., :2], obstacle)
+            total_collisions.append(collisions.sum().item())
+
+        plt.plot(cond_lambda, total_collisions)
+        wandb.log({"Collision Rate": wandb.Image(plt)})
+        plt.close()

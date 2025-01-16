@@ -55,6 +55,7 @@ ignore = ["E402"]
 
 [tool.pyright]
 
+extraPaths = ["./locodiff/"]
 exclude = ["**/__pycache__", "**/docs", "**/logs", ".git", ".vscode"]
 
 typeCheckingMode = "basic"

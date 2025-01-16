@@ -71,6 +71,19 @@ def rand_log_logistic(
     return u.logit().mul(scale).add(loc).exp().to(dtype)
 
 
+def get_open_maze_squares(maze):
+    coordinates = []
+
+    for y in range(8):
+        for x in range(8):
+            if maze[y][x] == 1:
+                coord_x = x - 4
+                coord_y = (7 - y) - 4
+                coordinates.append((coord_x, coord_y))
+
+    return torch.tensor(coordinates, dtype=torch.float)
+
+
 class SinusoidalPosEmb(nn.Module):
     def __init__(self, dim, device):
         super().__init__()
