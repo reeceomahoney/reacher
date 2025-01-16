@@ -139,10 +139,11 @@ class ConditionalUnet1D(nn.Module):
         cond_dim = (
             cond_embed_dim + 3 if inpaint else obs_dim * (T_cond + 1) + 4
         )
+        self.cond_encoder = nn.Linear(cond_dim, 256)
 
         CondResBlock = partial(
             ConditionalResidualBlock1D,
-            cond_dim=cond_dim,
+            cond_dim=256,
             kernel_size=kernel_size,
             n_groups=n_groups,
             cond_predict_scale=cond_predict_scale,
@@ -240,6 +241,7 @@ class ConditionalUnet1D(nn.Module):
             returns = data_dict["returns"]
             # obstacles = data_dict["obstacles"]
             global_feature = torch.cat([sigma_emb, obs, goal, returns], dim=-1)
+            global_feature = self.cond_encoder(global_feature)
 
         # encode local features
         h_local = list()
