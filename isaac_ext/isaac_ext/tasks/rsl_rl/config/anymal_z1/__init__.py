@@ -1,3 +1,5 @@
+import os
+
 import gymnasium as gym
 
 from . import anymal_z1_env_cfg
@@ -8,7 +10,7 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": anymal_z1_env_cfg.ReacherRLEnvCfg,
-        "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherPPORunnerCfg",
+        "agent_cfg_entry_point": f"{os.path.dirname(__file__)}/anymal_z1_cfg.yaml",
     },
 )
 
@@ -18,7 +20,7 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": anymal_z1_env_cfg.ReacherRLEnvCfg_PLAY,
-        "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherPPORunnerCfg",
+        "agent_cfg_entry_point": f"{os.path.dirname(__file__)}/anymal_z1_cfg.yaml",
     },
 )
 
@@ -28,7 +30,7 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": anymal_z1_env_cfg.ReacherRLFlatEnvCfg,
-        "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherFlatPPORunnerCfg",
+        "agent_cfg_entry_point": f"{os.path.dirname(__file__)}/anymal_z1_cfg.yaml",
     },
 )
 gym.register(
@@ -37,6 +39,6 @@ gym.register(
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": anymal_z1_env_cfg.ReacherRLFlatEnvCfg_PLAY,
-        "agent_cfg_entry_point": "reacher.config.rl_cfg:ReacherFlatPPORunnerCfg",
+        "agent_cfg_entry_point": f"{os.path.dirname(__file__)}/anymal_z1_cfg.yaml",
     },
 )
