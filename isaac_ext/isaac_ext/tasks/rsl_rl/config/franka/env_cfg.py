@@ -17,10 +17,9 @@ from omni.isaac.lab.managers import RewardTermCfg as RewTerm
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
 from omni.isaac.lab.scene import InteractiveSceneCfg
-from omni.isaac.lab.sensors import ContactSensorCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
-from omni.isaac.lab_assets import FRANKA_PANDA_HIGH_PD_CFG
+from omni.isaac.lab_assets import FRANKA_PANDA_CFG
 
 import isaac_ext.tasks.rsl_rl.mdp as custom_mdp
 
@@ -51,15 +50,13 @@ class FrankaRLSceneCfg(InteractiveSceneCfg):
     )
 
     # robots
-    robot = FRANKA_PANDA_HIGH_PD_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")  # type: ignore
 
     # lights
     light = AssetBaseCfg(
         prim_path="/World/light",
         spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=2500.0),
     )
-
-    contact_forces = ContactSensorCfg(prim_path="{ENV_REGEX_NS}/Robot/.*")
 
 
 ##
