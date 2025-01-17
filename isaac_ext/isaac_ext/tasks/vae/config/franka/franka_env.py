@@ -1,12 +1,9 @@
 import gymnasium as gym
-
-from reacher.envs.base_env import ReacherEnvCfg
-
+import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
+from omni.isaac.lab.utils import configclass
 from omni.isaac.lab_assets import FRANKA_PANDA_HIGH_PD_CFG
 
-from omni.isaac.lab.utils import configclass
-
-import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
+from isaac_ext.tasks.vae.vae_env_cfg import ReacherEnvCfg
 
 
 @configclass
@@ -28,9 +25,7 @@ class ReacherFrankaEnvCfg(ReacherEnvCfg):
         self.observations.policy.joint_pos.params["asset_cfg"].joint_names = [
             "panda_joint.*"
         ]
-        self.observations.policy.ee_pos.params["asset_cfg"].body_names = [
-            "panda_hand"
-        ]
+        self.observations.policy.ee_pos.params["asset_cfg"].body_names = ["panda_hand"]
         # rewards
         self.rewards.end_effector_position_tracking.params["asset_cfg"].body_names = [
             "panda_hand"
