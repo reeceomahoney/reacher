@@ -140,6 +140,7 @@ class EventCfg:
 class RewardsCfg:
     """Reward terms for the MDP."""
 
+    # task
     ee_tracking = RewTerm(
         func=mdp.ee_position_error,
         weight=1,
@@ -157,6 +158,13 @@ class RewardsCfg:
             "command_name": "ee_pose",
             "std": 0.1,
         },
+    )
+    # penalties
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-1e-4)
+    joint_vel = RewTerm(
+        func=mdp.joint_vel_l2,
+        weight=-1e-4,
+        params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
 
