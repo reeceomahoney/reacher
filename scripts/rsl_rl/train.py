@@ -12,7 +12,6 @@ import sys
 
 # local imports
 import cli_args
-
 from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
@@ -64,14 +63,12 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import gymnasium as gym
 import os
-import torch
 
+import gymnasium as gym
+import torch
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
-from rsl_rl.runners import OnPolicyRunner
-
 from omni.isaac.lab.envs import (
     DirectMARLEnv,
     ManagerBasedRLEnvCfg,
@@ -81,6 +78,7 @@ from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 from omni.isaac.lab_tasks.utils import get_checkpoint_path, parse_env_cfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
+from rsl_rl.runners import OnPolicyRunner
 
 import isaac_ext.tasks  # noqa: F401
 from locodiff.utils import dynamic_hydra_main

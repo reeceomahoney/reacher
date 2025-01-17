@@ -54,13 +54,11 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import gymnasium as gym
 import os
+
+import gymnasium as gym
 import torch
-
 from omegaconf import DictConfig, OmegaConf
-from rsl_rl.runners import OnPolicyRunner
-
 from omni.isaac.lab.envs import (
     DirectMARLEnv,
     ManagerBasedRLEnvCfg,
@@ -72,6 +70,7 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
     export_policy_as_jit,
     export_policy_as_onnx,
 )
+from rsl_rl.runners import OnPolicyRunner
 
 import isaac_ext.tasks  # noqa: F401
 from locodiff.utils import dynamic_hydra_main

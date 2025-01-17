@@ -12,7 +12,7 @@ from omegaconf import DictConfig
 from tqdm import tqdm
 
 from locodiff.envs import MazeEnv
-from locodiff.plotting import plot_interactive_trajectory
+from locodiff.plotting import plot_interactive_trajectory, plot_cfg_analysis
 from locodiff.runner import DiffusionRunner
 from locodiff.utils import get_open_maze_squares
 from vae.utils import get_latest_run
@@ -81,9 +81,9 @@ def main(agent_cfg: DictConfig):
             runner.device
         )
 
-        # obs = torch.tensor([[-0.5, -2.5, 0, 0]]).to(runner.device)
-        # goal = torch.tensor([[2.5, 2.5]]).to(runner.device)
-        # obstacle = torch.tensor([[0, -1]]).to(runner.device)
+        obs = torch.tensor([[-2.5, -0.5, 0, 0]]).to(runner.device)
+        goal = torch.tensor([[2.5, 2.5]]).to(runner.device)
+        obstacle = torch.tensor([[-1, 0]]).to(runner.device)
 
         runner.policy.set_goal(goal)
 
@@ -96,10 +96,10 @@ def main(agent_cfg: DictConfig):
             )
             total_collisions.append(collisions.sum().item())
 
-        plt.plot(cond_lambda, total_collisions)
+        # plt.plot(cond_lambda, total_collisions)
 
         # Generate plots
-        # plot_cfg_analysis(runner.policy, env, obs, goal, obstacle, cond_lambda)
+        plot_cfg_analysis(runner.policy, env, obs, goal, obstacle, cond_lambda)
         plt.show()
 
     elif test_type == "play":
