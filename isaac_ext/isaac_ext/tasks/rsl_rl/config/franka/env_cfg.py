@@ -148,7 +148,7 @@ class RewardsCfg:
         func=custom_mdp.ee_position_error,
         weight=1,
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
+            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
             "command_name": "ee_pose",
             "std": 1,
         },
@@ -157,7 +157,7 @@ class RewardsCfg:
         func=custom_mdp.ee_position_error,
         weight=0.5,
         params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="gripperMover"),
+            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
             "command_name": "ee_pose",
             "std": 0.1,
         },
