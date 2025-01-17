@@ -7,12 +7,12 @@
 
 from __future__ import annotations
 
-import torch
-import torch.nn.functional as F
 from collections.abc import Sequence
 from dataclasses import MISSING
 from typing import TYPE_CHECKING
 
+import torch
+import torch.nn.functional as F
 from omni.isaac.lab.assets import Articulation
 from omni.isaac.lab.managers import CommandTerm, CommandTermCfg
 from omni.isaac.lab.markers import VisualizationMarkers, VisualizationMarkersCfg

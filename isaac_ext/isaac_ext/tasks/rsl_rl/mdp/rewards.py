@@ -1,5 +1,4 @@
 import torch
-
 from omni.isaac.lab.assets import RigidObject
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import SceneEntityCfg

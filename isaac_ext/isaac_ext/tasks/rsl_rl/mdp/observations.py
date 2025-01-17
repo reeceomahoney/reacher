@@ -1,5 +1,4 @@
 import torch
-
 from omni.isaac.lab.assets import RigidObject
 from omni.isaac.lab.envs import ManagerBasedRLEnv
 from omni.isaac.lab.managers import SceneEntityCfg
@@ -18,6 +17,7 @@ def ee_pose(
     ortho6d = rot_mat[..., :2].reshape(-1, 6)
     return torch.cat([pos, ortho6d], dim=-1)
 
+
 def ee_pose_l(
     env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
 ) -> torch.Tensor:
@@ -29,6 +29,7 @@ def ee_pose_l(
     rot_mat = matrix_from_quat(quat)
     ortho6d = rot_mat[..., :2].reshape(-1, 6)
     return torch.cat([pos, ortho6d], dim=-1)
+
 
 def position_commands(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
     """The generated command from command term in the command manager with the given name."""

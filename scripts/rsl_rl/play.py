@@ -76,14 +76,14 @@ import isaac_ext.tasks  # noqa: F401
 from locodiff.utils import dynamic_hydra_main
 from vae.utils import get_latest_run
 
-task = "Isaac-Reacher-RL-Flat"
+task = "Isaac-Franka-RL"
 
 
 @dynamic_hydra_main(task)
 def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     """Play with RSL-RL agent."""
     # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "rsl_rl", "anymal_z1")
+    log_root_path = os.path.join("logs", "rsl_rl", "franka")
     log_root_path = os.path.abspath(log_root_path)
     resume_path = get_latest_run(log_root_path)
     print(f"[INFO] Loading experiment from directory: {log_root_path}")

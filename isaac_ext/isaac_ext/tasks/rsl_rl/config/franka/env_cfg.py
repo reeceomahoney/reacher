@@ -6,7 +6,6 @@
 import math
 
 import omni.isaac.lab.sim as sim_utils
-import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
 from omni.isaac.lab.assets import AssetBaseCfg
 from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab.managers import ActionTermCfg as ActionTerm
@@ -21,7 +20,7 @@ from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 from omni.isaac.lab_assets import FRANKA_PANDA_CFG
 
-import isaac_ext.tasks.rsl_rl.mdp as custom_mdp
+import isaac_ext.tasks.rsl_rl.mdp as mdp
 
 ##
 # Scene definition
@@ -111,7 +110,7 @@ class ObservationsCfg:
         )
         joint_vel = ObsTerm(func=mdp.joint_vel_rel)
         ee_state = ObsTerm(
-            func=custom_mdp.ee_pose,
+            func=mdp.ee_pose,
             params={"asset_cfg": SceneEntityCfg("robot", body_names="panda_hand")},
         )
 
@@ -142,7 +141,7 @@ class RewardsCfg:
     """Reward terms for the MDP."""
 
     ee_tracking = RewTerm(
-        func=custom_mdp.ee_position_error,
+        func=mdp.ee_position_error,
         weight=1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
@@ -151,7 +150,7 @@ class RewardsCfg:
         },
     )
     ee_tracking_fine_grained = RewTerm(
-        func=custom_mdp.ee_position_error,
+        func=mdp.ee_position_error,
         weight=0.5,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
