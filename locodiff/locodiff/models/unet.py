@@ -339,10 +339,16 @@ class ValueUnet1D(nn.Module):
                 )
             )
 
-        fc_dim = all_dims[-1] * 64
+        mid_dim = all_dims[-1]
+        self.mid_block_1 = CondResBlock(mid_dim, mid_dim // 2)
+        self.mid_down_1 = Downsample1d(mid_dim // 2)
+        self.mid_block_2 = CondResBlock(mid_dim // 2, mid_dim // 4)
+        self.mid_down_2 = Downsample1d(mid_dim // 4)
+
+        fc_dim = 64 * 16
 
         self.final_block = nn.Sequential(
-            nn.Linear(fc_dim + cond_embed_dim, fc_dim // 2),
+            nn.Linear(fc_dim + 256, fc_dim // 2),
             nn.Mish(),
             nn.Linear(fc_dim // 2, 1),
         )
@@ -394,6 +400,11 @@ class ValueUnet1D(nn.Module):
             x = resnet2(x, global_feature)
             h.append(x)
             x = downsample(x)
+
+        x = self.mid_block_1(x, global_feature)
+        x = self.mid_down_1(x)
+        x = self.mid_block_2(x, global_feature)
+        x = self.mid_down_2(x)
 
         x = x.view(x.shape[0], -1)
         x = self.final_block(torch.cat([x, global_feature], dim=-1))

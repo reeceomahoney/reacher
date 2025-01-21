@@ -148,7 +148,7 @@ class ClassifierRunner:
 
     def load(self, path):
         loaded_dict = torch.load(path)
-        self.policy.load_state_dict(loaded_dict["model_state_dict"])
+        self.policy.load_state_dict(loaded_dict["model_state_dict"], strict=False)
         self.normalizer.load_state_dict(loaded_dict["norm_state_dict"])
         self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
         self.current_learning_iteration = loaded_dict["iter"]

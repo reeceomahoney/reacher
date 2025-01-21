@@ -183,8 +183,8 @@ class DiffusionPolicy(nn.Module):
 
         # compute partially denoised sample
         timesteps = random.randint(0, self.sampling_steps - 1)
-        x = self.forward(data, timesteps)
-        pred_value = self.classifier(x)
+        x, t = self.trancated_forward(data, timesteps)
+        pred_value = self.classifier(x, t, data)
 
         # calculate loss
         loss = torch.nn.functional.mse_loss(pred_value, data["return"])
@@ -203,8 +203,8 @@ class DiffusionPolicy(nn.Module):
 
         # compute partially denoised sample
         timesteps = random.randint(0, self.sampling_steps - 1)
-        x = self.forward(data, timesteps)
-        pred_value = self.classifier(x)
+        x, t = self.truncated_forward(data, timesteps)
+        pred_value = self.classifier(x, t, data)
 
         # calculate loss
         loss = torch.nn.functional.mse_loss(pred_value, data["return"])
@@ -222,7 +222,35 @@ class DiffusionPolicy(nn.Module):
     #####################
 
     @torch.no_grad()
-    def forward(self, data: dict, timesteps: int | None = None) -> torch.Tensor:
+    def forward(self, data: dict) -> torch.Tensor:
+        # sample noise
+        B = data["obs"].shape[0]
+        x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
+        # we should need this but performance is better without it
+        # x *= self.noise_scheduler.init_noise_sigma
+
+        # create inpainting conditioning
+        cond = self.create_conditioning(data)
+        # this needs to called every time we do inference
+        self.noise_scheduler.set_timesteps(self.sampling_steps)
+
+        # inference loop
+        for t in self.noise_scheduler.timesteps:
+            x_in = self.noise_scheduler.scale_model_input(x, t)
+            x_in = apply_conditioning(x_in, cond, 2)
+            output = self.model(x_in, t.expand(B), data)
+            x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
+
+        # final conditioning
+        x = apply_conditioning(x, cond, 2)
+        # denormalize
+        x = self.normalizer.clip(x)
+        x = self.normalizer.inverse_scale_output(x)
+        return x
+
+    def truncated_forward(
+        self, data: dict, timesteps: int
+    ) -> tuple[torch.Tensor, torch.Tensor]:
         # sample noise
         B = data["obs"].shape[0]
         x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
@@ -241,15 +269,10 @@ class DiffusionPolicy(nn.Module):
             output = self.model(x_in, t.expand(B), data)
             x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
 
-            if timesteps is not None and i >= timesteps:
-                return x
+            if i >= timesteps:
+                return x, t.expand(B)
 
-        # final conditioning
-        x = apply_conditioning(x, cond, 2)
-        # denormalize
-        x = self.normalizer.clip(x)
-        x = self.normalizer.inverse_scale_output(x)
-        return x
+        return x, t.expand(B)
 
     ###################
     # Data processing #
