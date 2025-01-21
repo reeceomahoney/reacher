@@ -134,14 +134,8 @@ class ConditionalUnet1D(nn.Module):
         in_out = list(zip(all_dims[:-1], all_dims[1:], strict=False))
 
         # diffusion step embedding and observations
-        cond_dim = cond_embed_dim + 3 if inpaint else obs_dim * (T_cond + 1) + 4
-        self.cond_encoder = nn.Sequential(
-            nn.Linear(cond_dim, 256),
-            nn.Mish(),
-            nn.Linear(256, 256),
-            nn.Mish(),
-            nn.Linear(256, 256),
-        )
+        cond_dim = cond_embed_dim + 3 if inpaint else obs_dim * (T_cond + 1) + 3
+        self.cond_encoder = nn.Linear(cond_dim, 256)
 
         CondResBlock = partial(
             ConditionalResidualBlock1D,
@@ -195,8 +189,6 @@ class ConditionalUnet1D(nn.Module):
             nn.Conv1d(start_dim, input_dim, 1),
         )
 
-        # self.sigma_encoder = nn.Linear(1, cond_embed_dim)
-
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
         self.inpaint = inpaint
@@ -228,21 +220,19 @@ class ConditionalUnet1D(nn.Module):
         sample = einops.rearrange(noised_action, "b t h -> b h t")
 
         # embed timestep
-        sigma = sigma.to(noised_action.device)
-        # sigma_emb = self.sigma_encoder(sigma.view(-1, 1))
-        sigma_emb = sigma.view(-1, 1)
+        sigma = sigma.to(noised_action.device).view(-1, 1)
 
         # create global feature
         if self.inpaint:
             returns = data_dict["returns"]
             obstacles = data_dict["obstacles"]
-            global_feature = torch.cat([sigma_emb, returns, obstacles], dim=-1)
+            global_feature = torch.cat([sigma, returns, obstacles], dim=-1)
         else:
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
             goal = data_dict["goal"]
-            returns = data_dict["returns"]
+            # returns = data_dict["returns"]
             obstacles = data_dict["obstacles"]
-            global_feature = torch.cat([sigma_emb, obs, goal, obstacles, returns], dim=-1)
+            global_feature = torch.cat([sigma, obs, goal, obstacles], dim=-1)
             global_feature = self.cond_encoder(global_feature)
 
         # encode local features
@@ -391,15 +381,15 @@ class ValueUnet1D(nn.Module):
 
         # embed timestep
         sigma = sigma.to(noised_action.device)
-        sigma_emb = self.sigma_encoder(sigma.view(-1, 1))
+        sigma = self.sigma_encoder(sigma.view(-1, 1))
 
         # create global feature
         if self.inpaint:
-            global_feature = sigma_emb
+            global_feature = sigma
         else:
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
             goal = data_dict["goal"].squeeze(1)
-            global_feature = torch.cat([sigma_emb, obs, goal], dim=-1)
+            global_feature = torch.cat([sigma, obs, goal], dim=-1)
             global_feature = self.cond_encoder(global_feature)
 
         x = sample
