@@ -183,11 +183,11 @@ class DiffusionPolicy(nn.Module):
 
         # compute partially denoised sample
         timesteps = random.randint(0, self.sampling_steps - 1)
-        x, t = self.trancated_forward(data, timesteps)
+        x, t = self.truncated_forward(data, timesteps)
         pred_value = self.classifier(x, t, data)
 
         # calculate loss
-        loss = torch.nn.functional.mse_loss(pred_value, data["return"])
+        loss = torch.nn.functional.mse_loss(pred_value, data["returns"])
 
         # update model
         self.classifier_optimizer.zero_grad()
@@ -207,7 +207,7 @@ class DiffusionPolicy(nn.Module):
         pred_value = self.classifier(x, t, data)
 
         # calculate loss
-        loss = torch.nn.functional.mse_loss(pred_value, data["return"])
+        loss = torch.nn.functional.mse_loss(pred_value, data["returns"])
 
         return loss.item()
 
