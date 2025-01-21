@@ -43,9 +43,6 @@ class ClassifierRunner:
         self.ema_helper = ExponentialMovingAverage(
             self.policy.get_params(), self.cfg.ema_decay, self.cfg.device
         )
-        self.classifier_ema_helper = ExponentialMovingAverage(
-            self.policy.classifier.get_params(), self.cfg.ema_decay, self.cfg.device
-        )
         self.use_ema = agent_cfg.use_ema
 
         # variables
@@ -97,7 +94,7 @@ class ClassifierRunner:
                 batch = next(generator)
 
             loss = self.policy.update_classifier(batch)
-            self.classifier_ema_helper.update(self.policy.classifier.get_params())
+            self.ema_helper.update(self.policy.get_params())
 
             # logging
             self.current_learning_iteration = it
