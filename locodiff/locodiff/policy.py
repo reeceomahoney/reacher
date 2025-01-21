@@ -1,4 +1,5 @@
 import math
+import random
 
 import matplotlib.pyplot as plt
 import torch
@@ -10,6 +11,7 @@ from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 import wandb
+from locodiff.models.unet import ValueUnet1D
 from locodiff.plotting import plot_cfg_analysis
 from locodiff.utils import (
     CFGWrapper,
@@ -43,12 +45,15 @@ class DiffusionPolicy(nn.Module):
         num_iters: int,
         inpaint: bool,
         device: str,
+        classifier: ValueUnet1D | None = None,
     ):
         super().__init__()
         # model
         if cond_mask_prob > 0:
             model = CFGWrapper(model, cond_lambda, cond_mask_prob)
         self.model = model
+        if classifier is not None:
+            self.classifier = classifier
 
         # other classes
         self.env = env
@@ -83,6 +88,9 @@ class DiffusionPolicy(nn.Module):
         # optimizer and lr scheduler
         optim_groups = self.model.get_optim_groups()
         self.optimizer = AdamW(optim_groups, lr=lr, betas=betas)
+        self.classifier_optimizer = AdamW(
+            self.classifier.parameters(), lr=lr, betas=betas
+        )
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
 
         # reward guidance
@@ -169,6 +177,40 @@ class DiffusionPolicy(nn.Module):
 
         return loss.mean().item(), obs_loss.item(), action_loss.item()
 
+    def update_classifier(self, data):
+        # preprocess data
+        data = self.process(data)
+
+        # compute partially denoised sample
+        timesteps = random.randint(0, self.sampling_steps - 1)
+        x = self.forward(data, timesteps)
+        pred_value = self.classifier(x)
+
+        # calculate loss
+        loss = torch.nn.functional.mse_loss(pred_value, data["return"])
+
+        # update model
+        self.classifier_optimizer.zero_grad()
+        loss.backward()
+        self.classifier_optimizer.step()
+        self.lr_scheduler.step()
+
+        return loss.item()
+
+    def test_classifier(self, data):
+        # preprocess data
+        data = self.process(data)
+
+        # compute partially denoised sample
+        timesteps = random.randint(0, self.sampling_steps - 1)
+        x = self.forward(data, timesteps)
+        pred_value = self.classifier(x)
+
+        # calculate loss
+        loss = torch.nn.functional.mse_loss(pred_value, data["return"])
+
+        return loss.item()
+
     def reset(self, dones=None):
         if dones is not None:
             self.obs_hist[dones.bool()] = 0
@@ -180,7 +222,7 @@ class DiffusionPolicy(nn.Module):
     #####################
 
     @torch.no_grad()
-    def forward(self, data: dict) -> torch.Tensor:
+    def forward(self, data: dict, timesteps: int | None = None) -> torch.Tensor:
         # sample noise
         B = data["obs"].shape[0]
         x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
@@ -193,11 +235,14 @@ class DiffusionPolicy(nn.Module):
         self.noise_scheduler.set_timesteps(self.sampling_steps)
 
         # inference loop
-        for t in self.noise_scheduler.timesteps:
+        for i, t in enumerate(self.noise_scheduler.timesteps):
             x_in = self.noise_scheduler.scale_model_input(x, t)
             x_in = apply_conditioning(x_in, cond, 2)
             output = self.model(x_in, t.expand(B), data)
             x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
+
+            if timesteps is not None and i >= timesteps:
+                return x
 
         # final conditioning
         x = apply_conditioning(x, cond, 2)
