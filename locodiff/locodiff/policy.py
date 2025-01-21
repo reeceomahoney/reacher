@@ -49,11 +49,12 @@ class DiffusionPolicy(nn.Module):
     ):
         super().__init__()
         # model
-        if cond_mask_prob > 0:
-            model = CFGWrapper(model, cond_lambda, cond_mask_prob)
-        self.model = model
         if classifier is not None:
             self.classifier = classifier
+            self.alpha = 1e-3
+        elif cond_mask_prob > 0:
+            model = CFGWrapper(model, cond_lambda, cond_mask_prob)
+        self.model = model
 
         # other classes
         self.env = env
@@ -240,6 +241,12 @@ class DiffusionPolicy(nn.Module):
             x_in = apply_conditioning(x_in, cond, 2)
             output = self.model(x_in, t.expand(B), data)
             x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
+
+            # if hasattr(self, "classifier"):
+            #     x_grad = x.detach().clone().requires_grad_(True)
+            #     y = self.classifier(x_grad, t, data)
+            #     grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
+            #     x = x_grad + self.alpha * grad.detach()
 
         # final conditioning
         x = apply_conditioning(x, cond, 2)

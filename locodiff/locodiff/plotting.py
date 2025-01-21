@@ -52,7 +52,7 @@ def plot_cfg_analysis(
         # Compute trajectory
         policy.model.cond_lambda = lam
         obs_traj = policy.act({"obs": obs, "obstacles": obstacle})
-        obs_traj = obs_traj["obs_traj"][0].cpu().numpy()
+        obs_traj = obs_traj["obs_traj"][0].detach().cpu().numpy()
 
         # Plot maze and trajectory
         axes[i].imshow(env.get_maze(), cmap="gray", extent=(-4, 4, -4, 4))
