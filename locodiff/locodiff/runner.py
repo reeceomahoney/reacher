@@ -5,15 +5,14 @@ import time
 from collections import deque
 
 import torch
-import wandb
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 from tqdm import tqdm, trange
 
+import wandb
 from locodiff.dataset import get_dataloaders
 from locodiff.envs import MazeEnv
 from locodiff.models.unet import ConditionalUnet1D
-from locodiff.models.transformer import DiffusionTransformer
 from locodiff.policy import DiffusionPolicy
 from locodiff.utils import ExponentialMovingAverage, InferenceContext, Normalizer
 

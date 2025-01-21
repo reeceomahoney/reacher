@@ -1,9 +1,9 @@
-import numpy as np
 import random
 import sys
-import torch
 
 import hydra
+import numpy as np
+import torch
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig
 
