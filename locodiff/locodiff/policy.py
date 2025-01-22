@@ -407,9 +407,6 @@ class DiffusionPolicy(nn.Module):
     def dict_to_device(self, data):
         return {k: v.to(self.device) for k, v in data.items()}
 
-    def get_params(self):
-        return self.parameters()
-
     def plot_collsion_rate(self, batch_size):
         cond_lambda = [0, 1, 2, 3, 5, 10]
 

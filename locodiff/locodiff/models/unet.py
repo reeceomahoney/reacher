@@ -288,9 +288,6 @@ class ConditionalUnet1D(nn.Module):
     def get_optim_groups(self):
         return [{"params": self.parameters(), "weight_decay": self.weight_decay}]
 
-    def get_params(self):
-        return self.parameters()
-
 
 class ValueUnet1D(nn.Module):
     def __init__(
@@ -425,6 +422,3 @@ class ValueUnet1D(nn.Module):
 
     def get_optim_groups(self):
         return [{"params": self.parameters(), "weight_decay": self.weight_decay}]
-
-    def get_params(self):
-        return self.parameters()

@@ -41,7 +41,7 @@ class ClassifierRunner:
 
         # ema
         self.ema_helper = ExponentialMovingAverage(
-            self.policy.get_params(), self.cfg.ema_decay, self.cfg.device
+            self.policy.parameters(), self.cfg.ema_decay, self.cfg.device
         )
         self.use_ema = agent_cfg.use_ema
 
@@ -94,7 +94,7 @@ class ClassifierRunner:
                 batch = next(generator)
 
             loss = self.policy.update_classifier(batch)
-            self.ema_helper.update(self.policy.get_params())
+            self.ema_helper.update(self.policy.parameters())
 
             # logging
             self.current_learning_iteration = it
@@ -147,8 +147,8 @@ class ClassifierRunner:
         loaded_dict = torch.load(path)
         self.policy.load_state_dict(loaded_dict["model_state_dict"])
         self.normalizer.load_state_dict(loaded_dict["norm_state_dict"])
-        # self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
-        # self.current_learning_iteration = loaded_dict["iter"]
+        self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
+        self.current_learning_iteration = loaded_dict["iter"]
         return loaded_dict["infos"]
 
     def get_inference_policy(self, device=None):

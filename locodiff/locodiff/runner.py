@@ -42,7 +42,7 @@ class DiffusionRunner:
 
         # ema
         self.ema_helper = ExponentialMovingAverage(
-            self.policy.get_params(), self.cfg.ema_decay, self.cfg.device
+            self.policy.parameters(), self.cfg.ema_decay, self.cfg.device
         )
         self.use_ema = agent_cfg.use_ema
 

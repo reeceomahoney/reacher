@@ -70,7 +70,7 @@ class DiffusionTransformer(nn.Module):
         self.apply(self._init_weights)
         self.to(device)
 
-        total_params = sum(p.numel() for p in self.get_params())
+        total_params = sum(p.numel() for p in self.parameters())
         log.info(f"Total parameters: {total_params:e}")
 
     def _init_weights(self, module):
@@ -181,9 +181,7 @@ class DiffusionTransformer(nn.Module):
             goal_emb = self.obs_emb(data_dict["goal"]).unsqueeze(1)
             returns_emb = self.returns_emb(data_dict["returns"]).unsqueeze(1)
             # obstacle_emb = self.obstacle_emb(data_dict["obstacles"]).unsqueeze(1)
-            cond_emb = torch.cat(
-                [sigma_emb, obs_emb, goal_emb, returns_emb], dim=1
-            )
+            cond_emb = torch.cat([sigma_emb, obs_emb, goal_emb, returns_emb], dim=1)
         # add position encoding and dropout
         cond_emb = self.drop(cond_emb + self.cond_pos_emb)
         x_emb = self.drop(x_emb + self.pos_emb)
@@ -214,9 +212,6 @@ class DiffusionTransformer(nn.Module):
             return cond
         else:
             return cond
-
-    def get_params(self):
-        return self.parameters()
 
     def detach_all(self):
         for _, param in self.named_parameters():

@@ -360,8 +360,5 @@ class CFGWrapper(nn.Module):
 
         return out
 
-    def get_params(self):
-        return self.model.get_params()
-
     def get_optim_groups(self):
         return self.model.get_optim_groups()
