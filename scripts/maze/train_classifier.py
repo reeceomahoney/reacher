@@ -41,7 +41,7 @@ def main(agent_cfg: DictConfig):
 
     # create runner from rsl-rl
     runner = ClassifierRunner(env, agent_cfg, log_dir=log_dir, device=agent_cfg.device)
-    model_path = "logs/diffusion/maze/Jan-21/18-36-25/" + "models/model.pt"
+    model_path = "logs/diffusion/maze/Jan-21/19-06-27/" + "models/model.pt"
     runner.load(model_path)
 
     # run training

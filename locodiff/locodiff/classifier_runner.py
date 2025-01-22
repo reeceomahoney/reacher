@@ -147,8 +147,8 @@ class ClassifierRunner:
         loaded_dict = torch.load(path)
         self.policy.load_state_dict(loaded_dict["model_state_dict"])
         self.normalizer.load_state_dict(loaded_dict["norm_state_dict"])
-        self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
-        self.current_learning_iteration = loaded_dict["iter"]
+        # self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
+        # self.current_learning_iteration = loaded_dict["iter"]
         return loaded_dict["infos"]
 
     def get_inference_policy(self, device=None):

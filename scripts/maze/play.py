@@ -14,8 +14,7 @@ from tqdm import tqdm
 from locodiff.classifier_runner import ClassifierRunner
 from locodiff.envs import MazeEnv
 from locodiff.plotting import plot_cfg_analysis, plot_interactive_trajectory
-from locodiff.utils import get_open_maze_squares
-from vae.utils import get_latest_run
+from locodiff.utils import get_latest_run, get_open_maze_squares
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -25,7 +24,7 @@ torch.backends.cudnn.benchmark = False
 
 @hydra.main(
     config_path="../../isaac_ext/isaac_ext/tasks/diffusion/config/maze/",
-    config_name="maze_cfg.yaml",
+    config_name="classifier_cfg.yaml",
     version_base=None,
 )
 def main(agent_cfg: DictConfig):
@@ -40,7 +39,7 @@ def main(agent_cfg: DictConfig):
     torch.manual_seed(agent_cfg.seed)
 
     # create isaac environment
-    env = MazeEnv(agent_cfg, render=True)
+    env = MazeEnv(agent_cfg, render=False)
     agent_cfg.obs_dim = env.obs_dim
     agent_cfg.act_dim = env.act_dim
 
