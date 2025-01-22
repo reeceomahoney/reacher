@@ -87,8 +87,10 @@ class DiffusionPolicy(nn.Module):
         self.inpaint = inpaint
 
         # optimizer and lr scheduler
-        self.optimizer = AdamW(self.classifier.parameters(), lr=lr, betas=betas)
+        self.optimizer = AdamW(self.model.parameters(), lr=lr, betas=betas)
+        self.classifier_optimizer = AdamW(self.classifier.parameters(), lr=lr, betas=betas)
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
+        self.classifier_lr_scheduler = CosineAnnealingLR(self.classifier_optimizer, T_max=num_iters)
 
         # reward guidance
         self.gammas = torch.tensor([0.99**i for i in range(self.T)]).to(device)
@@ -187,9 +189,9 @@ class DiffusionPolicy(nn.Module):
         loss = torch.nn.functional.mse_loss(pred_value, data["returns"])
 
         # update model
-        self.optimizer.zero_grad()
+        self.classifier_optimizer.zero_grad()
         loss.backward()
-        self.optmizer.step()
+        self.classifier_optmizer.step()
         self.lr_scheduler.step()
 
         return loss.item()
