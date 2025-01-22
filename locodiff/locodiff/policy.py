@@ -76,7 +76,6 @@ class DiffusionPolicy(nn.Module):
         self.T_cond = T_cond
         self.T_action = T_action
         self.num_envs = num_envs
-        self.goal_dim = 4
 
         # diffusion
         self.sampling_steps = sampling_steps
@@ -88,9 +87,13 @@ class DiffusionPolicy(nn.Module):
 
         # optimizer and lr scheduler
         self.optimizer = AdamW(self.model.parameters(), lr=lr, betas=betas)
-        self.classifier_optimizer = AdamW(self.classifier.parameters(), lr=lr, betas=betas)
+        self.classifier_optimizer = AdamW(
+            self.classifier.parameters(), lr=lr, betas=betas
+        )
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
-        self.classifier_lr_scheduler = CosineAnnealingLR(self.classifier_optimizer, T_max=num_iters)
+        self.classifier_lr_scheduler = CosineAnnealingLR(
+            self.classifier_optimizer, T_max=num_iters
+        )
 
         # reward guidance
         self.gammas = torch.tensor([0.99**i for i in range(self.T)]).to(device)
@@ -244,7 +247,7 @@ class DiffusionPolicy(nn.Module):
             x_grad = x.detach().clone().requires_grad_(True)
             y = self.classifier(x_grad, t, data)
             grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
-            x = x_grad + self.alpha * grad.detach()
+            x = x_grad + self.alpha * torch.exp(4 * t) * grad.detach()
 
         # final conditioning
         x = apply_conditioning(x, cond, 2)
@@ -294,8 +297,10 @@ class DiffusionPolicy(nn.Module):
             # data = self.update_history(data)
             input = None
             raw_obs = data["obs"].unsqueeze(1)
-            obstacles = self.normalizer.scale_pos(data["obstacles"])
-            goal = self.normalizer.scale_input(self.goal)
+            obstacle = self.normalizer.scale_pos(data["obstacle"])
+            goal = self.normalizer.scale_input(
+                torch.cat([data["goal"], torch.zeros_like(data["goal"])], dim=-1)
+            )
             returns = torch.ones_like(raw_obs[:, 0, :1])
         else:
             # train and test
@@ -307,23 +312,22 @@ class DiffusionPolicy(nn.Module):
                 input_act = raw_action[:, self.T_cond - 1 :]
             input = torch.cat([input_act, input_obs], dim=-1)
 
-            obstacles = self.calculate_obstacles(input.shape[0])
-            returns = self.calculate_return(input, data["mask"], obstacles)
+            obstacle = self.calculate_obstacles(input.shape[0])
+            returns = self.calculate_return(input, data["mask"], obstacle)
 
-            obstacles = self.normalizer.scale_pos(obstacles)
+            obstacle = self.normalizer.scale_pos(obstacle)
             input = self.normalizer.scale_output(input)
 
             lengths = data["mask"].sum(dim=-1).int()
             goal = input[range(input.shape[0]), lengths - 1, self.action_dim :]
 
-        # returns = torch.cat([returns, obstacles], dim=-1)
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
         return {
             "obs": obs,
             "input": input,
             "goal": goal,
             "returns": returns,
-            "obstacles": obstacles,
+            "obstacle": obstacle,
         }
 
     def create_conditioning(self, data: dict) -> dict:
@@ -332,37 +336,18 @@ class DiffusionPolicy(nn.Module):
         else:
             return {}
 
-    def calculate_return(self, input, mask, obstacles):
-        # collision reward
-        reward = self.check_collisions(input[:, :, 2:4], obstacles)
+    def calculate_return(self, input, mask, obstacle):
+        reward = self.check_collisions(input[:, :, 2:4], obstacle)
         reward = ((~reward) * mask).float()
-
-        # distance reward
-        # reward = self.calculate_distances(input[:, :, 2:4], obstacles)
-        # reward *= mask
-
-        lengths = mask.sum(dim=-1)
-        returns = reward.sum(dim=-1) / lengths
+        # average reward for valid timesteps
+        returns = reward.sum(dim=-1) / mask.sum(dim=-1)
         returns = (returns - returns.min()) / (returns.max() - returns.min())
         return returns.unsqueeze(-1)
 
     def calculate_obstacles(self, size: int) -> torch.Tensor:
         # Sample random coordinates within the maze (bottom left corner)
-        # random
-        samples = self.open_squares[
-            torch.randint(0, len(self.open_squares), (size,))
-        ].to(self.device)
-
-        # fixed
-        # x_vals = -1 * torch.ones(size, dtype=torch.float32)
-        # y_vals = torch.zeros(size, dtype=torch.float32)
-        # samples = torch.stack((x_vals, y_vals), dim=1)
-
-        # 2 random
-        # points = torch.tensor([[0, -1], [-1, 0]])
-        # indices = torch.randint(0, 2, (size,))
-        # samples = points[indices]
-
+        idx = torch.randint(0, len(self.open_squares), (size,))
+        samples = self.open_squares[idx].to(self.device)
         return samples.to(self.device)
 
     def check_collisions(
@@ -404,9 +389,6 @@ class DiffusionPolicy(nn.Module):
         x["obs"] = self.obs_hist.clone()
         return x
 
-    def set_goal(self, goal):
-        self.goal = torch.cat([goal, torch.zeros_like(goal)], dim=-1)
-
     def dict_to_device(self, data):
         return {k: v.to(self.device) for k, v in data.items()}
 
@@ -421,15 +403,11 @@ class DiffusionPolicy(nn.Module):
         obstacle = self.open_squares[
             torch.randint(0, len(self.open_squares), (batch_size,))
         ].to(self.device)
-        # obstacle = torch.zeros(batch_size, 2).to(self.device)
-        # obstacle[:, 0] = -1
-
-        self.set_goal(goal)
 
         total_collisions = []
         for lam in cond_lambda:
             self.model.cond_lambda = lam
-            obs_traj = self.act({"obs": obs, "obstacles": obstacle})
+            obs_traj = self.act({"obs": obs, "obstacle": obstacle, "goal": goal})
             collisions = self.check_collisions(obs_traj["obs_traj"][..., :2], obstacle)
             total_collisions.append(collisions.sum().item())
 

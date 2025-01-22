@@ -71,7 +71,7 @@ def main(agent_cfg: DictConfig):
 
     elif test_type == "cfg":
         # cond_lambda = [0, 1, 2, 3, 5, 10, 20, 40]
-        alphas = [0, 1e-4, 1e-3, 1e-2, 1e-1]
+        alphas = [0, 200, 300, 500, 700, 1e3]
         open_squares = get_open_maze_squares(env.get_maze())
         obs = open_squares[torch.randint(0, len(open_squares), (num_envs,))]
         obs = torch.cat([obs, torch.zeros(num_envs, 2)], dim=1).to(runner.device)
@@ -86,13 +86,16 @@ def main(agent_cfg: DictConfig):
         goal = torch.tensor([[2.5, 2.5]]).to(runner.device)
         obstacle = torch.tensor([[-1, 0]]).to(runner.device)
 
-        runner.policy.set_goal(goal)
+        # obs = torch.tensor([[-0.5, -2.5, 0, 0]]).to(runner.device)
+        # goal = torch.tensor([[2.5, 2.5]]).to(runner.device)
+        # obstacle = torch.tensor([[0, -1]]).to(runner.device)
+
 
         total_collisions = []
         for alpha in alphas:
             runner.policy.alpha = alpha
             # runner.policy.model.cond_lambda = lam
-            obs_traj = runner.policy.act({"obs": obs, "obstacles": obstacle})
+            obs_traj = runner.policy.act({"obs": obs, "obstacle": obstacle, "goal": goal})
             collisions = runner.policy.check_collisions(
                 obs_traj["obs_traj"][..., :2], obstacle
             )

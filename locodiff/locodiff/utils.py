@@ -84,7 +84,7 @@ def get_open_maze_squares(maze):
                 coord_y = (7 - y) - 4
                 coordinates.append((coord_x, coord_y))
 
-    return torch.tensor(coordinates, dtype=torch.float) + 0.5
+    return torch.tensor(coordinates, dtype=torch.float)
 
 
 def get_latest_run(base_path, resume=False):

@@ -225,14 +225,14 @@ class ConditionalUnet1D(nn.Module):
         # create global feature
         if self.inpaint:
             returns = data_dict["returns"]
-            obstacles = data_dict["obstacles"]
-            global_feature = torch.cat([sigma, returns, obstacles], dim=-1)
+            obstacle = data_dict["obstacle"]
+            global_feature = torch.cat([sigma, returns, obstacle], dim=-1)
         else:
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
             goal = data_dict["goal"]
             # returns = data_dict["returns"]
-            obstacles = data_dict["obstacles"]
-            global_feature = torch.cat([sigma, obs, goal, obstacles], dim=-1)
+            obstacle = data_dict["obstacle"]
+            global_feature = torch.cat([sigma, obs, goal, obstacle], dim=-1)
             global_feature = self.cond_encoder(global_feature)
 
         # encode local features
@@ -386,8 +386,8 @@ class ValueUnet1D(nn.Module):
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
             goal = data_dict["goal"]
             # returns = data_dict["returns"]
-            obstacles = data_dict["obstacles"]
-            global_feature = torch.cat([sigma, obs, goal, obstacles], dim=-1)
+            obstacle = data_dict["obstacle"]
+            global_feature = torch.cat([sigma, obs, goal, obstacle], dim=-1)
             global_feature = self.cond_encoder(global_feature)
 
         x = sample

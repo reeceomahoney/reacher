@@ -45,13 +45,12 @@ def plot_cfg_analysis(
     cond_lambda: list,
 ):
     fig, axes = plt.subplots(1, len(cond_lambda), figsize=(16, 3.5))
-    policy.set_goal(goal)
     goal_np = goal.cpu().numpy()
 
     for i, lam in enumerate(cond_lambda):
         # Compute trajectory
         policy.alpha = lam
-        obs_traj = policy.act({"obs": obs, "obstacles": obstacle})
+        obs_traj = policy.act({"obs": obs, "obstacle": obstacle, "goal": goal})
         obs_traj = obs_traj["obs_traj"][0].detach().cpu().numpy()
 
         # Plot maze and trajectory
