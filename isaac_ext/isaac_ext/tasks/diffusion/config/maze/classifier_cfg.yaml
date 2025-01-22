@@ -29,7 +29,7 @@ num_envs: 1
 
 # diffusion
 sampling_steps: 20
-cond_mask_prob: 0.1
+cond_mask_prob: 0
 
 policy:
   obs_dim: ${obs_dim}

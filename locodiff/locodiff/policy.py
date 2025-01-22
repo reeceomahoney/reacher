@@ -192,7 +192,7 @@ class DiffusionPolicy(nn.Module):
         self.classifier_optimizer.zero_grad()
         loss.backward()
         self.classifier_optimizer.step()
-        self.lr_scheduler.step()
+        self.classifier_lr_scheduler.step()
 
         return loss.item()
 
@@ -220,7 +220,7 @@ class DiffusionPolicy(nn.Module):
     # Inference backend #
     #####################
 
-    @torch.no_grad()
+    # @torch.no_grad()
     def forward(self, data: dict) -> torch.Tensor:
         # sample noise
         B = data["obs"].shape[0]
@@ -240,11 +240,11 @@ class DiffusionPolicy(nn.Module):
             output = self.model(x_in, t.expand(B), data)
             x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
 
-            # if hasattr(self, "classifier"):
-            #     x_grad = x.detach().clone().requires_grad_(True)
-            #     y = self.classifier(x_grad, t, data)
-            #     grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
-            #     x = x_grad + self.alpha * grad.detach()
+            # guidance
+            x_grad = x.detach().clone().requires_grad_(True)
+            y = self.classifier(x_grad, t, data)
+            grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
+            x = x_grad + self.alpha * grad.detach()
 
         # final conditioning
         x = apply_conditioning(x, cond, 2)
@@ -253,6 +253,7 @@ class DiffusionPolicy(nn.Module):
         x = self.normalizer.inverse_scale_output(x)
         return x
 
+    @torch.no_grad()
     def truncated_forward(
         self, data: dict, timesteps: int
     ) -> tuple[torch.Tensor, torch.Tensor]:

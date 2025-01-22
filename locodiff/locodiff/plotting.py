@@ -50,7 +50,7 @@ def plot_cfg_analysis(
 
     for i, lam in enumerate(cond_lambda):
         # Compute trajectory
-        policy.model.cond_lambda = lam
+        policy.alpha = lam
         obs_traj = policy.act({"obs": obs, "obstacles": obstacle})
         obs_traj = obs_traj["obs_traj"][0].detach().cpu().numpy()
 
