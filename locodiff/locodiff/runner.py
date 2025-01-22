@@ -70,7 +70,7 @@ class DiffusionRunner:
         obs, _ = self.env.get_observations()
         obs = obs.to(self.device)
         self.policy.reset()
-        self.train_mode()  # switch to train mode (for dropout for example)
+        self.train_mode()
 
         rewbuffer = deque()
         lenbuffer = deque()
