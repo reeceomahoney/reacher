@@ -191,7 +191,7 @@ class DiffusionPolicy(nn.Module):
         # update model
         self.classifier_optimizer.zero_grad()
         loss.backward()
-        self.classifier_optmizer.step()
+        self.classifier_optimizer.step()
         self.lr_scheduler.step()
 
         return loss.item()
