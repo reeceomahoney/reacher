@@ -66,10 +66,8 @@ class ClassifierRunner:
             store_code_state(self.log_dir, [__file__])
 
     def learn(self):
-        obs, _ = self.env.get_observations()
-        obs = obs.to(self.device)
         self.policy.reset()
-        self.train_mode()  # switch to train mode (for dropout for example)
+        self.train_mode()
 
         start_iter = self.current_learning_iteration
         tot_iter = int(start_iter + self.cfg.num_iters)
