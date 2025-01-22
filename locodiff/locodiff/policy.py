@@ -298,9 +298,7 @@ class DiffusionPolicy(nn.Module):
             input = None
             raw_obs = data["obs"].unsqueeze(1)
             obstacle = self.normalizer.scale_pos(data["obstacle"])
-            goal = self.normalizer.scale_input(
-                torch.cat([data["goal"], torch.zeros_like(data["goal"])], dim=-1)
-            )
+            goal = self.normalizer.scale_input(data["goal"])
             returns = torch.ones_like(raw_obs[:, 0, :1])
         else:
             # train and test

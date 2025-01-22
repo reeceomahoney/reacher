@@ -44,8 +44,6 @@ def main(agent_cfg: DictConfig):
     agent_cfg.act_dim = env.act_dim
 
     # create runner from rsl-rl
-    num_envs = 1
-    agent_cfg.policy.num_envs = num_envs
     # runner = DiffusionRunner(env, agent_cfg, device=agent_cfg.device)
     runner = ClassifierRunner(env, agent_cfg, device=agent_cfg.device)
 
@@ -56,7 +54,7 @@ def main(agent_cfg: DictConfig):
     runner.load(resume_path)
     runner.eval_mode()
 
-    test_type = "cfg"
+    test_type = "guidance"
 
     if test_type == "mse":
         samplings_steps = [3, 10, 20, 50, 100, 256]
@@ -69,43 +67,44 @@ def main(agent_cfg: DictConfig):
             test_mse = statistics.mean(test_mse)
             print(f"Sampling steps: {steps}, Test MSE: {test_mse}")
 
-    elif test_type == "cfg":
-        # cond_lambda = [0, 1, 2, 3, 5, 10, 20, 40]
+    elif test_type == "guidance":
         alphas = [0, 200, 300, 500, 700, 1e3]
-        open_squares = get_open_maze_squares(env.get_maze())
-        obs = open_squares[torch.randint(0, len(open_squares), (num_envs,))]
-        obs = torch.cat([obs, torch.zeros(num_envs, 2)], dim=1).to(runner.device)
-        goal = open_squares[torch.randint(0, len(open_squares), (num_envs,))].to(
-            runner.device
-        )
-        obstacle = open_squares[torch.randint(0, len(open_squares), (num_envs,))].to(
-            runner.device
-        )
 
         obs = torch.tensor([[-2.5, -0.5, 0, 0]]).to(runner.device)
-        goal = torch.tensor([[2.5, 2.5]]).to(runner.device)
+        goal = torch.tensor([[2.5, 2.5, 0, 0]]).to(runner.device)
         obstacle = torch.tensor([[-1, 0]]).to(runner.device)
 
-        # obs = torch.tensor([[-0.5, -2.5, 0, 0]]).to(runner.device)
-        # goal = torch.tensor([[2.5, 2.5]]).to(runner.device)
-        # obstacle = torch.tensor([[0, -1]]).to(runner.device)
+        plot_cfg_analysis(runner.policy, env, obs, goal, obstacle, alphas)
+        plt.show()
 
+    elif test_type == "collisions":
+
+        def sample_maze(size, add_zeros=True):
+            open_squares = get_open_maze_squares(env.get_maze())
+            x = open_squares[torch.randint(0, len(open_squares), (size,))]
+            if add_zeros:
+                x = torch.cat([x, torch.zeros(size, 2)], dim=1)
+            return x.to(runner.device)
+
+        B = 50
+        alphas = [0, 200, 300, 500, 700, 1e3]
+
+        obs = sample_maze(B) + 0.5
+        goal = sample_maze(B) + 0.5
+        obstacle = sample_maze(B, add_zeros=False)
 
         total_collisions = []
         for alpha in alphas:
             runner.policy.alpha = alpha
-            # runner.policy.model.cond_lambda = lam
-            obs_traj = runner.policy.act({"obs": obs, "obstacle": obstacle, "goal": goal})
+            obs_traj = runner.policy.act(
+                {"obs": obs, "obstacle": obstacle, "goal": goal}
+            )
             collisions = runner.policy.check_collisions(
                 obs_traj["obs_traj"][..., :2], obstacle
             )
             total_collisions.append(collisions.sum().item())
 
-        # plt.plot(cond_lambda, total_collisions)
-
-        # Generate plots
-        plot_cfg_analysis(runner.policy, env, obs, goal, obstacle, alphas)
-        plt.show()
+        plt.plot(alphas, total_collisions)
 
     elif test_type == "play":
         obs = env.reset()

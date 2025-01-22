@@ -14,18 +14,19 @@ class MazeEnv:
             max_episode_steps=int(agent_cfg.episode_length * 100),
             render_mode=render_mode,
         )
-        self.obs = None
-        self.goal = None
-        self.device = agent_cfg.device
 
+        self.num_envs = 1
+        self.device = agent_cfg.device
         self.obs_dim = self.env.observation_space["observation"].shape[0]  # type: ignore
         self.act_dim = self.env.action_space.shape[0]  # type: ignore
-        self.num_envs = 1
+
+        self.obs = torch.zeros((1, self.obs_dim), device=self.device)
 
     def reset(self):
         obs, _ = self.env.reset()
         self.obs = self.to_tensor(obs["observation"])
-        self.goal = self.to_tensor(obs["desired_goal"])
+        goal = self.to_tensor(obs["desired_goal"])
+        self.goal = torch.cat([goal, torch.zeros_like(goal)], dim=-1)
         return self.obs
 
     def step(self, action):
@@ -50,7 +51,7 @@ class MazeEnv:
         self.env.close()
 
     def get_maze(self):
-        maze = np.array(self.env.unwrapped.maze.maze_map)
+        maze = np.array(self.env.unwrapped.maze.maze_map)  # type: ignore
         return 1 - maze
 
     def to_tensor(self, x):

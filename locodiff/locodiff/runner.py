@@ -92,16 +92,15 @@ class DiffusionRunner:
                 t = 0
                 ep_infos = []
                 self.env.reset()
-                self.policy.set_goal(self.env.goal)
                 obstacle = torch.tensor([[-1.0, -2.0]]).to(self.device)
 
                 with InferenceContext(self) and tqdm(
                     total=self.num_steps_per_env, desc="Simulating...", leave=False
                 ) as pbar:
                     while t < self.num_steps_per_env:
-                        actions = self.policy.act({"obs": obs, "obstacles": obstacle})[
-                            "action"
-                        ]
+                        data = {"obs": obs, "obstacle": obstacle, "goal": self.env.goal}  # type: ignore
+                        actions = self.policy.act(data)["action"]
+
                         for i in range(self.policy.T_action):
                             obs, rewards, dones, infos = self.env.step(actions[:, i])
                             if i < self.policy.T_action - 1:
