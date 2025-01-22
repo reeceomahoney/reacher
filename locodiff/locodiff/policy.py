@@ -204,7 +204,7 @@ class DiffusionPolicy(nn.Module):
 
         return loss.item()
 
-    def test_classifier(self, data):
+    def test_classifier(self, data, plot) -> float:
         # preprocess data
         data = self.process(data)
 
@@ -215,6 +215,17 @@ class DiffusionPolicy(nn.Module):
 
         # calculate loss
         loss = torch.nn.functional.mse_loss(pred_value, data["returns"])
+
+        if plot:
+            obs = torch.tensor([[-2.5, -0.5, 0, 0]]).to(self.device)
+            goal = torch.tensor([[2.5, 2.5, 0, 0]]).to(self.device)
+            obstacle = torch.tensor([[-1, 0]]).to(self.device)
+            alphas = [0, 200, 300, 500, 700, 1e3]
+            # Generate plots
+            fig = plot_guided_trajectory(self, self.env, obs, goal, obstacle, alphas)
+            # log
+            wandb.log({"Guided Trajectory": wandb.Image(fig)})
+            plt.close(fig)
 
         return loss.item()
 
