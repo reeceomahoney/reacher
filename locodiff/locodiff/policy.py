@@ -106,7 +106,6 @@ class DiffusionPolicy(nn.Module):
     # Main API #
     ############
 
-    @torch.no_grad()
     def act(self, data: dict) -> dict[str, torch.Tensor]:
         data = self.process(data)
         x = self.forward(data)

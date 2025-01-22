@@ -30,7 +30,7 @@ class MazeEnv:
         return self.obs
 
     def step(self, action):
-        action = action[0].cpu().numpy()
+        action = action[0].detach().cpu().numpy()
 
         obs, reward, terminated, trunacted, info = self.env.step(action)
 
