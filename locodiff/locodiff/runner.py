@@ -145,10 +145,8 @@ class DiffusionRunner:
             if it % self.cfg.eval_interval == 0:
                 with InferenceContext(self):
                     test_mse, test_obs_mse, test_act_mse = [], [], []
-                    plot = True
                     for batch in tqdm(self.test_loader, desc="Testing...", leave=False):
-                        mse, obs_mse, act_mse = self.policy.test(batch, plot)
-                        plot = False
+                        mse, obs_mse, act_mse = self.policy.test(batch, plot=False)
                         test_mse.append(mse)
                         test_obs_mse.append(obs_mse)
                         test_act_mse.append(act_mse)

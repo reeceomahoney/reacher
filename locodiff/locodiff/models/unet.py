@@ -219,18 +219,15 @@ class ConditionalUnet1D(nn.Module):
         """
         sample = einops.rearrange(noised_action, "b t h -> b h t")
 
-        # embed timestep
-        sigma = sigma.to(noised_action.device).view(-1, 1)
-
         # create global feature
         if self.inpaint:
             returns = data_dict["returns"]
             obstacle = data_dict["obstacle"]
             global_feature = torch.cat([sigma, returns, obstacle], dim=-1)
         else:
+            sigma = sigma.to(sample.device).view(-1, 1)
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
             goal = data_dict["goal"]
-            # returns = data_dict["returns"]
             obstacle = data_dict["obstacle"]
             global_feature = torch.cat([sigma, obs, goal, obstacle], dim=-1)
             global_feature = self.cond_encoder(global_feature)
@@ -376,16 +373,13 @@ class ValueUnet1D(nn.Module):
         """
         sample = einops.rearrange(noised_action, "b t h -> b h t")
 
-        # embed timestep
-        sigma = sigma.to(noised_action.device).view(-1, 1)
-
         # create global feature
         if self.inpaint:
             global_feature = sigma
         else:
+            sigma = sigma.to(sample.device).view(-1, 1)
             obs = data_dict["obs"].reshape(sample.shape[0], -1)
             goal = data_dict["goal"]
-            # returns = data_dict["returns"]
             obstacle = data_dict["obstacle"]
             global_feature = torch.cat([sigma, obs, goal, obstacle], dim=-1)
             global_feature = self.cond_encoder(global_feature)

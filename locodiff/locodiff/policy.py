@@ -12,7 +12,7 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 
 import wandb
 from locodiff.models.unet import ValueUnet1D
-from locodiff.plotting import plot_cfg_analysis
+from locodiff.plotting import plot_guided_trajectory
 from locodiff.utils import (
     CFGWrapper,
     Normalizer,
@@ -51,7 +51,7 @@ class DiffusionPolicy(nn.Module):
         # model
         if classifier is not None:
             self.classifier = classifier
-            self.alpha = 1e-3
+            self.alpha = 0
         elif cond_mask_prob > 0:
             model = CFGWrapper(model, cond_lambda, cond_mask_prob)
         self.model = model
@@ -166,11 +166,11 @@ class DiffusionPolicy(nn.Module):
 
         if plot:
             obs = torch.tensor([[-2.5, -0.5, 0, 0]]).to(self.device)
-            goal = torch.tensor([[2.5, 2.5]]).to(self.device)
+            goal = torch.tensor([[2.5, 2.5, 0, 0]]).to(self.device)
             obstacle = torch.tensor([[-1, 0]]).to(self.device)
-            cond_lambda = [0, 1, 2, 3, 5, 10]
+            alphas = [0, 200, 300, 500, 700, 1e3]
             # Generate plots
-            fig = plot_cfg_analysis(self, self.env, obs, goal, obstacle, cond_lambda)
+            fig = plot_guided_trajectory(self, self.env, obs, goal, obstacle, alphas)
             # log
             wandb.log({"CFG Trajectory": wandb.Image(fig)})
             plt.close(fig)
@@ -178,6 +178,10 @@ class DiffusionPolicy(nn.Module):
             self.plot_collsion_rate(100)
 
         return loss.mean().item(), obs_loss.item(), action_loss.item()
+
+    ##################
+    # Classifier API #
+    ##################
 
     def update_classifier(self, data):
         # preprocess data
@@ -244,10 +248,11 @@ class DiffusionPolicy(nn.Module):
             x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
 
             # guidance
-            x_grad = x.detach().clone().requires_grad_(True)
-            y = self.classifier(x_grad, t, data)
-            grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
-            x = x_grad + self.alpha * torch.exp(4 * t) * grad.detach()
+            if self.alpha > 0:
+                x_grad = x.detach().clone().requires_grad_(True)
+                y = self.classifier(x_grad, t, data)
+                grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
+                x = x_grad + self.alpha * torch.exp(4 * t) * grad.detach()
 
         # final conditioning
         x = apply_conditioning(x, cond, 2)
@@ -295,11 +300,10 @@ class DiffusionPolicy(nn.Module):
         if raw_action is None:
             # sim
             # data = self.update_history(data)
-            input = None
+            input, returns = None, None
             raw_obs = data["obs"].unsqueeze(1)
             obstacle = self.normalizer.scale_pos(data["obstacle"])
             goal = self.normalizer.scale_input(data["goal"])
-            returns = torch.ones_like(raw_obs[:, 0, :1])
         else:
             # train and test
             raw_obs = data["obs"]
@@ -358,13 +362,6 @@ class DiffusionPolicy(nn.Module):
         inside_box = (trajectories > box_corners_bl) & (trajectories < box_corners_tr)
         # Both x and y coordinates must be inside for a collision
         return inside_box.all(dim=2)
-
-    def calculate_distances(
-        self, trajectories: torch.Tensor, box_corners: torch.Tensor
-    ) -> torch.Tensor:
-        box_centers = (box_corners + 0.5).unsqueeze(1)
-        distances = torch.norm(trajectories - box_centers, dim=2)
-        return distances
 
     ###########
     # Helpers #

@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 from locodiff.classifier_runner import ClassifierRunner
 from locodiff.envs import MazeEnv
-from locodiff.plotting import plot_cfg_analysis, plot_interactive_trajectory
+from locodiff.plotting import plot_guided_trajectory, plot_interactive_trajectory
 from locodiff.utils import get_latest_run, get_open_maze_squares
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -74,7 +74,7 @@ def main(agent_cfg: DictConfig):
         goal = torch.tensor([[2.5, 2.5, 0, 0]]).to(runner.device)
         obstacle = torch.tensor([[-1, 0]]).to(runner.device)
 
-        plot_cfg_analysis(runner.policy, env, obs, goal, obstacle, alphas)
+        plot_guided_trajectory(runner.policy, env, obs, goal, obstacle, alphas)
         plt.show()
 
     elif test_type == "collisions":

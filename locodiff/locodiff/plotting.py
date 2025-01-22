@@ -36,20 +36,20 @@ def plot_trajectory(
     ax.plot(goal_pos[0], goal_pos[1], "x", color="red", **marker_params)
 
 
-def plot_cfg_analysis(
+def plot_guided_trajectory(
     policy,
     env,
     obs: torch.Tensor,
     goal: torch.Tensor,
     obstacle: torch.Tensor,
-    cond_lambda: list,
+    alphas: list,
 ):
-    fig, axes = plt.subplots(1, len(cond_lambda), figsize=(16, 3.5))
+    fig, axes = plt.subplots(1, len(alphas), figsize=(16, 3.5))
     goal_np = goal.cpu().numpy()
 
-    for i, lam in enumerate(cond_lambda):
+    for i, alpha in enumerate(alphas):
         # Compute trajectory
-        policy.alpha = lam
+        policy.alpha = alpha
         obs_traj = policy.act({"obs": obs, "obstacle": obstacle, "goal": goal})
         obs_traj = obs_traj["obs_traj"][0].detach().cpu().numpy()
 
@@ -63,7 +63,7 @@ def plot_cfg_analysis(
             goal_pos=(goal_np[0, 0], goal_np[0, 1]),
         )
 
-        axes[i].set_title(f"cond_lambda={lam}")
+        axes[i].set_title(f"alphas={alpha}")
         axes[i].set_axis_off()
 
     fig.tight_layout()
