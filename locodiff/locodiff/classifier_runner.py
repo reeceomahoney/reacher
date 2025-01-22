@@ -13,7 +13,7 @@ from locodiff.dataset import get_dataloaders
 from locodiff.envs import MazeEnv
 from locodiff.models.unet import ConditionalUnet1D, ValueUnet1D
 from locodiff.policy import DiffusionPolicy
-from locodiff.utils import ExponentialMovingAverage, InferenceContext, Normalizer
+from locodiff.utils import ExponentialMovingAverage, Normalizer
 
 # A logger for this file
 log = logging.getLogger(__name__)
@@ -77,14 +77,13 @@ class ClassifierRunner:
 
             # evaluation
             if it % self.cfg.eval_interval == 0:
-                with InferenceContext(self):
-                    test_mse = []
-                    plot = True
-                    for batch in tqdm(self.test_loader, desc="Testing...", leave=False):
-                        mse = self.policy.test_classifier(batch, plot)
-                        plot = False
-                        test_mse.append(mse)
-                    test_mse = statistics.mean(test_mse)
+                test_mse = []
+                plot = True
+                for batch in tqdm(self.test_loader, desc="Testing...", leave=False):
+                    mse = self.policy.test_classifier(batch, plot)
+                    plot = False
+                    test_mse.append(mse)
+                test_mse = statistics.mean(test_mse)
 
             # training
             try:

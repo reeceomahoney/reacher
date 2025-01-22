@@ -238,7 +238,6 @@ class DiffusionPolicy(nn.Module):
     # Inference backend #
     #####################
 
-    # @torch.no_grad()
     def forward(self, data: dict) -> torch.Tensor:
         # sample noise
         B = data["obs"].shape[0]
