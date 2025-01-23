@@ -199,6 +199,6 @@ class FrankaRLEnvCfg(ManagerBasedRLEnvCfg):
         # general settings
         self.decimation = 10
         self.sim.render_interval = self.decimation
-        self.sim.dt = 1.0 / 100.0
+        self.sim.dt = 1.0 / 50.0
         self.episode_length_s = 10.0
         self.viewer.eye = (3.5, 3.5, 3.5)
