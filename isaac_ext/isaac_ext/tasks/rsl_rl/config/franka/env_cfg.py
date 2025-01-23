@@ -141,7 +141,7 @@ class RewardsCfg:
 
     # task
     ee_tracking = RewTerm(
-        func=mdp.ee_position_error,
+        func=mdp.ee_9d_pose_error,
         weight=0.2,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
@@ -150,7 +150,7 @@ class RewardsCfg:
         },
     )
     ee_tracking_fine_grained = RewTerm(
-        func=mdp.ee_position_error,
+        func=mdp.ee_9d_pose_error,
         weight=0.1,
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
