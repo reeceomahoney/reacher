@@ -91,7 +91,6 @@ class ActionsCfg:
         asset_name="robot",
         joint_names=["panda_joint.*"],
         scale=1.0,
-        use_default_offset=False,
     )
     gripper_action: ActionTerm | None = None
 
@@ -160,10 +159,10 @@ class RewardsCfg:
         },
     )
     # penalties
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-1e-4)
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-1e-2)
     joint_vel = RewTerm(
         func=mdp.joint_vel_l2,
-        weight=-1e-4,
+        weight=-1e-2,
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
@@ -200,6 +199,6 @@ class FrankaRLEnvCfg(ManagerBasedRLEnvCfg):
         # general settings
         self.decimation = 10
         self.sim.render_interval = self.decimation
-        self.sim.dt = 1.0 / 50.0
+        self.sim.dt = 1.0 / 100.0
         self.episode_length_s = 10.0
         self.viewer.eye = (3.5, 3.5, 3.5)
