@@ -4,7 +4,7 @@ save_interval: 50
 experiment_name: franka_rl
 empirical_normalization: False
 logger: wandb
-wandb_project: reacher_rl
+wandb_project: rsl_rl
 device: cuda
 seed: 42
 num_envs: 4096
