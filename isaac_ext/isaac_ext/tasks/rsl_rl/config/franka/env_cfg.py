@@ -125,13 +125,9 @@ class EventCfg:
     """Configuration for events."""
 
     reset_robot_joints = EventTerm(
-        func=mdp.reset_joints_by_scale,
+        func=mdp.reset_joints_random,
         mode="reset",
-        params={
-            "position_range": (0.5, 1.5),
-            "velocity_range": (0.0, 0.0),
-            "asset_cfg": SceneEntityCfg("robot", joint_names="panda_joint.*"),
-        },
+        params={"asset_cfg": SceneEntityCfg("robot", joint_names="panda_joint.*")},
     )
 
 
