@@ -197,7 +197,7 @@ class FrankaRLEnvCfg(ManagerBasedRLEnvCfg):
     def __post_init__(self):
         """Post initialization."""
         # general settings
-        self.decimation = 10
+        self.decimation = 5
         self.sim.render_interval = self.decimation
         self.sim.dt = 1.0 / 50.0
         self.episode_length_s = 10.0
