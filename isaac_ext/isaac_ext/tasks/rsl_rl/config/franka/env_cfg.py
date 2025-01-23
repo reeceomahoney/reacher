@@ -159,10 +159,10 @@ class RewardsCfg:
         },
     )
     # penalties
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-1)
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.01)
     joint_vel = RewTerm(
         func=mdp.joint_vel_l2,
-        weight=-1,
+        weight=-0.01,
         params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
