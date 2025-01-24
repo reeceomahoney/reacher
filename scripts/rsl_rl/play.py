@@ -36,7 +36,10 @@ parser.add_argument(
     "--num_envs", type=int, default=16, help="Number of environments to simulate."
 )
 parser.add_argument(
-    "--collect", type=bool, default=False, help="Whether to collect data."
+    "--num_timesteps", type=int, default=128, help="Number of timesteps to simulate."
+)
+parser.add_argument(
+    "--collect", action="store_true", default=False, help="Whether to collect data."
 )
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
@@ -140,21 +143,28 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     # reset environment
     obs, _ = env.get_observations()
     timestep = 0
+    if not args_cli.collect:
+        args_cli.num_timesteps = float("inf")
+
     # simulate environment
-    while simulation_app.is_running():
+    while timestep < args_cli.num_timesteps:
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
             actions = policy(obs)
             # env stepping
-            obs, _, _, _ = env.step(actions)
+            obs, rew, dones, _ = env.step(actions)
+
+            if args_cli.collect:
+                collector.add_step(obs, actions, rew, dones)
+
+        timestep += 1
         if args_cli.video:
-            timestep += 1
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
                 break
 
-    # close the simulator
+    collector.flush()
     env.close()
 
 
