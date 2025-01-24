@@ -12,7 +12,6 @@ import sys
 
 # local imports
 import cli_args
-
 from omni.isaac.lab.app import AppLauncher
 
 # add argparse arguments
@@ -61,18 +60,13 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import gymnasium as gym
 import os
-import torch
 
+import gymnasium as gym
+import torch
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
-
-from omni.isaac.lab.envs import (
-    DirectMARLEnv,
-    ManagerBasedRLEnvCfg,
-    multi_agent_to_single_agent,
-)
+from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 from omni.isaac.lab_tasks.utils import get_checkpoint_path
@@ -87,7 +81,7 @@ torch.backends.cudnn.allow_tf32 = True
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
-task = "Isaac-Cartpole-Diffusion"
+task = "Isaac-Franka-Diffusion"
 
 
 @dynamic_hydra_main(task)
@@ -141,10 +135,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         print("[INFO] Recording videos during training.")
         print_dict(video_kwargs, nesting=4)
         env = gym.wrappers.RecordVideo(env, **video_kwargs)
-
-    # convert to single-agent instance if required by the RL algorithm
-    if isinstance(env.unwrapped, DirectMARLEnv):
-        env = multi_agent_to_single_agent(env)
 
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env)
