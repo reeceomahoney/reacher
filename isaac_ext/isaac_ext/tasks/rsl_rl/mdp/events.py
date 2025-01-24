@@ -13,13 +13,12 @@ def reset_joints_random(
     """Reset the robot joints to a random position within its full range."""
     # extract the used quantities (to enable type-hinting)
     asset: Articulation = env.scene[asset_cfg.name]
-    idx = (env_ids[:, None], asset_cfg.joint_ids)
     # get default joint state for shape
-    joint_pos = asset.data.default_joint_pos[idx].clone().squeeze(1)
-    joint_vel = asset.data.default_joint_vel[idx].clone().squeeze(1)
+    joint_pos = asset.data.default_joint_pos[env_ids].clone()
+    joint_vel = asset.data.default_joint_vel[env_ids].clone()
 
     # sample position
-    joint_pos_limits = asset.data.soft_joint_pos_limits[idx]
+    joint_pos_limits = asset.data.soft_joint_pos_limits[env_ids]
     joint_pos = math_utils.sample_uniform(
         joint_pos_limits[..., 0],
         joint_pos_limits[..., 1],
