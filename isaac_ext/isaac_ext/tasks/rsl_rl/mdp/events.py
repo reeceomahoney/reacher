@@ -15,8 +15,8 @@ def reset_joints_random(
     asset: Articulation = env.scene[asset_cfg.name]
     idx = (env_ids[:, None], asset_cfg.joint_ids)
     # get default joint state for shape
-    joint_pos = asset.data.default_joint_pos[idx].clone()
-    joint_vel = asset.data.default_joint_vel[idx].clone()
+    joint_pos = asset.data.default_joint_pos[idx].clone().squeeze(1)
+    joint_vel = asset.data.default_joint_vel[idx].clone().squeeze(1)
 
     # sample position
     joint_pos_limits = asset.data.soft_joint_pos_limits[idx]
