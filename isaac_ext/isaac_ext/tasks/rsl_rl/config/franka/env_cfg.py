@@ -1,13 +1,9 @@
-# Copyright (c) 2022-2024, The Isaac Lab Project Developers.
-# All rights reserved.
-#
-# SPDX-License-Identifier: BSD-3-Clause
-
 import math
 
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.utils import configclass
+from omni.isaac.lab_assets import FRANKA_PANDA_CFG
 from omni.isaac.lab_tasks.manager_based.manipulation.reach.reach_env_cfg import (
     ReachEnvCfg,
 )
@@ -15,13 +11,7 @@ from omni.isaac.lab_tasks.manager_based.manipulation.reach.reach_env_cfg import 
 import isaac_ext.tasks.rsl_rl.mdp as mdp
 
 ##
-# Pre-defined configs
-##
-from omni.isaac.lab_assets import FRANKA_PANDA_CFG  # isort: skip
-
-
-##
-# Environment configuration
+# MDP settings
 ##
 
 
@@ -37,7 +27,33 @@ class EventCfg:
 
 
 @configclass
+class CommandsCfg:
+    """Command terms for the MDP."""
+
+    ee_pose = mdp.UniformPoseCommandCfg(
+        asset_name="robot",
+        body_name="panda_hand",
+        resampling_time_range=(4.0, 4.0),
+        debug_vis=True,
+        ranges=mdp.UniformPoseCommandCfg.Ranges(
+            pos_x=(-1, 1),
+            pos_y=(-1, 1),
+            pos_z=(0.15, 1),
+            roll=(-math.pi, math.pi),
+            pitch=(-math.pi, math.pi),
+            yaw=(-math.pi, math.pi),
+        ),
+    )
+
+
+##
+# Environment configuration
+##
+
+
+@configclass
 class FrankaReachEnvCfg(ReachEnvCfg):
+    commands: CommandsCfg = CommandsCfg()
     events: EventCfg = EventCfg()
 
     def __post_init__(self):
@@ -64,10 +80,6 @@ class FrankaReachEnvCfg(ReachEnvCfg):
             scale=0.5,
             use_default_offset=True,
         )
-        # override command generator body
-        # end-effector is along z-direction
-        self.commands.ee_pose.body_name = "panda_hand"
-        self.commands.ee_pose.ranges.pitch = (math.pi, math.pi)
 
 
 @configclass
