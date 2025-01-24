@@ -35,6 +35,9 @@ parser.add_argument(
 parser.add_argument(
     "--num_envs", type=int, default=16, help="Number of environments to simulate."
 )
+parser.add_argument(
+    "--collect", type=bool, default=False, help="Whether to collect data."
+)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -59,11 +62,7 @@ import os
 import gymnasium as gym
 import torch
 from omegaconf import DictConfig, OmegaConf
-from omni.isaac.lab.envs import (
-    DirectMARLEnv,
-    ManagerBasedRLEnvCfg,
-    multi_agent_to_single_agent,
-)
+from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
     RslRlVecEnvWrapper,
@@ -73,6 +72,7 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
 from rsl_rl.runners import OnPolicyRunner
 
 import isaac_ext.tasks  # noqa: F401
+from isaac_ext.tasks.utils.data_collector import DataCollector
 from locodiff.utils import dynamic_hydra_main
 from vae.utils import get_latest_run
 
@@ -83,11 +83,7 @@ task = "Isaac-Franka-RL"
 def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     """Play with RSL-RL agent."""
     # specify directory for logging experiments
-    log_root_path = os.path.join("logs", "rsl_rl", "franka")
-    log_root_path = os.path.abspath(log_root_path)
-    resume_path = get_latest_run(log_root_path)
-    print(f"[INFO] Loading experiment from directory: {log_root_path}")
-    log_dir = os.path.join("logs/rsl_rl/cartpole_collect")
+    resume_path = get_latest_run("logs/rsl_rl/franka")
 
     if args_cli.num_envs is not None:
         env_cfg.scene.num_envs = args_cli.num_envs
@@ -100,7 +96,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     # wrap for video recording
     if args_cli.video:
         video_kwargs = {
-            "video_folder": os.path.join(log_dir, "videos", "play"),
+            "video_folder": os.path.join(resume_path, "videos", "play"),
             "step_trigger": lambda step: step == 0,
             "video_length": args_cli.video_length,
             "disable_logger": True,
@@ -112,8 +108,8 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env)  # type: ignore
 
-    print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     # load previously trained model
+    print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     agent_cfg_dict = OmegaConf.to_container(agent_cfg)
     ppo_runner = OnPolicyRunner(
         env, agent_cfg_dict, log_dir=None, device=agent_cfg.device
@@ -137,6 +133,9 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         path=export_model_dir,
         filename="policy.onnx",
     )
+
+    if args_cli.collect:
+        collector = DataCollector(env, "data/rsl_rl/franka/data.hdf5")
 
     # reset environment
     obs, _ = env.get_observations()

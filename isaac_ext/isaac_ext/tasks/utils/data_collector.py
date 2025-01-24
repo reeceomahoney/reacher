@@ -3,7 +3,7 @@ import h5py
 import torch
 
 
-class GymDataCollector:
+class DataCollector:
     """A class to collect and store data from gym environments in HDF5 format."""
 
     def __init__(self, env: gym.Env, file_path: str):
