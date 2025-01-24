@@ -6,6 +6,7 @@
 import math
 
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
+from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab_tasks.manager_based.manipulation.reach.reach_env_cfg import (
     ReachEnvCfg,
@@ -28,7 +29,11 @@ from omni.isaac.lab_assets import FRANKA_PANDA_CFG  # isort: skip
 class EventCfg:
     """Configuration for events."""
 
-    reset_robot_joints = EventTerm(func=mdp.reset_joints_random, mode="reset")
+    reset_robot_joints = EventTerm(
+        func=mdp.reset_joints_random,
+        mode="reset",
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
 
 
 @configclass
