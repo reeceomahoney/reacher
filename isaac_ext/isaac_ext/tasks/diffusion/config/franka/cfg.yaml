@@ -1,0 +1,65 @@
+defaults:
+  - model: unet
+  - _self_
+
+logger: wandb
+wandb_project: diffusion_maze
+task: PointMaze_Medium-v3
+num_iters: 5e5
+seed: 42
+resume: false
+episode_length: 1.5
+
+# training
+log_interval: 100
+eval_interval: 1e3
+sim_interval: 5e3
+device: cuda
+ema_decay: 0.999
+use_ema: True
+scaling: linear
+
+#dims
+obs_dim: null
+act_dim: null
+T: 248
+T_cond: 1
+T_action: 248
+num_envs: 1
+
+# diffusion
+sampling_steps: 20
+cond_mask_prob: 0
+
+policy:
+  obs_dim: ${obs_dim}
+  act_dim: ${act_dim}
+  T: ${T}
+  T_cond: ${T_cond}
+  T_action: ${T_action}
+  num_envs: ${num_envs}
+  sampling_steps: ${sampling_steps}
+  sigma_data: 0.5
+  sigma_min: 0.002
+  sigma_max: 80
+  cond_lambda: 0
+  cond_mask_prob: ${cond_mask_prob}
+  lr: 1e-4
+  betas: [0.9, 0.999]
+  num_iters: ${num_iters}
+  inpaint: false
+  device: ${device}
+
+dataset:
+  task_name: ${task}
+  data_directory: data/rsl_rl/franka/data.hdf5
+  train_fraction: 0.995
+  T_cond: ${T_cond}
+  T: ${T}
+  train_batch_size: 1024
+  test_batch_size: 1024
+  num_workers: 4
+
+hydra:
+  run:
+    dir: logs/diffusion/maze/${now:%b-%d}/${now:%H-%M-%S}
