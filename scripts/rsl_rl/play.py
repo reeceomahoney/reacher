@@ -61,6 +61,7 @@ simulation_app = app_launcher.app
 """Rest everything follows."""
 
 import os
+import time
 
 import gymnasium as gym
 import torch
@@ -148,6 +149,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
     # simulate environment
     while timestep < args_cli.num_timesteps:
+        start = time.time()
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
@@ -157,6 +159,10 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
             if args_cli.collect:
                 collector.add_step(obs, actions, rew, dones)
+
+        end = time.time()
+        if end - start < 0.1:
+            time.sleep(0.1 - (end - start))
 
         timestep += 1
         if args_cli.video:
