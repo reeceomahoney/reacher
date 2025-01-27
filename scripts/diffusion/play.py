@@ -54,20 +54,12 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import gymnasium as gym
-import matplotlib.pylab as plt
 import os
-import statistics
+
+import gymnasium as gym
 import torch
-from tqdm import tqdm
-
 from omegaconf import DictConfig
-from omni.isaac.core.utils.extensions import enable_extension
-
-enable_extension("omni.isaac.debug_draw")
-
-from omni.isaac.debug_draw import _debug_draw
-
+from omni.isaac.debug_draw import _debug_draw  # type: ignore
 from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
@@ -76,7 +68,7 @@ from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main
 from vae.utils import get_latest_run
 
-task = "Isaac-Cartpole-Diffusion"
+task = "Isaac-Franka-Diffusion"
 
 
 @dynamic_hydra_main(task)
@@ -94,94 +86,57 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     )
 
     # wrap around environment for rsl-rl
-    env = RslRlVecEnvWrapper(env)
-    agent_cfg.obs_dim = env.observation_space["policy"].shape[-1]
-    agent_cfg.act_dim = env.action_space.shape[-1]
+    env = RslRlVecEnvWrapper(env)  # type: ignore
+    agent_cfg.obs_dim = env.observation_space["policy"].shape[-1]  # type: ignore
+    agent_cfg.act_dim = env.action_space.shape[-1]  # type: ignore
 
     # load previously trained model
     runner = DiffusionRunner(env, agent_cfg, device=agent_cfg.device)
 
     # load the checkpoint
-    log_root_path = os.path.abspath("logs/diffusion/cartpole")
+    log_root_path = os.path.abspath("logs/diffusion/franka")
     resume_path = os.path.join(get_latest_run(log_root_path), "models", "model.pt")
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(resume_path)
 
-    test_type = "play"
+    # obtain the trained policy for inference
+    policy = runner.get_inference_policy(device=env.unwrapped.device)
 
-    if test_type == "mse":
-        from locodiff.samplers import get_resampling_sequence
+    obstacle = torch.tensor([[0, 0, 0]]).to(env.device)
+    obstacle = obstacle.expand(env.num_envs, -1)
 
-        T_values = [10]
-        r_values = [5, 10, 20, 40, 80, 160]
-        j_values = [1]
+    goal = torch.tensor([[0.5, 0, 0.25]]).to(env.device)
+    goal = goal.expand(env.num_envs, -1)
 
-        results = []
-        # batch = next(iter(runner.test_loader))
-        with tqdm(total=len(T_values) * len(r_values) * len(j_values)) as pbar:
-            for T in T_values:
-                for r in r_values:
-                    for j in j_values:
-                        # set the policy parameters
-                        runner.policy.sampling_steps = T
-                        runner.policy.resampling_steps = r
-                        runner.policy.jump_length = j
+    # draw goal point
+    draw = _debug_draw.acquire_debug_draw_interface()
+    draw.draw_points([(0.5, 0, 0.25)], [(0.8, 0.2, 0, 1)], [25])
 
-                        # test policy mse
-                        test_loss = []
-                        for batch in runner.test_loader:
-                            test_loss.append(runner.policy.test(batch))
-                        test_loss = statistics.mean(test_loss)
-                        nfe = get_resampling_sequence(T, r, j).count("down")
-                        results.append((T, r, j, nfe, test_loss))
+    # reset environment
+    obs, _ = env.get_observations()
+    timestep = 0
+    # simulate environment
+    while simulation_app.is_running():
+        # run everything in inference mode
+        with torch.inference_mode():
+            # agent stepping
+            output = policy({"obs": obs, "obstacle": obstacle, "goal": goal})
 
-                        pbar.update(1)
+            # env stepping
+            for i in range(runner.policy.T_action):
+                obs, _, dones, _ = env.step(output["action"][:, i])
 
-        results = sorted(results, key=lambda x: x[-1])
-        # Print tuples with the last value rounded to 3 significant figures
-        for item in results:
-            print((*item[:-1], f"{item[-1]:.3g}"))
+        if dones.any():
+            runner.policy.reset(dones)
 
-    elif test_type == "play":
-        # obtain the trained policy for inference
-        policy = runner.get_inference_policy(device=env.unwrapped.device)
+        timestep += 1
 
-        # draw goal point
-        draw = _debug_draw.acquire_debug_draw_interface()
-        draw.draw_points([(0, 1, 2)], [(0.8, 0.2, 0, 1)], [25])
-
-        # reset environment
-        obs, _ = env.get_observations()
-        timestep = 0
-        # simulate environment
-        while simulation_app.is_running():
-            # run everything in inference mode
-            with torch.inference_mode():
-                # agent stepping
-                output = policy({"obs": obs})
-                # plot trajectory
-                plt.plot(output["obs_traj"][0, :, 0].cpu().numpy())
-                plt.show()
-
-                # env stepping
-                for i in range(runner.policy.T_action):
-                    obs, _, dones, _ = env.step(output["action"][:, i])
-                    if i < runner.policy.T_action - 1:
-                        runner.policy.update_history({"obs": obs})
-
-            if dones.any():
-                runner.policy.reset(dones)
-
-            timestep += 1
-
-        # close the simulator
-        env.close()
-    else:
-        raise ValueError(f"Unknown test type {test_type}")
+    # close the simulator
+    env.close()
 
 
 if __name__ == "__main__":
     # run the main function
-    main()
+    main()  # type: ignore
     # close sim app
     simulation_app.close()
