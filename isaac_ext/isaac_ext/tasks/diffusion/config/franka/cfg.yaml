@@ -22,7 +22,7 @@ scaling: linear
 #dims
 obs_dim: null
 act_dim: null
-T: 120
+T: 40
 T_cond: 1
 T_action: 1
 num_envs: 1
