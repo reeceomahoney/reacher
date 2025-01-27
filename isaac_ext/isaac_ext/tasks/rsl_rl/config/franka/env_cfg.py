@@ -89,6 +89,7 @@ class EventCfg:
 
 @configclass
 class FrankaReachEnvCfg(ReachEnvCfg):
+    observations: ObservationsCfg = ObservationsCfg()
     commands: CommandsCfg = CommandsCfg()
     events: EventCfg = EventCfg()
 
