@@ -17,7 +17,6 @@ from locodiff.utils import (
     CFGWrapper,
     Normalizer,
     apply_conditioning,
-    get_open_maze_squares,
     rand_log_logistic,
 )
 
@@ -97,7 +96,7 @@ class DiffusionPolicy(nn.Module):
 
         # reward guidance
         self.gammas = torch.tensor([0.99**i for i in range(self.T)]).to(device)
-        self.open_squares = get_open_maze_squares(self.env.get_maze())
+        # self.open_squares = get_open_maze_squares(self.env.get_maze())
 
         self.device = device
         self.to(device)
@@ -324,8 +323,11 @@ class DiffusionPolicy(nn.Module):
                 input_act = raw_action[:, self.T_cond - 1 :]
             input = torch.cat([input_act, input_obs], dim=-1)
 
-            obstacle = self.calculate_obstacles(input.shape[0])
-            returns = self.calculate_return(input, data["mask"], obstacle)
+            # obstacle = self.calculate_obstacles(input.shape[0])
+            # returns = self.calculate_return(input, data["mask"], obstacle)
+
+            obstacle = torch.zeros_like(input[..., :3])
+            returns = None
 
             obstacle = self.normalizer.scale_pos(obstacle)
             input = self.normalizer.scale_output(input)

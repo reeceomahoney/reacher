@@ -32,10 +32,8 @@ class DiffusionRunner:
         # classes
         self.train_loader, self.test_loader = get_dataloaders(**self.cfg.dataset)
         self.normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
-        # TODO: init model with hydra
         model = ConditionalUnet1D(**self.cfg.model)
         classifier = ValueUnet1D(**self.cfg.model)
-        # model = DiffusionTransformer(**self.cfg.model)
         self.policy = DiffusionPolicy(
             model, self.normalizer, env, **self.cfg.policy, classifier=classifier
         )
@@ -92,13 +90,18 @@ class DiffusionRunner:
                 t = 0
                 ep_infos = []
                 self.env.reset()
-                obstacle = torch.tensor([[-1.0, -2.0]]).to(self.device)
+
+                obstacle = torch.tensor([[0, 0, 0]]).to(self.device)
+                obstacle = obstacle.expand(self.env.num_envs, -1)
+
+                goal = torch.tensor([[0.5, 0, 0.25]]).to(self.device)
+                goal = goal.expand(self.env.num_envs, -1)
 
                 with InferenceContext(self) and tqdm(
                     total=self.num_steps_per_env, desc="Simulating...", leave=False
                 ) as pbar:
                     while t < self.num_steps_per_env:
-                        data = {"obs": obs, "obstacle": obstacle, "goal": self.env.goal}  # type: ignore
+                        data = {"obs": obs, "obstacle": obstacle, "goal": goal}
                         actions = self.policy.act(data)["action"]
 
                         for i in range(self.policy.T_action):
