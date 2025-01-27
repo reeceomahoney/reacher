@@ -56,7 +56,7 @@ class ObservationsCfg:
         ee_pose = ObsTerm(
             func=mdp.ee_pose,
             noise=Unoise(n_min=-0.01, n_max=0.01),
-            params={"asset_cfg": SceneEntityCfg("robot", body_names="gripperMover")},
+            params={"asset_cfg": SceneEntityCfg("robot", body_names="panda_hand")},
         )
         pose_command = ObsTerm(
             func=mdp.generated_commands, params={"command_name": "ee_pose"}
