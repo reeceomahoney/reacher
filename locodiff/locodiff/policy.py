@@ -105,6 +105,7 @@ class DiffusionPolicy(nn.Module):
     # Main API #
     ############
 
+    @torch.no_grad()
     def act(self, data: dict) -> dict[str, torch.Tensor]:
         data = self.process(data)
         x = self.forward(data)
@@ -154,6 +155,7 @@ class DiffusionPolicy(nn.Module):
 
         return loss.item()
 
+    @torch.no_grad()
     def test(self, data: dict, plot) -> tuple[float, float, float]:
         data = self.process(data)
         x = self.forward(data)
@@ -237,6 +239,7 @@ class DiffusionPolicy(nn.Module):
     # Inference backend #
     #####################
 
+    @torch.no_grad()
     def forward(self, data: dict) -> torch.Tensor:
         # sample noise
         B = data["obs"].shape[0]
