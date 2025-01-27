@@ -57,9 +57,13 @@ class FrankaReachEnvCfg(ReachEnvCfg):
     events: EventCfg = EventCfg()
 
     def __post_init__(self):
-        # post init of parent
         super().__post_init__()
+        # general settings
+        self.decimation = 5
+        self.sim.render_interval = self.decimation
         self.episode_length_s = 4.0
+        # simulation settings
+        self.sim.dt = 1.0 / 50.0
 
         # switch robot to franka
         self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
