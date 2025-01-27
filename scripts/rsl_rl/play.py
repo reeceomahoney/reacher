@@ -77,8 +77,7 @@ from rsl_rl.runners import OnPolicyRunner
 
 import isaac_ext.tasks  # noqa: F401
 from isaac_ext.tasks.utils.data_collector import DataCollector
-from locodiff.utils import dynamic_hydra_main
-from vae.utils import get_latest_run
+from locodiff.utils import dynamic_hydra_main, get_latest_run
 
 task = "Isaac-Franka-RL"
 
