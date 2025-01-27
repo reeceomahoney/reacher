@@ -311,8 +311,8 @@ class DiffusionPolicy(nn.Module):
             # data = self.update_history(data)
             input, returns = None, None
             raw_obs = data["obs"].unsqueeze(1)
-            obstacle = self.normalizer.scale_pos(data["obstacle"])
-            goal = self.normalizer.scale_input(data["goal"])
+            obstacle = self.normalizer.scale_3d_pos(data["obstacle"])
+            goal = self.normalizer.scale_3d_pos(data["goal"])
         else:
             # train and test
             raw_obs = data["obs"]
@@ -326,14 +326,18 @@ class DiffusionPolicy(nn.Module):
             # obstacle = self.calculate_obstacles(input.shape[0])
             # returns = self.calculate_return(input, data["mask"], obstacle)
 
-            obstacle = torch.zeros_like(input[..., :3])
+            obstacle = torch.zeros((input.shape[0], 3)).to(self.device)
             returns = None
 
-            obstacle = self.normalizer.scale_pos(obstacle)
+            obstacle = self.normalizer.scale_3d_pos(obstacle)
             input = self.normalizer.scale_output(input)
 
             lengths = data["mask"].sum(dim=-1).int()
-            goal = input[range(input.shape[0]), lengths - 1, self.action_dim :]
+            goal = input[
+                range(input.shape[0]),
+                lengths - 1,
+                self.action_dim + 18 : self.action_dim + 21,
+            ]
 
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
         return {

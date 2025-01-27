@@ -128,13 +128,10 @@ class DiffusionRunner:
                                 cur_episode_length += 1
                                 new_ids = (dones > 0).nonzero(as_tuple=False)
                                 rewbuffer.extend(
-                                    cur_reward_sum[new_ids][:, 0].cpu().numpy().tolist()
+                                    self.process_ep_data(cur_reward_sum, new_ids)
                                 )
                                 lenbuffer.extend(
-                                    cur_episode_length[new_ids][:, 0]
-                                    .cpu()
-                                    .numpy()
-                                    .tolist()
+                                    self.process_ep_data(cur_episode_length, new_ids)
                                 )
                                 cur_reward_sum[new_ids] = 0
                                 cur_episode_length[new_ids] = 0
@@ -255,6 +252,9 @@ class DiffusionRunner:
         self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
         self.current_learning_iteration = loaded_dict["iter"]
         return loaded_dict["infos"]
+
+    def process_ep_data(self, x, new_ids):
+        return x[new_ids][:, 0].detach().cpu().numpy().tolist()
 
     def get_inference_policy(self, device=None):
         self.eval_mode()
