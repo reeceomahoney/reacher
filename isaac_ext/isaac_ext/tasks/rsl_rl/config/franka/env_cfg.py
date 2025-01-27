@@ -1,8 +1,11 @@
 import math
 
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
+from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
+from omni.isaac.lab.managers import ObservationTermCfg as ObsTerm
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.utils import configclass
+from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from omni.isaac.lab_assets import FRANKA_PANDA_CFG
 from omni.isaac.lab_tasks.manager_based.manipulation.reach.reach_env_cfg import (
     ReachEnvCfg,
@@ -13,17 +16,6 @@ import isaac_ext.tasks.rsl_rl.mdp as mdp
 ##
 # MDP settings
 ##
-
-
-@configclass
-class EventCfg:
-    """Configuration for events."""
-
-    reset_robot_joints = EventTerm(
-        func=mdp.reset_joints_random,
-        mode="reset",
-        params={"asset_cfg": SceneEntityCfg("robot")},
-    )
 
 
 @configclass
@@ -43,6 +35,50 @@ class CommandsCfg:
             pitch=(-math.pi, math.pi),
             yaw=(-math.pi, math.pi),
         ),
+    )
+
+
+@configclass
+class ObservationsCfg:
+    """Observation specifications for the MDP."""
+
+    @configclass
+    class PolicyCfg(ObsGroup):
+        """Observations for policy group."""
+
+        # observation terms (order preserved)
+        joint_pos = ObsTerm(
+            func=mdp.joint_pos_rel, noise=Unoise(n_min=-0.01, n_max=0.01)
+        )
+        joint_vel = ObsTerm(
+            func=mdp.joint_vel_rel, noise=Unoise(n_min=-0.01, n_max=0.01)
+        )
+        ee_pose = ObsTerm(
+            func=mdp.ee_pose,
+            noise=Unoise(n_min=-0.01, n_max=0.01),
+            params={"asset_cfg": SceneEntityCfg("robot", body_names="gripperMover")},
+        )
+        pose_command = ObsTerm(
+            func=mdp.generated_commands, params={"command_name": "ee_pose"}
+        )
+        actions = ObsTerm(func=mdp.last_action)
+
+        def __post_init__(self):
+            self.enable_corruption = True
+            self.concatenate_terms = True
+
+    # observation groups
+    policy: PolicyCfg = PolicyCfg()
+
+
+@configclass
+class EventCfg:
+    """Configuration for events."""
+
+    reset_robot_joints = EventTerm(
+        func=mdp.reset_joints_random,
+        mode="reset",
+        params={"asset_cfg": SceneEntityCfg("robot")},
     )
 
 

@@ -5,9 +5,7 @@ from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.utils.math import matrix_from_quat
 
 
-def ee_pose(
-    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
-) -> torch.Tensor:
+def ee_pose(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     """Asset ee position and orientation in the base frame."""
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
@@ -18,9 +16,7 @@ def ee_pose(
     return torch.cat([pos, ortho6d], dim=-1)
 
 
-def ee_pose_l(
-    env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg = SceneEntityCfg("robot")
-) -> torch.Tensor:
+def ee_pose_l(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor:
     """Asset ee position and orientation in the env frame."""
     # extract the used quantities (to enable type-hinting)
     asset: RigidObject = env.scene[asset_cfg.name]
