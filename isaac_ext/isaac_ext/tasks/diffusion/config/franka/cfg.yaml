@@ -3,8 +3,8 @@ defaults:
   - _self_
 
 logger: wandb
-wandb_project: diffusion_maze
-task: PointMaze_Medium-v3
+wandb_project: diffusion_franka
+task: null
 num_iters: 5e5
 seed: 42
 resume: false
@@ -22,9 +22,9 @@ scaling: linear
 #dims
 obs_dim: null
 act_dim: null
-T: 248
+T: 120
 T_cond: 1
-T_action: 248
+T_action: 1
 num_envs: 1
 
 # diffusion
@@ -62,4 +62,4 @@ dataset:
 
 hydra:
   run:
-    dir: logs/diffusion/maze/${now:%b-%d}/${now:%H-%M-%S}
+    dir: logs/diffusion/franka/${now:%b-%d}/${now:%H-%M-%S}

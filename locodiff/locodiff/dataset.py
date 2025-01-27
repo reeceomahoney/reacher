@@ -15,7 +15,7 @@ class ExpertDataset(Dataset):
         self,
         data_directory: str | None,
         T_cond: int,
-        task_name: str,
+        task_name: str | None,
         device="cpu",
     ):
         self.T_cond = T_cond
@@ -24,11 +24,11 @@ class ExpertDataset(Dataset):
         if data_directory is not None:
             # build path
             current_dir = os.path.dirname(os.path.realpath(__file__))
-            dataset_path = current_dir + "/../" + data_directory
+            dataset_path = current_dir + "/../../" + data_directory
             log.info(f"Loading data from {data_directory}")
 
-            data = {}
             # load data
+            data = {}
             with h5py.File(dataset_path, "r") as f:
 
                 def load_dataset(name, obj):
@@ -38,31 +38,22 @@ class ExpertDataset(Dataset):
                 f.visititems(load_dataset)
 
             # (B, T, D)
-            for k, v in data.items():
-                data[k] = torch.from_numpy(v).transpose(0, 1)
+            data = {k: torch.from_numpy(v).transpose(0, 1) for k, v in data.items()}
+            obs = data["observations"]
+            actions = data["actions"]
+            # terminals = data["terminals"]
 
-            # build obs
-            if task_name.startswith("Isaac-Locodiff"):
-                obs = torch.cat((data["data/root_pos"], data["data/obs"]), dim=-1)
-                if task_name == "Isaac-Locodiff-no-cmd":
-                    obs = torch.cat([obs[..., :59], obs[..., 62:]], dim=-1)
-            else:
-                obs = data["data/obs"]
-            # get other data
-            actions = data["data/actions"]
-            first_steps = data["data/first_steps"]
+            obs_splits = [t.squeeze(0) for t in torch.split(obs, 1, dim=0)]
+            actions_splits = [t.squeeze(0) for t in torch.split(actions, 1, dim=0)]
 
-            # add first step flages to episode starts
-            first_steps[:, 0] = 1
-            # find episode ends
-            first_steps_flat = first_steps.reshape(-1)
-            split_indices = torch.where(first_steps_flat == 1)[0]
+            # TODO: fix this
+
             # split the sequences at episode ends
-            obs_splits = self.split_eps(obs, split_indices)
-            actions_splits = self.split_eps(actions, split_indices)
+            # obs_splits = self.split_eps(obs, split_indices)
+            # actions_splits = self.split_eps(actions, split_indices)
 
         else:
-            dataset_path = f"data/dataset_{task_name}.pkl"
+            dataset_path = f"data/diffusion/maze/dataset_{task_name}.pkl"
             if os.path.exists(dataset_path):
                 # load pre-processed dataset
                 obs_splits, actions_splits = self.load_dataset(dataset_path)
@@ -153,7 +144,7 @@ class ExpertDataset(Dataset):
         return masks.to(self.device)
 
     def calculate_norm_data(self, obs_splits, actions_splits):
-        all_obs = torch.cat(obs_splits)[:1000000]
+        all_obs = torch.cat(obs_splits)
         all_actions = torch.cat(actions_splits)
         # all_obs_acts = torch.cat([all_obs, all_actions], dim=-1)
         all_obs_acts = torch.cat([all_actions, all_obs], dim=-1)
