@@ -9,6 +9,7 @@
 
 import argparse
 import sys
+import time
 
 from omni.isaac.lab.app import AppLauncher
 
@@ -71,6 +72,21 @@ from vae.utils import get_latest_run
 task = "Isaac-Franka-Diffusion"
 
 
+def create_color_gradient(steps):
+    start_color = (0.2, 0.8, 1.0, 1.0)  # Light blue
+    end_color = (0.8, 0.2, 0.0, 1.0)  # Red
+
+    colors = []
+    for i in range(steps):
+        t = i / (steps - 1)
+        r = start_color[0] + (end_color[0] - start_color[0]) * t
+        g = start_color[1] + (end_color[1] - start_color[1]) * t
+        b = start_color[2] + (end_color[2] - start_color[2]) * t
+        a = start_color[3] + (end_color[3] - start_color[3]) * t
+        colors.append((r, g, b, a))
+    return colors
+
+
 @dynamic_hydra_main(task)
 def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     """Play with RSL-RL agent."""
@@ -108,28 +124,40 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     goal = torch.tensor([[0.5, 0, 0.25]]).to(env.device)
     goal = goal.expand(env.num_envs, -1)
 
-    # draw goal point
+    # drawing points
     draw = _debug_draw.acquire_debug_draw_interface()
-    draw.draw_points([(0.5, 0, 0.25)], [(0.8, 0.2, 0, 1)], [25])
+    colors = create_color_gradient(agent_cfg.T)
 
     # reset environment
     obs, _ = env.get_observations()
     timestep = 0
     # simulate environment
     while simulation_app.is_running():
+        start = time.time()
+
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
             output = policy({"obs": obs, "obstacle": obstacle, "goal": goal})
+            traj = output["obs_traj"][0, :, 18:21].cpu().numpy().tolist()
+            draw.draw_points([tuple(x) for x in traj], colors, [10] * len(traj))
+            draw.draw_points([(0.5, 0, 0.25)], [(0.8, 0.2, 0, 1)], [25])
 
             # env stepping
             for i in range(runner.policy.T_action):
                 obs, _, dones, _ = env.step(output["action"][:, i])
 
+                end = time.time()
+                if end - start < 0.1:
+                    time.sleep(0.1 - (end - start))
+
+                start = time.time()
+
         if dones.any():
             runner.policy.reset(dones)
 
         timestep += 1
+        draw.clear_points()
 
     # close the simulator
     env.close()
