@@ -121,9 +121,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     obstacle = torch.tensor([[0, 0, 0]]).to(env.device)
     obstacle = obstacle.expand(env.num_envs, -1)
 
-    goal = torch.tensor([[0.5, 0, 0.25]]).to(env.device)
-    goal = goal.expand(env.num_envs, -1)
-
     # drawing points
     draw = _debug_draw.acquire_debug_draw_interface()
     colors = create_color_gradient(agent_cfg.T)
@@ -138,10 +135,10 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
+            goal = env.unwrapped.command_manager.get_command("ee_pose")[:, :3]
             output = policy({"obs": obs, "obstacle": obstacle, "goal": goal})
             traj = output["obs_traj"][0, :, 18:21].cpu().numpy().tolist()
             draw.draw_points([tuple(x) for x in traj], colors, [10] * len(traj))
-            draw.draw_points([(0.5, 0, 0.25)], [(0.8, 0.2, 0, 1)], [25])
 
             # env stepping
             for i in range(runner.policy.T_action):
