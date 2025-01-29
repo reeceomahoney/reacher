@@ -145,7 +145,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         runner = ClassifierRunner(
             env, agent_cfg, log_dir=log_dir, device=agent_cfg.device
         )
-        model_path = "logs/diffusion/maze/Jan-22/16-23-33/" + "models/model.pt"
+        model_path = "logs/diffusion/franka/Jan-29/15-59-18/" + "models/model.pt"
         runner.load(model_path)
     else:
         runner = DiffusionRunner(

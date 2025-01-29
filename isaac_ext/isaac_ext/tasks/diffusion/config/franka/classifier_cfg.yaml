@@ -3,7 +3,7 @@ defaults:
   - _self_
 
 logger: wandb
-wandb_project: diffusion_franka
+wandb_project: classifier_franka
 task: null
 num_iters: 5e5
 seed: 42
