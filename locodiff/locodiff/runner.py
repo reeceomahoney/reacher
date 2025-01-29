@@ -94,9 +94,7 @@ class DiffusionRunner:
                 obstacle = torch.tensor([[0, 0, 0]]).to(self.device)
                 obstacle = obstacle.expand(self.env.num_envs, -1)
 
-                goal = torch.tensor(
-                    [[0.5, 0, 0.25, -0.84, 0.34, 0.44, 0.89, -0.33, 0.29]]
-                ).to(self.device)
+                goal = torch.tensor([[0.5, 0, 0.25]]).to(self.device)
                 goal = goal.expand(self.env.num_envs, -1)
 
                 with InferenceContext(self) and tqdm(
