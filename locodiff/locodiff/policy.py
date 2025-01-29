@@ -327,11 +327,8 @@ class DiffusionPolicy(nn.Module):
                 input_act = raw_action[:, self.T_cond - 1 :]
             input = torch.cat([input_act, input_obs], dim=-1)
 
-            # obstacle = self.calculate_obstacles(input.shape[0])
-            # returns = self.calculate_return(input, data["mask"], obstacle)
-
             obstacle = torch.zeros((input.shape[0], 3)).to(self.device)
-            returns = None
+            returns = self.calculate_return(input, data["mask"])
 
             obstacle = self.normalizer.scale_3d_pos(obstacle)
             input = self.normalizer.scale_output(input)
@@ -340,7 +337,7 @@ class DiffusionPolicy(nn.Module):
             goal = input[
                 range(input.shape[0]),
                 lengths - 1,
-                self.action_dim + 18 : self.action_dim + 21
+                self.action_dim + 18 : self.action_dim + 21,
             ]
 
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
@@ -358,8 +355,8 @@ class DiffusionPolicy(nn.Module):
         else:
             return {}
 
-    def calculate_return(self, input, mask, obstacle):
-        reward = self.check_collisions(input[:, :, 2:4], obstacle)
+    def calculate_return(self, input, mask):
+        reward = self.check_collisions(input[..., 25:28])
         reward = ((~reward) * mask).float()
         # average reward for valid timesteps
         returns = reward.sum(dim=-1) / mask.sum(dim=-1)
@@ -372,16 +369,11 @@ class DiffusionPolicy(nn.Module):
         samples = self.open_squares[idx].to(self.device)
         return samples.to(self.device)
 
-    def check_collisions(
-        self, trajectories: torch.Tensor, box_corners: torch.Tensor
-    ) -> torch.Tensor:
-        # Expand box corners to match trajectory timesteps
-        box_corners_tr = (box_corners + 1.0).unsqueeze(1)
-        box_corners_bl = box_corners.unsqueeze(1)
-        # Check if any point in each trajectory is inside its box
-        inside_box = (trajectories > box_corners_bl) & (trajectories < box_corners_tr)
-        # Both x and y coordinates must be inside for a collision
-        return inside_box.all(dim=2)
+    def check_collisions(self, traj: torch.Tensor) -> torch.Tensor:
+        x_mask = (traj[..., 0] >= 0.3) & (traj[..., 0] <= 0.4)
+        y_mask = (traj[..., 1] >= -0.5) & (traj[..., 1] <= 0.5)
+        z_mask = (traj[..., 2] >= 0.0) & (traj[..., 2] <= 0.4)
+        return x_mask & y_mask & z_mask
 
     ###########
     # Helpers #

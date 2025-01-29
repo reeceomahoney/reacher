@@ -14,6 +14,8 @@ import sys
 import cli_args
 from omni.isaac.lab.app import AppLauncher
 
+from locodiff.classifier_runner import ClassifierRunner
+
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
 parser.add_argument(
@@ -139,13 +141,20 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env)
 
-    # create runner from rsl-rl
-    runner = DiffusionRunner(env, agent_cfg, log_dir=log_dir, device=agent_cfg.device)
-    # write git state to logs
+    if task.endswith("Classifier"):
+        runner = ClassifierRunner(
+            env, agent_cfg, log_dir=log_dir, device=agent_cfg.device
+        )
+        model_path = "logs/diffusion/maze/Jan-22/16-23-33/" + "models/model.pt"
+        runner.load(model_path)
+    else:
+        runner = DiffusionRunner(
+            env, agent_cfg, log_dir=log_dir, device=agent_cfg.device
+        )
+
     # load the checkpoint
     if agent_cfg.resume:
         print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-        # load previously trained model
         runner.load(resume_path)
 
     # dump the configuration into log-directory
