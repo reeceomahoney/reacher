@@ -340,7 +340,7 @@ class DiffusionPolicy(nn.Module):
             goal = input[
                 range(input.shape[0]),
                 lengths - 1,
-                self.action_dim + 18 : self.action_dim + 21,
+                self.action_dim + 18 : self.action_dim + 27
             ]
 
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])

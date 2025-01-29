@@ -41,7 +41,7 @@ class ExpertDataset(Dataset):
             data = {k: torch.from_numpy(v).transpose(0, 1) for k, v in data.items()}
             obs = data["observations"]
             # remove commands
-            # obs = torch.cat([obs[..., :27], obs[..., 34:]], dim=-1)
+            obs = torch.cat([obs[..., :27], obs[..., 34:]], dim=-1)
             actions = data["actions"]
             # terminals = data["terminals"]
 
