@@ -76,10 +76,8 @@ class ClassifierRunner:
             # evaluation
             if it % self.cfg.eval_interval == 0:
                 test_mse = []
-                plot = True
                 for batch in tqdm(self.test_loader, desc="Testing...", leave=False):
-                    mse = self.policy.test_classifier(batch, plot)
-                    plot = False
+                    mse = self.policy.test_classifier(batch, False)
                     test_mse.append(mse)
                 test_mse = statistics.mean(test_mse)
 
