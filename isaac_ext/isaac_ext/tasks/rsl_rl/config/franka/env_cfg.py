@@ -6,7 +6,7 @@ from omni.isaac.lab.managers import ObservationTermCfg as ObsTerm
 from omni.isaac.lab.managers import SceneEntityCfg
 from omni.isaac.lab.utils import configclass
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
-from omni.isaac.lab_assets import FRANKA_PANDA_CFG
+from omni.isaac.lab_assets import FRANKA_PANDA_HIGH_PD_CFG
 from omni.isaac.lab_tasks.manager_based.manipulation.reach.reach_env_cfg import (
     ReachEnvCfg,
 )
@@ -103,7 +103,9 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         self.sim.dt = 1.0 / 50.0
 
         # switch robot to franka
-        self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+        self.scene.robot = FRANKA_PANDA_HIGH_PD_CFG.replace(
+            prim_path="{ENV_REGEX_NS}/Robot"
+        )
         # override rewards
         self.rewards.end_effector_position_tracking.params["asset_cfg"].body_names = [
             "panda_hand"
