@@ -103,9 +103,7 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         self.sim.dt = 1.0 / 50.0
 
         # switch robot to franka
-        self.scene.robot = FRANKA_PANDA_CFG.replace(
-            prim_path="{ENV_REGEX_NS}/Robot"
-        )
+        self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         # override rewards
         self.rewards.end_effector_position_tracking.params["asset_cfg"].body_names = [
             "panda_hand"
@@ -117,8 +115,8 @@ class FrankaReachEnvCfg(ReachEnvCfg):
             "asset_cfg"
         ].body_names = ["panda_hand"]
         self.rewards.end_effector_orientation_tracking.weight = -0.05
-        self.rewards.action_rate.weight = -1
-        self.rewards.joint_vel.weight = -1
+        self.rewards.action_rate.weight = -0.001
+        self.rewards.joint_vel.weight = -0.001
 
         # override actions
         self.actions.arm_action = mdp.JointPositionActionCfg(
@@ -127,3 +125,5 @@ class FrankaReachEnvCfg(ReachEnvCfg):
             scale=0.5,
             use_default_offset=True,
         )
+
+        self.curriculum = None
