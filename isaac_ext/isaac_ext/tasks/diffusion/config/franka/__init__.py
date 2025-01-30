@@ -19,7 +19,7 @@ gym.register(
     entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
-        "env_cfg_entry_point": env_cfg.FrankaDiffusionEnvCfg,
+        "env_cfg_entry_point": env_cfg.FrankaGuidanceEnvCfg,
         "agent_cfg_entry_point": f"{os.path.dirname(__file__)}/classifier_cfg.yaml",
     },
 )
