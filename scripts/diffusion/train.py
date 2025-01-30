@@ -83,7 +83,7 @@ torch.backends.cudnn.allow_tf32 = True
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
-task = "Isaac-Franka-Diffusion"
+task = "Isaac-Franka-Classifier"
 
 
 @dynamic_hydra_main(task)
@@ -145,7 +145,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         runner = ClassifierRunner(
             env, agent_cfg, log_dir=log_dir, device=agent_cfg.device
         )
-        model_path = "logs/diffusion/franka/Jan-29/15-59-18/" + "models/model.pt"
+        model_path = "logs/diffusion/franka/Jan-29/17-57-04/" + "models/model.pt"
         runner.load(model_path)
     else:
         runner = DiffusionRunner(
