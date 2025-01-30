@@ -339,7 +339,7 @@ class ValueUnet1D(nn.Module):
         self.mid_block_2 = CondResBlock(mid_dim // 2, mid_dim // 4)
         self.mid_down_2 = Downsample1d(mid_dim // 4)
 
-        fc_dim = 64 * 16
+        fc_dim = 64 * 3
 
         self.final_block = nn.Sequential(
             nn.Linear(fc_dim + 256, fc_dim // 2),
