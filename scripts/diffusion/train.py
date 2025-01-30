@@ -71,7 +71,6 @@ from omegaconf import DictConfig, OmegaConf
 from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
 from omni.isaac.lab.utils.dict import print_dict
 from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
-from omni.isaac.lab_tasks.utils import get_checkpoint_path
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
 import isaac_ext.tasks  # noqa: F401
@@ -83,14 +82,14 @@ torch.backends.cudnn.allow_tf32 = True
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
-task = "Isaac-Franka-Classifier"
+task = "Isaac-Franka-Diffusion"
 
 
 @dynamic_hydra_main(task)
 def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     """Train with RSL-RL agent."""
     # override configurations with non-hydra CLI arguments
-    agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)
+    agent_cfg = cli_args.update_rsl_rl_cfg(agent_cfg, args_cli)  # type: ignore
     env_cfg.scene.num_envs = (
         args_cli.num_envs if args_cli.num_envs is not None else env_cfg.scene.num_envs
     )
@@ -117,14 +116,8 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     env = gym.make(
         task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
     )
-    agent_cfg.obs_dim = env.observation_space["policy"].shape[-1]
-    agent_cfg.act_dim = env.action_space.shape[-1]
-
-    # save resume path before creating a new log_dir
-    if agent_cfg.resume:
-        resume_path = get_checkpoint_path(
-            log_root_path, agent_cfg.load_run, agent_cfg.load_checkpoint
-        )
+    agent_cfg.obs_dim = env.observation_space["policy"].shape[-1]  # type: ignore
+    agent_cfg.act_dim = env.action_space.shape[-1]  # type: ignore
 
     # wrap for video recording
     if args_cli.video:
@@ -152,11 +145,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
             env, agent_cfg, log_dir=log_dir, device=agent_cfg.device
         )
 
-    # load the checkpoint
-    if agent_cfg.resume:
-        print(f"[INFO]: Loading model checkpoint from: {resume_path}")
-        runner.load(resume_path)
-
     # dump the configuration into log-directory
     agent_cfg_dict = OmegaConf.to_container(agent_cfg)
     dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
@@ -173,6 +161,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
 if __name__ == "__main__":
     # run the main function
-    main()
+    main()  # type: ignore
     # close sim app
     simulation_app.close()
