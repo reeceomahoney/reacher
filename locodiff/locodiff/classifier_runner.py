@@ -30,13 +30,11 @@ class ClassifierRunner:
 
         # classes
         self.train_loader, self.test_loader = get_dataloaders(**self.cfg.dataset)
-        self.normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
-        # TODO: init model with hydra
+        normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
         model = ConditionalUnet1D(**self.cfg.model)
         classifier = ValueUnet1D(**self.cfg.model)
-        # model = DiffusionTransformer(**self.cfg.model)
         self.policy = DiffusionPolicy(
-            model, self.normalizer, env, **self.cfg.policy, classifier=classifier
+            model, normalizer, env, **self.cfg.policy, classifier=classifier
         )
 
         # ema
@@ -131,9 +129,10 @@ class ClassifierRunner:
             self.ema_helper.copy_to(self.policy.parameters())
 
         saved_dict = {
-            "model_state_dict": self.policy.state_dict(),
+            "model_state_dict": self.policy.model.state_dict(),
             "optimizer_state_dict": self.policy.optimizer.state_dict(),
-            "norm_state_dict": self.normalizer.state_dict(),
+            "norm_state_dict": self.policy.normalizer.state_dict(),
+            "classifier_state_dict": self.policy.classifier.state_dict(),
             "iter": self.current_learning_iteration,
             "infos": infos,
         }
@@ -144,9 +143,10 @@ class ClassifierRunner:
 
     def load(self, path):
         loaded_dict = torch.load(path)
-        self.policy.load_state_dict(loaded_dict["model_state_dict"])
-        self.normalizer.load_state_dict(loaded_dict["norm_state_dict"])
+        self.policy.model.load_state_dict(loaded_dict["model_state_dict"])
         self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
+        self.policy.normalizer.load_state_dict(loaded_dict["norm_state_dict"])
+        self.policy.classifier.load_state_dict(loaded_dict["classifier_state_dict"])
         # self.current_learning_iteration = loaded_dict["iter"]
         return loaded_dict["infos"]
 

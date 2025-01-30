@@ -234,9 +234,10 @@ class DiffusionRunner:
             self.ema_helper.copy_to(self.policy.parameters())
 
         saved_dict = {
-            "model_state_dict": self.policy.state_dict(),
+            "model_state_dict": self.policy.model.state_dict(),
             "optimizer_state_dict": self.policy.optimizer.state_dict(),
-            "norm_state_dict": self.normalizer.state_dict(),
+            "norm_state_dict": self.policy.normalizer.state_dict(),
+            "classifier_state_dict": self.policy.classifier.state_dict(),
             "iter": self.current_learning_iteration,
             "infos": infos,
         }
@@ -247,10 +248,10 @@ class DiffusionRunner:
 
     def load(self, path):
         loaded_dict = torch.load(path)
-        self.policy.load_state_dict(loaded_dict["model_state_dict"])
-        self.normalizer.load_state_dict(loaded_dict["norm_state_dict"])
+        self.policy.model.load_state_dict(loaded_dict["model_state_dict"])
         self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
-        self.current_learning_iteration = loaded_dict["iter"]
+        self.policy.normalizer.load_state_dict(loaded_dict["norm_state_dict"])
+        self.policy.classifier.load_state_dict(loaded_dict["classifier_state_dict"])
         return loaded_dict["infos"]
 
     def process_ep_data(self, x, new_ids):
