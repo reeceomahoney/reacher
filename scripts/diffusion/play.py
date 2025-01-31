@@ -35,7 +35,7 @@ from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main
 from vae.utils import get_latest_run
 
-task = "Isaac-Franka-Diffusion"
+task = "Isaac-Franka-Classifier"
 
 
 def interpolate_color(t):
@@ -101,6 +101,9 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     # create trajectory visualizer
     trajectory_visualizer = create_trajectory_visualizer(agent_cfg)
 
+    # set classifier scale
+    runner.policy.alpha = 300
+
     # reset environment
     obs, _ = env.get_observations()
     timestep = 0
@@ -108,22 +111,20 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     while simulation_app.is_running():
         start = time.time()
 
-        # run everything in inference mode
-        with torch.inference_mode():
-            # agent stepping
-            goal = env.unwrapped.command_manager.get_command("ee_pose")[:, :3]  # type: ignore
-            output = policy({"obs": obs, "obstacle": obstacle[:, :3], "goal": goal})
-            trajectory_visualizer.visualize(output["obs_traj"][0, :, 18:21])
+        # agent stepping
+        goal = env.unwrapped.command_manager.get_command("ee_pose")[:, :3]  # type: ignore
+        output = policy({"obs": obs, "obstacle": obstacle[:, :3], "goal": goal})
+        trajectory_visualizer.visualize(output["obs_traj"][0, :, 18:21])
 
-            # env stepping
-            for i in range(runner.policy.T_action):
-                obs, _, dones, _ = env.step(output["action"][:, i])
+        # env stepping
+        for i in range(runner.policy.T_action):
+            obs, _, dones, _ = env.step(output["action"][:, i])
 
-                end = time.time()
-                if end - start < 0.1:
-                    time.sleep(0.1 - (end - start))
+            end = time.time()
+            if end - start < 0.1:
+                time.sleep(0.1 - (end - start))
 
-                start = time.time()
+            start = time.time()
 
         if dones.any():
             runner.policy.reset(dones)

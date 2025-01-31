@@ -50,7 +50,7 @@ class DiffusionPolicy(nn.Module):
         # model
         if classifier is not None:
             self.classifier = classifier
-            self.alpha = 0
+            self.alpha = 0.0
         elif cond_mask_prob > 0:
             model = CFGWrapper(model, cond_lambda, cond_mask_prob)
         self.model = model
