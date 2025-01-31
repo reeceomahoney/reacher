@@ -370,9 +370,9 @@ class DiffusionPolicy(nn.Module):
         return samples.to(self.device)
 
     def check_collisions(self, traj: torch.Tensor) -> torch.Tensor:
-        x_mask = (traj[..., 0] >= 0.3) & (traj[..., 0] <= 0.4)
-        y_mask = (traj[..., 1] >= -0.5) & (traj[..., 1] <= 0.5)
-        z_mask = (traj[..., 2] >= 0.0) & (traj[..., 2] <= 0.4)
+        x_mask = (traj[..., 0] >= 0.45) & (traj[..., 0] <= 0.55)
+        y_mask = (traj[..., 1] >= -0.8) & (traj[..., 1] <= 0.8)
+        z_mask = (traj[..., 2] >= 0.0) & (traj[..., 2] <= 0.5)
         return x_mask & y_mask & z_mask
 
     ###########
