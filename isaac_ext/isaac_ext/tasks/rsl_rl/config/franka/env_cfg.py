@@ -45,7 +45,7 @@ class FrankaSceneCfg(InteractiveSceneCfg):
     )
 
     # robots
-    robot: ArticulationCfg = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+    robot: ArticulationCfg = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")  # type: ignore
 
     # lights
     light = AssetBaseCfg(
