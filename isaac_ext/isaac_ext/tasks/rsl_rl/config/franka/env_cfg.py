@@ -1,17 +1,58 @@
 import math
 
+import omni.isaac.lab.sim as sim_utils
+from omni.isaac.lab.assets import ArticulationCfg, AssetBaseCfg
+from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
+from omni.isaac.lab.managers import ActionTermCfg as ActionTerm
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
 from omni.isaac.lab.managers import ObservationTermCfg as ObsTerm
+from omni.isaac.lab.managers import RewardTermCfg as RewTerm
 from omni.isaac.lab.managers import SceneEntityCfg
+from omni.isaac.lab.managers import TerminationTermCfg as DoneTerm
+from omni.isaac.lab.scene import InteractiveSceneCfg
 from omni.isaac.lab.utils import configclass
+from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from omni.isaac.lab_assets import FRANKA_PANDA_CFG
-from omni.isaac.lab_tasks.manager_based.manipulation.reach.reach_env_cfg import (
-    ReachEnvCfg,
-)
 
 import isaac_ext.tasks.rsl_rl.mdp as mdp
+
+##
+# Scene definition
+##
+
+
+@configclass
+class FrankaSceneCfg(InteractiveSceneCfg):
+    """Configuration for the scene with a robotic arm."""
+
+    # world
+    ground = AssetBaseCfg(
+        prim_path="/World/ground",
+        spawn=sim_utils.GroundPlaneCfg(),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, -1.05)),
+    )
+
+    table = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/Table",
+        spawn=sim_utils.UsdFileCfg(
+            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
+        ),
+        init_state=AssetBaseCfg.InitialStateCfg(
+            pos=(0.55, 0.0, 0.0), rot=(0.70711, 0.0, 0.0, 0.70711)
+        ),
+    )
+
+    # robots
+    robot: ArticulationCfg = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
+
+    # lights
+    light = AssetBaseCfg(
+        prim_path="/World/light",
+        spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=2500.0),
+    )
+
 
 ##
 # MDP settings
@@ -36,6 +77,19 @@ class CommandsCfg:
             yaw=(-math.pi, math.pi),
         ),
     )
+
+
+@configclass
+class ActionsCfg:
+    """Action specifications for the MDP."""
+
+    arm_action: ActionTerm = mdp.JointPositionActionCfg(
+        asset_name="robot",
+        joint_names=["panda_joint.*"],
+        scale=0.5,
+        use_default_offset=True,
+    )
+    gripper_action = None
 
 
 @configclass
@@ -72,6 +126,50 @@ class ObservationsCfg:
 
 
 @configclass
+class RewardsCfg:
+    """Reward terms for the MDP."""
+
+    # task terms
+    end_effector_position_tracking = RewTerm(
+        func=mdp.position_command_error,
+        weight=-0.2,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            "command_name": "ee_pose",
+        },
+    )
+    end_effector_position_tracking_fine_grained = RewTerm(
+        func=mdp.position_command_error_tanh,
+        weight=0.1,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            "std": 0.1,
+            "command_name": "ee_pose",
+        },
+    )
+    end_effector_orientation_tracking = RewTerm(
+        func=mdp.orientation_command_error,
+        weight=-0.05,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            "command_name": "ee_pose",
+        },
+    )
+
+    # action penalty
+    joint_acc = RewTerm(
+        func=mdp.joint_acc_l2,
+        weight=-0.0001,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+    joint_vel = RewTerm(
+        func=mdp.joint_vel_l2,
+        weight=-0.0001,
+        params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+
+
+@configclass
 class EventCfg:
     """Configuration for events."""
 
@@ -82,48 +180,35 @@ class EventCfg:
     )
 
 
+@configclass
+class TerminationsCfg:
+    """Termination terms for the MDP."""
+
+    time_out = DoneTerm(func=mdp.time_out, time_out=True)
+
+
 ##
 # Environment configuration
 ##
 
 
 @configclass
-class FrankaReachEnvCfg(ReachEnvCfg):
+class FrankaReachEnvCfg(ManagerBasedRLEnvCfg):
+    # Scene settings
+    scene: FrankaSceneCfg = FrankaSceneCfg(num_envs=4096, env_spacing=2.5)
+    # Basic settings
     observations: ObservationsCfg = ObservationsCfg()
+    actions: ActionsCfg = ActionsCfg()
     commands: CommandsCfg = CommandsCfg()
+    # MDP settings
+    rewards: RewardsCfg = RewardsCfg()
+    terminations: TerminationsCfg = TerminationsCfg()
     events: EventCfg = EventCfg()
 
     def __post_init__(self):
-        super().__post_init__()
         # general settings
         self.decimation = 5
         self.sim.render_interval = self.decimation
         self.episode_length_s = 8.0
         # simulation settings
         self.sim.dt = 1.0 / 50.0
-
-        # switch robot to franka
-        self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
-        # override rewards
-        self.rewards.end_effector_position_tracking.params["asset_cfg"].body_names = [
-            "panda_hand"
-        ]
-        self.rewards.end_effector_position_tracking_fine_grained.params[
-            "asset_cfg"
-        ].body_names = ["panda_hand"]
-        self.rewards.end_effector_orientation_tracking.params[
-            "asset_cfg"
-        ].body_names = ["panda_hand"]
-        self.rewards.end_effector_orientation_tracking.weight = -0.05
-        self.rewards.action_rate.weight = -1
-        self.rewards.joint_vel.weight = -0.01
-
-        # override actions
-        self.actions.arm_action = mdp.JointPositionActionCfg(
-            asset_name="robot",
-            joint_names=["panda_joint.*"],
-            scale=0.5,
-            use_default_offset=True,
-        )
-
-        self.curriculum = None
