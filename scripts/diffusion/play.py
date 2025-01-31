@@ -7,55 +7,17 @@
 
 """Launch Isaac Sim Simulator first."""
 
-import argparse
-import sys
-import time
-
 from omni.isaac.lab.app import AppLauncher
 
-# local imports
-import cli_args  # isort: skip
-
-# add argparse arguments
-parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
-parser.add_argument(
-    "--video", action="store_true", default=False, help="Record videos during training."
-)
-parser.add_argument(
-    "--video_length",
-    type=int,
-    default=200,
-    help="Length of the recorded video (in steps).",
-)
-parser.add_argument(
-    "--disable_fabric",
-    action="store_true",
-    default=False,
-    help="Disable fabric and use USD I/O operations.",
-)
-parser.add_argument(
-    "--num_envs", type=int, default=1, help="Number of environments to simulate."
-)
-# append RSL-RL cli arguments
-cli_args.add_rsl_rl_args(parser)
-# append AppLauncher cli args
-AppLauncher.add_app_launcher_args(parser)
-args_cli, hydra_args = parser.parse_known_args()
-# always enable cameras to record video
-if args_cli.video:
-    args_cli.enable_cameras = True
-
-sys.argv = [sys.argv[0]] + hydra_args
-sys.argv.append("hydra.output_subdir=null")
-sys.argv.append("hydra.run.dir=.")
-
 # launch omniverse app
-app_launcher = AppLauncher(args_cli)
+app_launcher = AppLauncher()
 simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
 import os
+import sys
+import time
 
 import gymnasium as gym
 import omni.isaac.lab.sim as sim_utils
@@ -107,15 +69,12 @@ def create_trajectory_visualizer(agent_cfg):
 @dynamic_hydra_main(task)
 def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     """Play with RSL-RL agent."""
-    if args_cli.num_envs is not None:
-        env_cfg.scene.num_envs = args_cli.num_envs
-        agent_cfg.num_envs = args_cli.num_envs
+    env_cfg.scene.num_envs = 1
+    agent_cfg.num_envs = 1
     agent_cfg.dataset.task_name = task
 
     # create isaac environment
-    env = gym.make(
-        task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
-    )
+    env = gym.make(task, cfg=env_cfg)
 
     # wrap around environment for rsl-rl
     env = RslRlVecEnvWrapper(env)  # type: ignore
@@ -176,7 +135,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
 
 if __name__ == "__main__":
-    # run the main function
+    sys.argv.append("hydra.output_subdir=null")
+    sys.argv.append("hydra.run.dir=.")
     main()  # type: ignore
-    # close sim app
     simulation_app.close()
