@@ -25,7 +25,7 @@ class CommandsCfg:
     ee_pose = mdp.UniformPoseCommandCfg(
         asset_name="robot",
         body_name="panda_hand",
-        resampling_time_range=(4.0, 4.0),
+        resampling_time_range=(8.0, 8.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
             pos_x=(-1, 1),
@@ -98,7 +98,7 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         # general settings
         self.decimation = 5
         self.sim.render_interval = self.decimation
-        self.episode_length_s = 4.0
+        self.episode_length_s = 8.0
         # simulation settings
         self.sim.dt = 1.0 / 50.0
 
@@ -115,8 +115,8 @@ class FrankaReachEnvCfg(ReachEnvCfg):
             "asset_cfg"
         ].body_names = ["panda_hand"]
         self.rewards.end_effector_orientation_tracking.weight = -0.05
-        self.rewards.action_rate.weight = -0.1
-        self.rewards.joint_vel.weight = -0.1
+        self.rewards.action_rate.weight = -0.5
+        self.rewards.joint_vel.weight = -0.5
 
         # override actions
         self.actions.arm_action = mdp.JointPositionActionCfg(

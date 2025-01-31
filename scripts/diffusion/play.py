@@ -73,7 +73,7 @@ from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main
 from vae.utils import get_latest_run
 
-task = "Isaac-Franka-Classifier"
+task = "Isaac-Franka-Diffusion"
 
 
 def interpolate_color(t):
@@ -110,7 +110,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     if args_cli.num_envs is not None:
         env_cfg.scene.num_envs = args_cli.num_envs
         agent_cfg.num_envs = args_cli.num_envs
-    env_cfg.episode_length_s = agent_cfg.episode_length
     agent_cfg.dataset.task_name = task
 
     # create isaac environment
@@ -138,7 +137,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     # set obstacle
     obstacle = torch.tensor([[0.5, 0, 0.125, 1, 0, 0, 0]]).to(env.device)
     obstacle = obstacle.expand(env.num_envs, -1)
-    env.unwrapped.scene["obstacle"].write_root_pose_to_sim(obstacle)
+    # env.unwrapped.scene["obstacle"].write_root_pose_to_sim(obstacle)
 
     # create trajectory visualizer
     trajectory_visualizer = create_trajectory_visualizer(agent_cfg)
