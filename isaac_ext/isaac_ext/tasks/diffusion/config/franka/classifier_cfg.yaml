@@ -8,7 +8,7 @@ task: null
 num_iters: 5e5
 seed: 42
 resume: false
-episode_length: 5
+episode_length: 4
 
 # training
 log_interval: 100
