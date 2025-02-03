@@ -40,6 +40,12 @@ parser.add_argument(
 parser.add_argument(
     "--max_iterations", type=int, default=None, help="RL Policy training iterations."
 )
+parser.add_argument(
+    "--resume",
+    type=str,
+    default=None,
+    help="Resume training from a checkpoint.",
+)
 # append RSL-RL cli arguments
 cli_args.add_rsl_rl_args(parser)
 # append AppLauncher cli args
@@ -74,7 +80,7 @@ from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 from rsl_rl.runners import OnPolicyRunner
 
 import isaac_ext.tasks  # noqa: F401
-from locodiff.utils import dynamic_hydra_main
+from locodiff.utils import dynamic_hydra_main, get_latest_run
 
 torch.backends.cuda.matmul.allow_tf32 = True
 torch.backends.cudnn.allow_tf32 = True
@@ -136,6 +142,12 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     runner = OnPolicyRunner(
         env, agent_cfg_dict, log_dir=log_dir, device=agent_cfg.device
     )
+
+    # load the checkpoint
+    if agent_cfg.resume:
+        print(f"[INFO]: Loading model checkpoint from: {agent_cfg.resume}")
+        runner.load(agent_cfg.resume)
+
     # write git state to logs
     runner.add_git_repo_to_log(__file__)
 
