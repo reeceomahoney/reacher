@@ -41,7 +41,7 @@ parser.add_argument(
     "--max_iterations", type=int, default=None, help="RL Policy training iterations."
 )
 parser.add_argument(
-    "--resume",
+    "--resume_path",
     type=str,
     default=None,
     help="Resume training from a checkpoint.",
@@ -144,9 +144,9 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     )
 
     # load the checkpoint
-    if args_cli.resume:
-        print(f"[INFO]: Loading model checkpoint from: {args_cli.resume}")
-        runner.load(args_cli.resume)
+    if args_cli.resume_path:
+        print(f"[INFO]: Loading model checkpoint from: {args_cli.resume_path}")
+        runner.load(args_cli.resume_path)
 
     # write git state to logs
     runner.add_git_repo_to_log(__file__)
