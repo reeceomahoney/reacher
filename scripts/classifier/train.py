@@ -14,6 +14,8 @@ import sys
 import cli_args
 from omni.isaac.lab.app import AppLauncher
 
+from locodiff.classifier_runner import ClassifierRunner
+
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Train an RL agent with RSL-RL.")
 parser.add_argument(
@@ -72,7 +74,6 @@ from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
 import isaac_ext.tasks  # noqa: F401
-from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main
 
 torch.backends.cuda.matmul.allow_tf32 = True
@@ -80,7 +81,7 @@ torch.backends.cudnn.allow_tf32 = True
 torch.backends.cudnn.deterministic = False
 torch.backends.cudnn.benchmark = False
 
-task = "Isaac-Franka-Diffusion"
+task = "Isaac-Franka-Classifier"
 
 
 @dynamic_hydra_main(task)
@@ -126,12 +127,14 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         }
         print("[INFO] Recording videos during training.")
         print_dict(video_kwargs, nesting=4)
-        env = gym.wrappers.RecordVideo(env, **video_kwargs)  # type: ignore
+        env = gym.wrappers.RecordVideo(env, **video_kwargs)
 
     # wrap around environment for rsl-rl
-    env = RslRlVecEnvWrapper(env)  # type: ignore
+    env = RslRlVecEnvWrapper(env)
 
-    runner = DiffusionRunner(env, agent_cfg, log_dir=log_dir, device=agent_cfg.device)
+    runner = ClassifierRunner(env, agent_cfg, log_dir=log_dir, device=agent_cfg.device)
+    model_path = "logs/diffusion/franka/Jan-31/13-50-45/" + "models/model.pt"
+    runner.load(model_path)
 
     # dump the configuration into log-directory
     agent_cfg_dict = OmegaConf.to_container(agent_cfg)
