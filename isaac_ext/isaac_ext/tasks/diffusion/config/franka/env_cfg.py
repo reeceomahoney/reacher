@@ -10,23 +10,24 @@ class FrankaDiffusionEnvCfg(FrankaReachEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.observations.policy.pose_command = None
+        self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
 
 
 @configclass
 class FrankaGuidanceEnvCfg(FrankaDiffusionEnvCfg):
     def __post_init__(self):
         super().__post_init__()
-        self.commands.ee_pose.ranges.pos_x = (0.8,0.8)
-        self.commands.ee_pose.ranges.pos_y = (0,0)
+        self.commands.ee_pose.ranges.pos_x = (0.8, 0.8)
+        self.commands.ee_pose.ranges.pos_y = (0, 0)
         self.commands.ee_pose.ranges.pos_z = (0.2, 0.2)
-        self.commands.ee_pose.ranges.roll = (0,0)
-        self.commands.ee_pose.ranges.pitch = (0,0)
-        self.commands.ee_pose.ranges.yaw = (0,0)
+        self.commands.ee_pose.ranges.roll = (0, 0)
+        self.commands.ee_pose.ranges.pitch = (0, 0)
+        self.commands.ee_pose.ranges.yaw = (0, 0)
 
         self.scene.obstacle = RigidObjectCfg(
             prim_path="/World/obstacle",
             spawn=sim_utils.CuboidCfg(
-                size=(0.05, 0.8, 0.25),
+                size=(0.05, 0.8, 0.4),
                 rigid_props=sim_utils.RigidBodyPropertiesCfg(
                     disable_gravity=True,
                     retain_accelerations=False,
@@ -41,5 +42,5 @@ class FrankaGuidanceEnvCfg(FrankaDiffusionEnvCfg):
                     collision_enabled=False
                 ),
             ),
-            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, 0, 0.125)),
+            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, 0, 0.2)),
         )

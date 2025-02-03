@@ -118,7 +118,9 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         # override command generator body
         # end-effector is along z-direction
         self.commands.ee_pose.body_name = "panda_hand"
+        self.commands.ee_pose.ranges.pos_z = (0.15, 1)
         self.commands.ee_pose.ranges.pitch = (math.pi, math.pi)
+
 
         # general settings
         self.decimation = 5
