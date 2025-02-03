@@ -144,9 +144,9 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     )
 
     # load the checkpoint
-    if agent_cfg.resume:
-        print(f"[INFO]: Loading model checkpoint from: {agent_cfg.resume}")
-        runner.load(agent_cfg.resume)
+    if args_cli.resume:
+        print(f"[INFO]: Loading model checkpoint from: {args_cli.resume}")
+        runner.load(args_cli.resume)
 
     # write git state to logs
     runner.add_git_repo_to_log(__file__)
