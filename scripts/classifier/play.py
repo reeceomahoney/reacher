@@ -104,7 +104,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     trajectory_visualizer = create_trajectory_visualizer(agent_cfg)
 
     # set classifier scale
-    runner.policy.alpha = 300
+    runner.policy.alpha = 10
 
     # reset environment
     obs, _ = env.get_observations()
@@ -119,7 +119,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         trajectory_visualizer.visualize(output["obs_traj"][0, :, 18:21])
 
         # plot trajectory
-        alphas = [0, 200, 300, 500, 700, 1e3]
+        alphas = [0, 10, 50, 100, 200]
         plot_3d_guided_trajectory(runner.policy, obs, goal, obstacle[:, :3], alphas)
         plt.show()
 
