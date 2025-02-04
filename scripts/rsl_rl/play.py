@@ -49,6 +49,9 @@ args_cli, hydra_args = parser.parse_known_args()
 # always enable cameras to record video
 if args_cli.video:
     args_cli.enable_cameras = True
+# enable headless mode for data collection
+if args_cli.collect:
+    args_cli.headless = True
 
 sys.argv = [sys.argv[0]] + hydra_args
 sys.argv.append("hydra.output_subdir=null")
