@@ -35,7 +35,7 @@ from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main
 from vae.utils import get_latest_run
 
-task = "Isaac-Franka-Diffusion"
+task = "Isaac-Franka-Classifier"
 
 
 def interpolate_color(t):
@@ -85,7 +85,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     runner = DiffusionRunner(env, agent_cfg, device=agent_cfg.device)
 
     # load the checkpoint
-    log_root_path = os.path.abspath("logs/diffusion/franka")
+    log_root_path = os.path.abspath("logs/classifier/franka")
     resume_path = os.path.join(get_latest_run(log_root_path), "models", "model.pt")
     print(f"[INFO]: Loading model checkpoint from: {resume_path}")
     runner.load(resume_path)
@@ -100,6 +100,9 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
     # create trajectory visualizer
     trajectory_visualizer = create_trajectory_visualizer(agent_cfg)
+
+    # set classifier scale
+    runner.policy.alpha = 300
 
     # reset environment
     obs, _ = env.get_observations()
