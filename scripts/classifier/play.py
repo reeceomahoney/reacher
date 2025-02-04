@@ -20,6 +20,7 @@ import sys
 import time
 
 import gymnasium as gym
+import matplotlib.pyplot as plt
 import omni.isaac.lab.sim as sim_utils
 import torch
 from omegaconf import DictConfig
@@ -31,6 +32,7 @@ from omni.isaac.lab.markers.visualization_markers import (
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
 import isaac_ext.tasks  # noqa: F401
+from locodiff.plotting import plot_3d_guided_trajectory
 from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main
 from vae.utils import get_latest_run
@@ -115,6 +117,11 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         goal = env.unwrapped.command_manager.get_command("ee_pose")[:, :3]  # type: ignore
         output = policy({"obs": obs, "obstacle": obstacle[:, :3], "goal": goal})
         trajectory_visualizer.visualize(output["obs_traj"][0, :, 18:21])
+
+        # plot trajectory
+        alphas = [0, 200, 300, 500, 700, 1e3]
+        plot_3d_guided_trajectory(runner.policy, obs, goal, obstacle[:, :3], alphas)
+        plt.show()
 
         # env stepping
         for i in range(runner.policy.T_action):

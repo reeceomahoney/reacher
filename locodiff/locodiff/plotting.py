@@ -70,6 +70,41 @@ def plot_guided_trajectory(
     return fig
 
 
+def plot_3d_guided_trajectory(
+    policy,
+    obs: torch.Tensor,
+    goal: torch.Tensor,
+    obstacle: torch.Tensor,
+    alphas: list,
+):
+    fig, axes = plt.subplots(
+        1, len(alphas), figsize=(16, 3.5), subplot_kw={"projection": "3d"}
+    )
+    goal_ = goal.cpu().numpy()
+
+    for i, alpha in enumerate(alphas):
+        # Compute trajectory
+        policy.alpha = alpha
+        traj = policy.act({"obs": obs, "obstacle": obstacle, "goal": goal})
+        traj = traj["obs_traj"][0, :, 18:21].detach().cpu().numpy()
+
+        # Plot trajectory with color gradient
+        gradient = np.linspace(0, 1, len(traj))
+        axes[i].scatter(traj[:, 0], traj[:, 1], traj[:, 2], c=gradient, cmap="inferno")
+        # Plot start and goal positions
+        marker_params = {"markersize": 10, "markeredgewidth": 3}
+        axes[i].plot(
+            traj[0, 0], traj[0, 1], traj[0, 2], "x", color="green", **marker_params
+        )
+        axes[i].plot(
+            goal_[0, 0], goal_[0, 1], goal_[0, 2], "x", color="red", **marker_params
+        )
+        axes[i].set_title(f"alphas={alpha}")
+
+    fig.tight_layout()
+    return fig
+
+
 def plot_interactive_trajectory(env, runner, obs: torch.Tensor):
     _, ax = plot_maze(env.get_maze())
 
