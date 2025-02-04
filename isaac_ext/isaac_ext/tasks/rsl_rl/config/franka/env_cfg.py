@@ -1,11 +1,18 @@
 import math
 
+import omni.isaac.lab.sim as sim_utils
+from omegaconf import MISSING
+from omni.isaac.lab.assets.articulation.articulation_cfg import ArticulationCfg
+from omni.isaac.lab.assets.asset_base_cfg import AssetBaseCfg
+from omni.isaac.lab.assets.rigid_object import RigidObjectCfg
 from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
 from omni.isaac.lab.managers import ObservationTermCfg as ObsTerm
 from omni.isaac.lab.managers import SceneEntityCfg
+from omni.isaac.lab.scene.interactive_scene_cfg import InteractiveSceneCfg
 from omni.isaac.lab.utils import configclass
+from omni.isaac.lab.utils.assets import ISAAC_NUCLEUS_DIR
 from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from omni.isaac.lab_assets import FRANKA_PANDA_CFG
 from omni.isaac.lab_tasks.manager_based.manipulation.reach.reach_env_cfg import (
@@ -13,6 +20,44 @@ from omni.isaac.lab_tasks.manager_based.manipulation.reach.reach_env_cfg import 
 )
 
 import isaac_ext.tasks.rsl_rl.mdp as mdp
+
+##
+# Scene definition
+##
+
+
+@configclass
+class FrankaSceneCfg(InteractiveSceneCfg):
+    """Configuration for the scene with a robotic arm."""
+
+    # world
+    ground = AssetBaseCfg(
+        prim_path="/World/ground",
+        spawn=sim_utils.GroundPlaneCfg(),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.0, 0.0, -1.05)),
+    )
+
+    table = AssetBaseCfg(
+        prim_path="{ENV_REGEX_NS}/Table",
+        spawn=sim_utils.UsdFileCfg(
+            usd_path=f"{ISAAC_NUCLEUS_DIR}/Props/Mounts/SeattleLabTable/table_instanceable.usd",
+        ),
+        init_state=AssetBaseCfg.InitialStateCfg(
+            pos=(0.55, 0.0, 0.0), rot=(0.70711, 0.0, 0.0, 0.70711)
+        ),
+    )
+
+    # robots
+    robot: ArticulationCfg = MISSING
+
+    # lights
+    light = AssetBaseCfg(
+        prim_path="/World/light",
+        spawn=sim_utils.DomeLightCfg(color=(0.75, 0.75, 0.75), intensity=2500.0),
+    )
+
+    obstacle: RigidObjectCfg = MISSING
+
 
 ##
 # MDP settings
@@ -105,6 +150,7 @@ class CurriculumCfg:
 
 @configclass
 class FrankaReachEnvCfg(ReachEnvCfg):
+    scene: FrankaSceneCfg = FrankaSceneCfg()
     commands: CommandsCfg = CommandsCfg()
     observations: ObservationsCfg = ObservationsCfg()
     curriculum: CurriculumCfg = CurriculumCfg()
