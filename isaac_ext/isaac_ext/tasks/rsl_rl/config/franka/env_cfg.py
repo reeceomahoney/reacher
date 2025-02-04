@@ -1,5 +1,6 @@
 import math
 
+from omni.isaac.lab.managers import CurriculumTermCfg as CurrTerm
 from omni.isaac.lab.managers import EventTermCfg as EventTerm
 from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
 from omni.isaac.lab.managers import ObservationTermCfg as ObsTerm
@@ -28,11 +29,11 @@ class CommandsCfg:
         resampling_time_range=(8.0, 8.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
-            pos_x=(-1, 1),
-            pos_y=(-1, 1),
-            pos_z=(0.15, 1),
-            roll=(-math.pi, math.pi),
-            pitch=(-math.pi, math.pi),
+            pos_x=(0.35, 1),
+            pos_y=(-0.5, 0.5),
+            pos_z=(0.15, 1.2),
+            roll=(0.0, 0.0),
+            pitch=(math.pi, math.pi),
             yaw=(-math.pi, math.pi),
         ),
     )
@@ -82,6 +83,21 @@ class EventCfg:
     )
 
 
+@configclass
+class CurriculumCfg:
+    """Curriculum terms for the MDP."""
+
+    action_rate = CurrTerm(
+        func=mdp.modify_reward_weight,
+        params={"term_name": "action_rate", "weight": -0.05, "num_steps": 4500},
+    )
+
+    joint_vel = CurrTerm(
+        func=mdp.modify_reward_weight,
+        params={"term_name": "joint_vel", "weight": -0.01, "num_steps": 4500},
+    )
+
+
 ##
 # Environment configuration
 ##
@@ -89,7 +105,9 @@ class EventCfg:
 
 @configclass
 class FrankaReachEnvCfg(ReachEnvCfg):
+    commands: CommandsCfg = CommandsCfg()
     observations: ObservationsCfg = ObservationsCfg()
+    curriculum: CurriculumCfg = CurriculumCfg()
 
     def __post_init__(self):
         # post init of parent
@@ -115,12 +133,6 @@ class FrankaReachEnvCfg(ReachEnvCfg):
             scale=0.5,
             use_default_offset=True,
         )
-        # override command generator body
-        # end-effector is along z-direction
-        self.commands.ee_pose.body_name = "panda_hand"
-        self.commands.ee_pose.ranges.pos_z = (0.15, 1)
-        self.commands.ee_pose.ranges.pitch = (math.pi, math.pi)
-
 
         # general settings
         self.decimation = 5
