@@ -102,7 +102,7 @@ class DiffusionRunner:
                     while t < self.num_steps_per_env:
                         goal = self.env.unwrapped.command_manager.get_command(
                             "ee_pose"
-                        )[:, :3]
+                        )
                         data = {"obs": obs, "obstacle": obstacle, "goal": goal}
                         actions = self.policy.act(data)["action"]
 
