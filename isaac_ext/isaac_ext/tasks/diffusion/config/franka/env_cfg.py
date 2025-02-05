@@ -9,7 +9,7 @@ from isaac_ext.tasks.rsl_rl.config.franka.env_cfg import FrankaReachEnvCfg
 class FrankaDiffusionEnvCfg(FrankaReachEnvCfg):
     def __post_init__(self):
         super().__post_init__()
-        self.observations.policy.pose_command = None  # type: ignore
+        # self.observations.policy.pose_command = None  # type: ignore
         self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
 
 

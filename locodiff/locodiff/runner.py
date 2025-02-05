@@ -35,7 +35,7 @@ class DiffusionRunner:
         self.normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
         # model = ConditionalUnet1D(**self.cfg.model)
         model = DiffusionTransformer(**self.cfg.model)
-        classifier = ValueUnet1D(**self.cfg.model)
+        classifier = DiffusionTransformer(**self.cfg.model)
         self.policy = DiffusionPolicy(
             model, self.normalizer, env, **self.cfg.policy, classifier=classifier
         )
