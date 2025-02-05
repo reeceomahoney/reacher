@@ -145,7 +145,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
     # reset environment
     obs, _ = env.get_observations()
-    actions = torch.zeros(env.num_envs, env.action_space.shape[-1])
     rew = torch.zeros(env.num_envs)
     dones = torch.zeros(env.num_envs, dtype=torch.bool)
 
@@ -156,14 +155,13 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     # simulate environment
     while timestep < args_cli.num_timesteps:
         start = time.time()
-
-        if args_cli.collect:
-            collector.add_step(obs, actions, rew, dones)
-
         # run everything in inference mode
         with torch.inference_mode():
             # agent stepping
             actions = policy(obs)
+            if args_cli.collect:
+                collector.add_step(obs, actions, rew, dones)
+
             # env stepping
             obs, rew, dones, _ = env.step(actions)
 
