@@ -2,7 +2,7 @@ obs_dim: ${obs_dim}
 act_dim: ${act_dim}
 d_model: 256
 nhead: 4
-num_layers: 2
+num_layers: 4
 T: ${T}
 T_cond: ${T_cond}
 cond_mask_prob: ${cond_mask_prob}
