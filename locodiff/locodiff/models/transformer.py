@@ -36,7 +36,7 @@ class DiffusionTransformer(nn.Module):
         # embeddings
         self.input_emb = nn.Linear(input_dim, d_model)
         self.obs_emb = nn.Linear(obs_dim, d_model)
-        self.goal_emb = nn.Linear(3, d_model)
+        self.goal_emb = nn.Linear(9, d_model)
         self.sigma_emb = nn.Linear(1, d_model)
         # self.returns_emb = nn.Linear(3, d_model)
         # self.obstacle_emb = nn.Linear(2, d_model)

@@ -316,7 +316,7 @@ class DiffusionPolicy(nn.Module):
             input, returns = None, None
             raw_obs = data["obs"].unsqueeze(1)
             obstacle = self.normalizer.scale_3d_pos(data["obstacle"])
-            goal = self.normalizer.scale_3d_pos(data["goal"])
+            goal = self.normalizer.scale_9d_pos(data["goal"])
         else:
             # train and test
             raw_obs = data["obs"]
@@ -337,7 +337,7 @@ class DiffusionPolicy(nn.Module):
             goal = input[
                 range(input.shape[0]),
                 lengths - 1,
-                self.action_dim + 18 : self.action_dim + 21,
+                self.action_dim + 18 : self.action_dim + 27,
             ]
 
         obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
