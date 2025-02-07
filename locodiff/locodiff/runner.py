@@ -16,6 +16,7 @@ from locodiff.models.transformer import DiffusionTransformer
 from locodiff.models.unet import ConditionalUnet1D, ValueUnet1D
 from locodiff.policy import DiffusionPolicy
 from locodiff.utils import ExponentialMovingAverage, InferenceContext, Normalizer
+from omni.isaac.lab.utils.math import matrix_from_quat
 
 # A logger for this file
 log = logging.getLogger(__name__)
@@ -100,12 +101,17 @@ class DiffusionRunner:
                     total=self.num_steps_per_env, desc="Simulating...", leave=False
                 ) as pbar:
                     while t < self.num_steps_per_env:
-                        goal = self.env.unwrapped.command_manager.get_command(
-                            "ee_pose"
-                        )
+                        # get goal
+                        goal = self.env.unwrapped.command_manager.get_command("ee_pose")  # type: ignore
+                        rot_mat = matrix_from_quat(goal[:, 3:])
+                        ortho6d = rot_mat[..., :2].reshape(-1, 6)
+                        goal = torch.cat([goal[:, :3], ortho6d], dim=-1)
+
+                        # compute actions
                         data = {"obs": obs, "obstacle": obstacle, "goal": goal}
                         actions = self.policy.act(data)["action"]
 
+                        # step the environment
                         for i in range(self.policy.T_action):
                             obs, rewards, dones, infos = self.env.step(actions[:, i])
                             if i < self.policy.T_action - 1:
