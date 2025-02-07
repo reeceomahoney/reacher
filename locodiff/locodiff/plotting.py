@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from matplotlib.patches import Rectangle
+from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 
 
 def plot_maze(maze: torch.Tensor, figsize: tuple = (8, 8)):
@@ -91,6 +92,7 @@ def plot_3d_guided_trajectory(
         # Plot trajectory with color gradient
         gradient = np.linspace(0, 1, len(traj))
         axes[i].scatter(traj[:, 0], traj[:, 1], traj[:, 2], c=gradient, cmap="inferno")
+
         # Plot start and goal positions
         marker_params = {"markersize": 10, "markeredgewidth": 3}
         axes[i].plot(
@@ -99,6 +101,30 @@ def plot_3d_guided_trajectory(
         axes[i].plot(
             goal_[0, 0], goal_[0, 1], goal_[0, 2], "x", color="red", **marker_params
         )
+
+        # Add cuboid
+        cuboid_vertices = [
+            [0.45, -0.8, 0.0],
+            [0.55, -0.8, 0.0],
+            [0.55, 0.8, 0.0],
+            [0.45, 0.8, 0.0],
+            [0.45, -0.8, 0.8],
+            [0.55, -0.8, 0.8],
+            [0.55, 0.8, 0.8],
+            [0.45, 0.8, 0.8],
+        ]
+        cuboid_faces = [
+            [cuboid_vertices[j] for j in [0, 1, 5, 4]],
+            [cuboid_vertices[j] for j in [1, 2, 6, 5]],
+            [cuboid_vertices[j] for j in [2, 3, 7, 6]],
+            [cuboid_vertices[j] for j in [3, 0, 4, 7]],
+            [cuboid_vertices[j] for j in [0, 1, 2, 3]],
+            [cuboid_vertices[j] for j in [4, 5, 6, 7]],
+        ]
+        poly3d = Poly3DCollection(cuboid_faces, alpha=0.5, facecolor="red")
+        axes[i].add_collection3d(poly3d)
+
+        axes[i].view_init(elev=0, azim=90)
         axes[i].set_title(f"alphas={alpha}")
 
     fig.tight_layout()

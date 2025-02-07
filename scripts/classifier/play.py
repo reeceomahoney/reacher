@@ -7,8 +7,8 @@
 
 """Launch Isaac Sim Simulator first."""
 
+from locodiff.classifier_runner import ClassifierRunner
 from omni.isaac.lab.app import AppLauncher
-from omni.isaac.lab.utils.math import matrix_from_quat
 
 # launch omniverse app
 app_launcher = AppLauncher()
@@ -30,6 +30,7 @@ from omni.isaac.lab.markers.visualization_markers import (
     VisualizationMarkers,
     VisualizationMarkersCfg,
 )
+from omni.isaac.lab.utils.math import matrix_from_quat
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
 import isaac_ext.tasks  # noqa: F401
@@ -85,7 +86,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     agent_cfg.act_dim = env.action_space.shape[-1]  # type: ignore
 
     # load previously trained model
-    runner = DiffusionRunner(env, agent_cfg, device=agent_cfg.device)
+    runner = ClassifierRunner(env, agent_cfg, device=agent_cfg.device)
 
     # load the checkpoint
     log_root_path = os.path.abspath("logs/classifier/franka")
@@ -105,7 +106,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     trajectory_visualizer = create_trajectory_visualizer(agent_cfg)
 
     # set classifier scale
-    runner.policy.alpha = 10
 
     # reset environment
     obs, _ = env.get_observations()
@@ -121,6 +121,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         goal = torch.cat([goal[:, :3], ortho6d], dim=-1)
 
         # agent stepping
+        runner.policy.alpha = 200
         output = policy({"obs": obs, "obstacle": obstacle[:, :3], "goal": goal})
         trajectory_visualizer.visualize(output["obs_traj"][0, :, 18:21])
 
