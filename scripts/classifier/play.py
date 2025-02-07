@@ -8,6 +8,7 @@
 """Launch Isaac Sim Simulator first."""
 
 from omni.isaac.lab.app import AppLauncher
+from omni.isaac.lab.utils.math import matrix_from_quat
 
 # launch omniverse app
 app_launcher = AppLauncher()
@@ -113,8 +114,13 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     while simulation_app.is_running():
         start = time.time()
 
+        # get goal
+        goal = env.unwrapped.command_manager.get_command("ee_pose")  # type: ignore
+        rot_mat = matrix_from_quat(goal[:, 3:])
+        ortho6d = rot_mat[..., :2].reshape(-1, 6)
+        goal = torch.cat([goal[:, :3], ortho6d], dim=-1)
+
         # agent stepping
-        goal = env.unwrapped.command_manager.get_command("ee_pose")[:, :3]  # type: ignore
         output = policy({"obs": obs, "obstacle": obstacle[:, :3], "goal": goal})
         trajectory_visualizer.visualize(output["obs_traj"][0, :, 18:21])
 
