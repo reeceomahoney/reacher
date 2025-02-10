@@ -26,7 +26,7 @@ class CommandsCfg:
     ee_pose = mdp.UniformPoseCommandCfg(
         asset_name="robot",
         body_name="panda_hand",
-        resampling_time_range=(4.0, 4.0),
+        resampling_time_range=(3.0, 3.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
             pos_x=(0.35, 1),
@@ -137,6 +137,6 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         # general settings
         self.decimation = 5
         self.sim.render_interval = self.decimation
-        self.episode_length_s = 4.0
+        self.episode_length_s = 12.0
         # simulation settings
         self.sim.dt = 1.0 / 50.0
