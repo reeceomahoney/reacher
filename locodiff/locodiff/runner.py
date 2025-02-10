@@ -4,7 +4,9 @@ import statistics
 import time
 from collections import deque
 
+import hydra
 import torch
+from omni.isaac.lab.utils.math import matrix_from_quat
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 from tqdm import tqdm, trange
@@ -12,11 +14,8 @@ from tqdm import tqdm, trange
 import wandb
 from locodiff.dataset import get_dataloaders
 from locodiff.envs import MazeEnv
-from locodiff.models.transformer import DiffusionTransformer
-from locodiff.models.unet import ConditionalUnet1D, ValueUnet1D
 from locodiff.policy import DiffusionPolicy
 from locodiff.utils import ExponentialMovingAverage, InferenceContext, Normalizer
-from omni.isaac.lab.utils.math import matrix_from_quat
 
 # A logger for this file
 log = logging.getLogger(__name__)
@@ -34,9 +33,8 @@ class DiffusionRunner:
         # classes
         self.train_loader, self.test_loader = get_dataloaders(**self.cfg.dataset)
         self.normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
-        # model = ConditionalUnet1D(**self.cfg.model)
-        model = DiffusionTransformer(**self.cfg.model)
-        classifier = DiffusionTransformer(**self.cfg.model)
+        model = hydra.utils.instantiate(self.cfg.model)
+        classifier = hydra.utils.instantiate(self.cfg.classifier)
         self.policy = DiffusionPolicy(
             model, self.normalizer, env, **self.cfg.policy, classifier=classifier
         )
