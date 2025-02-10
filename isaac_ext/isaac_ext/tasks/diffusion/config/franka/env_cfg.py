@@ -10,13 +10,13 @@ class FrankaDiffusionEnvCfg(FrankaReachEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.observations.policy.pose_command = None  # type: ignore
-        self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
 
 
 @configclass
 class FrankaGuidanceEnvCfg(FrankaDiffusionEnvCfg):
     def __post_init__(self):
         super().__post_init__()
+        self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
         self.commands.ee_pose.ranges.pos_x = (0.8, 0.8)
         self.commands.ee_pose.ranges.pos_y = (0, 0)
         self.commands.ee_pose.ranges.pos_z = (0.2, 0.2)
