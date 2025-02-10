@@ -255,7 +255,7 @@ class DiffusionPolicy(nn.Module):
         # inference loop
         for t in self.noise_scheduler.timesteps:
             x_in = self.noise_scheduler.scale_model_input(x, t)
-            x_in = apply_conditioning(x_in, cond, 2)
+            x_in = apply_conditioning(x_in, cond, self.action_dim)
             output = self.model(x_in, t.expand(B), data)
             x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
 
@@ -268,7 +268,7 @@ class DiffusionPolicy(nn.Module):
                     x = x_grad + self.alpha * torch.exp(4 * t) * grad.detach()
 
         # final conditioning
-        x = apply_conditioning(x, cond, 2)
+        x = apply_conditioning(x, cond, self.action_dim)
         # denormalize
         x = self.normalizer.clip(x)
         x = self.normalizer.inverse_scale_output(x)
@@ -292,7 +292,7 @@ class DiffusionPolicy(nn.Module):
         # inference loop
         for i, t in enumerate(self.noise_scheduler.timesteps):
             x_in = self.noise_scheduler.scale_model_input(x, t)
-            x_in = apply_conditioning(x_in, cond, 2)
+            x_in = apply_conditioning(x_in, cond, self.action_dim)
             output = self.model(x_in, t.expand(B), data)
             x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
 
@@ -351,7 +351,7 @@ class DiffusionPolicy(nn.Module):
 
     def create_conditioning(self, data: dict) -> dict:
         if self.inpaint:
-            return {0: data["obs"].squeeze(1), self.T - 1: data["goal"]}
+            return {0: data["obs"].squeeze(1)}
         else:
             return {}
 
