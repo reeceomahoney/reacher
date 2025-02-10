@@ -1,5 +1,5 @@
 defaults:
-  - model: transformer
+  - model: unet
   - classifier: unet
   - _self_
 

@@ -25,7 +25,7 @@ class FrankaGuidanceEnvCfg(FrankaDiffusionEnvCfg):
         self.commands.ee_pose.ranges.yaw = (0, 0)
 
         self.scene.obstacle = RigidObjectCfg(  # type: ignore
-            prim_path="/World/obstacle",
+            prim_path="{ENV_REGEX_NS}/Obstacle",
             spawn=sim_utils.CuboidCfg(
                 size=(0.05, 0.8, 0.4),
                 rigid_props=sim_utils.RigidBodyPropertiesCfg(
