@@ -309,7 +309,7 @@ class ValueUnet1D(nn.Module):
         in_out = list(zip(all_dims[:-1], all_dims[1:], strict=False))
 
         # diffusion step embedding and observations
-        cond_dim = cond_embed_dim + 3 if inpaint else obs_dim * (T_cond) + 4
+        cond_dim = cond_embed_dim + 3 if inpaint else obs_dim * (T_cond) + 10
         self.cond_encoder = nn.Linear(cond_dim, 256)
 
         CondResBlock = partial(
