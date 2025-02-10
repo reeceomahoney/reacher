@@ -110,11 +110,9 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         ].body_names = ["panda_hand"]
 
         # override actions
-        self.actions.arm_action = mdp.JointPositionActionCfg(
+        self.actions.arm_action = mdp.JointPositionToLimitsActionCfg(
             asset_name="robot",
             joint_names=["panda_joint.*"],
-            scale=0.5,
-            use_default_offset=True,
         )
 
         # general settings
