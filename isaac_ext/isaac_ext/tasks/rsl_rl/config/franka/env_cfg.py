@@ -89,12 +89,12 @@ class CurriculumCfg:
 
     action_rate = CurrTerm(
         func=mdp.modify_reward_weight,
-        params={"term_name": "action_rate", "weight": -0.5, "num_steps": 4500},
+        params={"term_name": "action_rate", "weight": -5, "num_steps": 4500},
     )
 
     joint_vel = CurrTerm(
         func=mdp.modify_reward_weight,
-        params={"term_name": "joint_vel", "weight": -0.1, "num_steps": 4500},
+        params={"term_name": "joint_vel", "weight": -1, "num_steps": 4500},
     )
 
 
@@ -135,8 +135,4 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         )
 
         # general settings
-        self.decimation = 5
-        self.sim.render_interval = self.decimation
         self.episode_length_s = 12.0
-        # simulation settings
-        self.sim.dt = 1.0 / 50.0
