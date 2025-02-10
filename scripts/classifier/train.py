@@ -132,7 +132,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     env = RslRlVecEnvWrapper(env)  # type: ignore
 
     runner = ClassifierRunner(env, agent_cfg, log_dir=log_dir, device=agent_cfg.device)
-    model_path = "logs/diffusion/franka/Feb-05/17-05-26/" + "models/model.pt"
+    model_path = "logs/diffusion/franka/Feb-10/10-17-32/" + "models/model.pt"
     runner.load(model_path)
 
     # dump the configuration into log-directory

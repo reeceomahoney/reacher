@@ -7,7 +7,6 @@
 
 """Launch Isaac Sim Simulator first."""
 
-from locodiff.classifier_runner import ClassifierRunner
 from omni.isaac.lab.app import AppLauncher
 
 # launch omniverse app
@@ -34,8 +33,8 @@ from omni.isaac.lab.utils.math import matrix_from_quat
 from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
 
 import isaac_ext.tasks  # noqa: F401
+from locodiff.classifier_runner import ClassifierRunner
 from locodiff.plotting import plot_3d_guided_trajectory
-from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main
 from vae.utils import get_latest_run
 
