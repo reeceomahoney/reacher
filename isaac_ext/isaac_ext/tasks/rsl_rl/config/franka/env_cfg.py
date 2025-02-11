@@ -109,6 +109,10 @@ class FrankaReachEnvCfg(ReachEnvCfg):
             "asset_cfg"
         ].body_names = ["panda_hand"]
 
+        # curriculum
+        self.curriculum.action_rate.params["weight"] = -0.05
+        self.curriculum.joint_vel.params["weight"] = -0.01
+
         # override actions
         self.actions.arm_action = mdp.JointPositionActionCfg(
             asset_name="robot",
