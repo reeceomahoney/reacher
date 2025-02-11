@@ -289,6 +289,7 @@ class ValueUnet1D(nn.Module):
         self,
         obs_dim,
         act_dim,
+        T,
         T_cond,
         cond_embed_dim,
         down_dims,
@@ -337,7 +338,7 @@ class ValueUnet1D(nn.Module):
         self.mid_block_2 = CondResBlock(mid_dim // 2, mid_dim // 4)
         self.mid_down_2 = Downsample1d(mid_dim // 4)
 
-        horizon = T_cond
+        horizon = T
         for _ in range(4):
             horizon = (horizon + 1) // 2
         fc_dim = 64 * horizon
