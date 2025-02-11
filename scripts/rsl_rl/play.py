@@ -162,8 +162,8 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
             obs = next_obs
 
         end = time.time()
-        if end - start < 0.1:
-            time.sleep(0.1 - (end - start))
+        if end - start < 1 / 30:
+            time.sleep(1 / 30 - (end - start))
 
         timestep += 1
         if args_cli.video:
