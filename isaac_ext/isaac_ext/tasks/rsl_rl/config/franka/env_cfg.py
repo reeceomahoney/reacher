@@ -100,7 +100,6 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         # switch robot to franka
         self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")
         # override rewards
-        self.rewards.action_rate = RewardTermCfg(func=mdp.clipped_action_rate_l2, weight=-0.0001)
         self.rewards.end_effector_position_tracking.params["asset_cfg"].body_names = [
             "panda_hand"
         ]
