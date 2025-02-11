@@ -89,3 +89,8 @@ def ee_9d_pose_error(
 
     reward = torch.exp(-(pos_error / std + orientation_error / 4 * std))
     return reward
+
+def clipped_action_rate_l2(env: ManagerBasedRLEnv) -> torch.Tensor:
+    """Penalize the rate of change of the actions using L2 squared kernel."""
+    reward = torch.sum(torch.square(env.action_manager.action - env.action_manager.prev_action), dim=1)
+    return torch.clamp(reward, 0, 1000)
