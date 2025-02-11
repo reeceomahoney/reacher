@@ -124,8 +124,8 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
             obs, _, dones, _ = env.step(output["action"][:, i])
 
             end = time.time()
-            if end - start < 0.1:
-                time.sleep(0.1 - (end - start))
+            if end - start < 1 / 30:
+                time.sleep(1 / 30 - (end - start))
 
             start = time.time()
 
