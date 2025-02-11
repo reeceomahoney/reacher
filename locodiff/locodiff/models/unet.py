@@ -339,7 +339,7 @@ class ValueUnet1D(nn.Module):
 
         horizon = T_cond
         for _ in range(4):
-            horizon = horizon // 2
+            horizon = (horizon + 1) // 2
         fc_dim = 64 * horizon
 
         self.final_block = nn.Sequential(
