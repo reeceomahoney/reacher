@@ -43,16 +43,11 @@ class ExpertDataset(Dataset):
             # remove commands
             obs = torch.cat([obs[..., :27], obs[..., 34:]], dim=-1)
             actions = data["actions"]
-            # terminals = data["terminals"]
+            terminals = data["terminals"]
+            split_indices = torch.where(terminals.flatten() == 1)[0] + 1
 
-            obs_splits = [t.squeeze(0) for t in torch.split(obs, 1, dim=0)]
-            actions_splits = [t.squeeze(0) for t in torch.split(actions, 1, dim=0)]
-
-            # TODO: fix this
-
-            # split the sequences at episode ends
-            # obs_splits = self.split_eps(obs, split_indices)
-            # actions_splits = self.split_eps(actions, split_indices)
+            obs_splits = self.split_eps(obs, split_indices)
+            actions_splits = self.split_eps(actions, split_indices)
 
         else:
             dataset_path = f"data/diffusion/maze/dataset_{task_name}.pkl"
