@@ -4,13 +4,13 @@ import random
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+import wandb
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-import wandb
 from locodiff.models.unet import ValueUnet1D
 from locodiff.plotting import plot_guided_trajectory
 from locodiff.utils import (
@@ -359,7 +359,7 @@ class DiffusionPolicy(nn.Module):
         reward = self.check_collisions(input[..., 25:28])
         reward = ((~reward) * mask).float()
         # average reward for valid timesteps
-        returns = reward.sum(dim=-1) / mask.sum(dim=-1)
+        returns = (reward * self.gammas).sum(dim=-1) / mask.sum(dim=-1)
         returns = (returns - returns.min()) / (returns.max() - returns.min())
         return returns.unsqueeze(-1)
 

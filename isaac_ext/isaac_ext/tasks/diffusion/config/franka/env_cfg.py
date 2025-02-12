@@ -1,8 +1,7 @@
 import isaaclab.sim as sim_utils
+from isaac_ext.tasks.rsl_rl.config.franka.env_cfg import FrankaReachEnvCfg
 from isaaclab.assets.rigid_object import RigidObjectCfg
 from isaaclab.utils import configclass
-
-from isaac_ext.tasks.rsl_rl.config.franka.env_cfg import FrankaReachEnvCfg
 
 
 @configclass
@@ -10,8 +9,8 @@ class FrankaDiffusionEnvCfg(FrankaReachEnvCfg):
     def __post_init__(self):
         super().__post_init__()
         self.observations.policy.pose_command = None  # type: ignore
-        self.episode_length_s = 4.0
-        self.commands.ee_pose.resampling_time_range = (4.0, 4.0)
+        self.episode_length_s = 6.0
+        self.commands.ee_pose.resampling_time_range = (6.0, 6.0)
 
 
 @configclass
