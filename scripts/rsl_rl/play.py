@@ -168,7 +168,8 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
             time.sleep(1 / 30 - (end - start))
 
         timestep += 1
-        pbar.update(1)
+        if args_cli.collect:
+            pbar.update(1)
         if args_cli.video:
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
