@@ -24,7 +24,7 @@ class CommandsCfg:
     ee_pose = mdp.UniformPoseCommandCfg(
         asset_name="robot",
         body_name="panda_hand",
-        resampling_time_range=(4.0, 4.0),
+        resampling_time_range=(2.0, 6.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
             pos_x=(0.35, 1),

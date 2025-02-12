@@ -70,6 +70,7 @@ import gymnasium as gym
 import torch
 from omegaconf import DictConfig, OmegaConf
 from rsl_rl.runners import OnPolicyRunner
+from tqdm import tqdm
 
 import isaac_ext.tasks  # noqa: F401
 from isaac_ext.tasks.utils.data_collector import DataCollector
@@ -142,6 +143,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
     if args_cli.collect:
         collector = DataCollector(env, "data/rsl_rl/franka/data.hdf5")
+        pbar = tqdm(total=args_cli.num_timesteps, desc="Collecting data")
 
     # reset environment
     obs, _ = env.get_observations()
@@ -166,6 +168,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
             time.sleep(1 / 30 - (end - start))
 
         timestep += 1
+        pbar.update(1)
         if args_cli.video:
             # Exit the play loop after recording one video
             if timestep == args_cli.video_length:
