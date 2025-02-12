@@ -99,7 +99,7 @@ class ClassifierRunner:
                 iter_time = stop - start
 
                 self.log(locals())
-                if it % self.cfg.sim_interval == 0:
+                if it % self.cfg.eval_interval == 0:
                     self.save(os.path.join(self.log_dir, "models", "model.pt"))
 
         if self.log_dir is not None:

@@ -6,12 +6,12 @@ from collections import deque
 
 import hydra
 import torch
-from isaaclab.utils.math import matrix_from_quat
-from isaaclab_rl.rsl_rl.vecenv_wrapper import RslRlVecEnvWrapper
 from rsl_rl.utils import store_code_state
 from tqdm import tqdm, trange
 
 import wandb
+from isaaclab.utils.math import matrix_from_quat
+from isaaclab_rl.rsl_rl.vecenv_wrapper import RslRlVecEnvWrapper
 from locodiff.dataset import get_dataloaders
 from locodiff.envs import MazeEnv
 from locodiff.policy import DiffusionPolicy
@@ -182,7 +182,7 @@ class DiffusionRunner:
                 iter_time = stop - start
 
                 self.log(locals())
-                if it % self.cfg.sim_interval == 0:
+                if it % self.cfg.eval_interval == 0:
                     self.save(os.path.join(self.log_dir, "models", "model.pt"))
 
         if self.log_dir is not None:
