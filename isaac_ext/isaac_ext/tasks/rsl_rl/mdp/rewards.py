@@ -1,8 +1,9 @@
 import torch
-from omni.isaac.lab.assets import RigidObject
-from omni.isaac.lab.envs import ManagerBasedRLEnv
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.utils.math import (
+
+from isaaclab.assets import RigidObject
+from isaaclab.envs import ManagerBasedRLEnv
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.utils.math import (
     combine_frame_transforms,
     matrix_from_quat,
     quat_error_magnitude,

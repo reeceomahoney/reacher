@@ -2,7 +2,7 @@ import os
 
 import h5py
 import torch
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl.vecenv_wrapper import RslRlVecEnvWrapper
+from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 
 
 class DataCollector:

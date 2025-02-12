@@ -169,10 +169,12 @@ class DataCollector:
 
         # store number of steps taken
         if isinstance(self._dataset["obs"], dict):
-            self._h5_data_group.attrs["num_samples"] = len(self._dataset["obs"]["joint_pos"])
+            self._h5_data_group.attrs["num_samples"] = len(
+                self._dataset["obs"]["joint_pos"]
+            )
         else:
             self._h5_data_group.attrs["num_samples"] = len(self._dataset["obs"])
-        
+
         # store other data from dictionary
         for key, value in self._dataset.items():
             if isinstance(value, dict):

@@ -6,7 +6,7 @@ from . import env_cfg
 
 gym.register(
     id="Isaac-Franka-Diffusion",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": env_cfg.FrankaDiffusionEnvCfg,
@@ -16,7 +16,7 @@ gym.register(
 
 gym.register(
     id="Isaac-Franka-Classifier",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": env_cfg.FrankaGuidanceEnvCfg,

@@ -16,7 +16,7 @@ def dynamic_hydra_main(task_name: str):
     Custom decorator to dynamically set Hydra's config_path based on the task name
     """
     # this is here to stop isaac errors
-    from omni.isaac.lab_tasks.utils import parse_env_cfg
+    from isaaclab_tasks.utils import parse_env_cfg
 
     def decorator(func):
         @wraps(func)
@@ -283,7 +283,9 @@ class Normalizer(nn.Module):
 
     def scale_3d_pos(self, pos) -> torch.Tensor:
         if self.scaling == "linear":
-            return (pos - self.x_min[18:21]) / (self.x_max[18:21] - self.x_min[18:21]) * 2 - 1
+            return (pos - self.x_min[18:21]) / (
+                self.x_max[18:21] - self.x_min[18:21]
+            ) * 2 - 1
         elif self.scaling == "gaussian":
             return (pos - self.x_mean[18:21]) / self.x_std[18:21]
         else:
@@ -291,7 +293,9 @@ class Normalizer(nn.Module):
 
     def scale_9d_pos(self, pos) -> torch.Tensor:
         if self.scaling == "linear":
-            return (pos - self.x_min[18:27]) / (self.x_max[18:27] - self.x_min[18:27]) * 2 - 1
+            return (pos - self.x_min[18:27]) / (
+                self.x_max[18:27] - self.x_min[18:27]
+            ) * 2 - 1
         elif self.scaling == "gaussian":
             return (pos - self.x_mean[18:27]) / self.x_std[18:27]
         else:

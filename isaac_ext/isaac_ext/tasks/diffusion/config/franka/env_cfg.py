@@ -1,6 +1,6 @@
-import omni.isaac.lab.sim as sim_utils
-from omni.isaac.lab.assets.rigid_object import RigidObjectCfg
-from omni.isaac.lab.utils import configclass
+import isaaclab.sim as sim_utils
+from isaaclab.assets.rigid_object import RigidObjectCfg
+from isaaclab.utils import configclass
 
 from isaac_ext.tasks.rsl_rl.config.franka.env_cfg import FrankaReachEnvCfg
 

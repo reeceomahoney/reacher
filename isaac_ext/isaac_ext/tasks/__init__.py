@@ -1,14 +1,6 @@
 """Package containing task implementations for various robotic environments."""
 
-import os
-import toml
-
-from omni.isaac.lab_tasks.utils import import_packages
-
-##
-# Register Gym environments.
-##
-
+from isaaclab_tasks.utils import import_packages
 
 # The blacklist is used to prevent importing configs from sub-packages
 _BLACKLIST_PKGS = ["utils"]

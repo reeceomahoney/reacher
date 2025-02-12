@@ -5,14 +5,13 @@ description = "Reacher IsaacLab Project"
 requires-python = ">=3.10"
 
 dependencies = [
-  "torch==2.4.0",
-  "isaacsim==4.2.0.2",
-  "isaacsim-extscache-physics==4.2.0.2",
-  "isaacsim-extscache-kit==4.2.0.2",
-  "isaacsim-extscache-kit-sdk==4.2.0.2",
-  "omni-isaac-lab",
-  "omni-isaac-lab_assets",
-  "omni-isaac-lab_tasks[all]",
+  "torch==2.5.1",
+  "isaacsim[all,extscache]==4.5.0",
+  "isaaclab",
+  "isaaclab_assets",
+  "isaaclab_mimic",
+  "isaaclab_rl[rsl_rl]",
+  "isaaclab_tasks",
   "isaac_ext",
   "locodiff",
   "pip>=24.3.1",
@@ -26,12 +25,11 @@ dependencies = [
 [tool.uv.sources]
 torch = { index = "pytorch" }
 isaacsim = { index = "nvidia" }
-isaacsim-extscache-physics = { index = "nvidia" }
-isaacsim-extscache-kit = { index = "nvidia" }
-isaacsim-extscache-kit-sdk = { index = "nvidia" }
-omni-isaac-lab = { path = "IsaacLab/source/extensions/omni.isaac.lab", editable = true }
-omni-isaac-lab_assets = { path = "IsaacLab/source/extensions/omni.isaac.lab_assets", editable = true }
-omni-isaac-lab_tasks = { path = "IsaacLab/source/extensions/omni.isaac.lab_tasks", editable = true }
+isaaclab = { path = "IsaacLab/source/isaaclab", editable = true }
+isaaclab_assets = { path = "IsaacLab/source/isaaclab_assets", editable = true }
+isaaclab_mimic = { path = "IsaacLab/source/isaaclab_mimic", editable = true }
+isaaclab_rl = { path = "IsaacLab/source/isaaclab_rl", editable = true }
+isaaclab_tasks = { path = "IsaacLab/source/isaaclab_tasks", editable = true }
 isaac_ext = { path = "isaac_ext", editable = true }
 locodiff = { path = "locodiff", editable = true }
 
@@ -53,6 +51,15 @@ target-version = "py310"
 select = ["E4", "E7", "E9", "F", "B", "I"]
 ignore = ["E402"]
 
+[tool.ruff.lint.isort]
+known-first-party = [
+  "isaaclab",
+  "isaaclab_assets",
+  "isaaclab_mimic",
+  "isaaclab_rl",
+  "isaaclab_tasks",
+]
+
 [tool.pyright]
 typeCheckingMode = "basic"
 pythonVersion = "3.10"
@@ -60,7 +67,9 @@ pythonPlatform = "Linux"
 "extraPaths" = [
   "locodiff",
   "isaac_ext",
-  "IsaacLab/source/extensions/omni.isaac.lab",
-  "IsaacLab/source/extensions/omni.isaac.lab_assets",
-  "IsaacLab/source/extensions/omni.isaac.lab_tasks",
+  "IsaacLab/source/isaaclab",
+  "IsaacLab/source/isaaclab_assets",
+  "IsaacLab/source/isaaclab_mimic",
+  "IsaacLab/source/isaaclab_rl",
+  "IsaacLab/source/isaaclab_tasks",
 ]

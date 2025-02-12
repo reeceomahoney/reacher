@@ -9,7 +9,7 @@
 
 import argparse
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(
@@ -39,18 +39,16 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import gymnasium as gym
 import os
+
+import gymnasium as gym
+import isaaclab_tasks  # noqa: F401
+import reacher.envs  # noqa: F401
 import torch
 import tqdm
-
-import reacher.envs  # noqa: F401
+from isaaclab.utils.io import dump_pickle, dump_yaml
+from isaaclab_tasks.utils.parse_cfg import parse_env_cfg
 from reacher.tasks.utils.data_collector import DataCollector
-
-from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
-
-import omni.isaac.lab_tasks  # noqa: F401
-from omni.isaac.lab_tasks.utils.parse_cfg import parse_env_cfg
 
 
 def main():

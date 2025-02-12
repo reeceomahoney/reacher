@@ -6,8 +6,8 @@ from collections import deque
 
 import hydra
 import torch
-from omni.isaac.lab.utils.math import matrix_from_quat
-from rsl_rl.env import VecEnv
+from isaaclab.utils.math import matrix_from_quat
+from isaaclab_rl.rsl_rl.vecenv_wrapper import RslRlVecEnvWrapper
 from rsl_rl.utils import store_code_state
 from tqdm import tqdm, trange
 
@@ -23,7 +23,11 @@ log = logging.getLogger(__name__)
 
 class DiffusionRunner:
     def __init__(
-        self, env: VecEnv | MazeEnv, agent_cfg, log_dir: str | None = None, device="cpu"
+        self,
+        env: RslRlVecEnvWrapper | MazeEnv,
+        agent_cfg,
+        log_dir: str | None = None,
+        device="cpu",
     ):
         self.env = env
         self.env.reset()
@@ -46,7 +50,7 @@ class DiffusionRunner:
         self.use_ema = agent_cfg.use_ema
 
         # variables
-        if isinstance(env, VecEnv):
+        if isinstance(env, RslRlVecEnvWrapper):
             self.num_steps_per_env = int(
                 self.env.cfg.episode_length_s  # type: ignore
                 / (self.env.cfg.decimation * self.env.cfg.sim.dt)  # type: ignore

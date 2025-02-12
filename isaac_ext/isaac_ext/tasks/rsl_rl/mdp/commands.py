@@ -11,15 +11,16 @@ from collections.abc import Sequence
 
 import torch
 from omegaconf import MISSING
-from omni.isaac.lab.assets import Articulation
-from omni.isaac.lab.envs import ManagerBasedEnv
-from omni.isaac.lab.managers import CommandTerm
-from omni.isaac.lab.managers.manager_term_cfg import CommandTermCfg
-from omni.isaac.lab.markers import VisualizationMarkers
-from omni.isaac.lab.markers.config import FRAME_MARKER_CFG
-from omni.isaac.lab.markers.visualization_markers import VisualizationMarkersCfg
-from omni.isaac.lab.utils.configclass import configclass
-from omni.isaac.lab.utils.math import (
+
+from isaaclab.assets import Articulation
+from isaaclab.envs import ManagerBasedEnv
+from isaaclab.managers import CommandTerm
+from isaaclab.managers.manager_term_cfg import CommandTermCfg
+from isaaclab.markers import VisualizationMarkers
+from isaaclab.markers.config import FRAME_MARKER_CFG
+from isaaclab.markers.visualization_markers import VisualizationMarkersCfg
+from isaaclab.utils.configclass import configclass
+from isaaclab.utils.math import (
     combine_frame_transforms,
     compute_pose_error,
     quat_from_euler_xyz,

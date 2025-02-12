@@ -9,9 +9,11 @@ license = { text = "MIT" }
 requires-python = ">=3.10"
 dependencies = [
   "psutil",
-  "omni.isaac.lab",
-  "omni.isaac.lab_assets",
-  "omni.isaac.lab_tasks",
+  "isaaclab",
+  "isaaclab_assets",
+  "isaaclab_mimic",
+  "isaaclab_rl",
+  "isaaclab_tasks",
 ]
 classifiers = [
   "Natural Language :: English",

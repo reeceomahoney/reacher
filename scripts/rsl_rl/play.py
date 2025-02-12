@@ -10,7 +10,7 @@
 import argparse
 import sys
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # local imports
 import cli_args  # isort: skip
@@ -69,17 +69,17 @@ import time
 import gymnasium as gym
 import torch
 from omegaconf import DictConfig, OmegaConf
-from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
-from omni.isaac.lab.utils.dict import print_dict
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import (
-    RslRlVecEnvWrapper,
-    export_policy_as_jit,
-    export_policy_as_onnx,
-)
 from rsl_rl.runners import OnPolicyRunner
 
 import isaac_ext.tasks  # noqa: F401
 from isaac_ext.tasks.utils.data_collector import DataCollector
+from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.utils.dict import print_dict
+from isaaclab_rl.rsl_rl import (
+    RslRlVecEnvWrapper,
+    export_policy_as_jit,
+    export_policy_as_onnx,
+)
 from locodiff.utils import dynamic_hydra_main, get_latest_run
 
 task = "Isaac-Franka-RL"

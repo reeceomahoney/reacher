@@ -1,9 +1,9 @@
 import torch
 
-import omni.isaac.lab.utils.math as math_utils
-from omni.isaac.lab.assets import Articulation
-from omni.isaac.lab.envs import ManagerBasedEnv
-from omni.isaac.lab.managers import SceneEntityCfg
+import isaaclab.utils.math as math_utils
+from isaaclab.assets import Articulation
+from isaaclab.envs import ManagerBasedEnv
+from isaaclab.managers import SceneEntityCfg
 
 
 def reset_joints_random(

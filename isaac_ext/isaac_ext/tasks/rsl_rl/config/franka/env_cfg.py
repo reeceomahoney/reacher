@@ -1,17 +1,16 @@
 import math
 
-from omni.isaac.lab.managers import EventTermCfg as EventTerm
-from omni.isaac.lab.managers import ObservationGroupCfg as ObsGroup
-from omni.isaac.lab.managers import ObservationTermCfg as ObsTerm
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab.utils.noise import AdditiveUniformNoiseCfg as Unoise
-from omni.isaac.lab_assets import FRANKA_PANDA_CFG
-from omni.isaac.lab_tasks.manager_based.manipulation.reach.reach_env_cfg import (
+import isaac_ext.tasks.rsl_rl.mdp as mdp
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import ObservationGroupCfg as ObsGroup
+from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.utils import configclass
+from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
+from isaaclab_assets import FRANKA_PANDA_CFG
+from isaaclab_tasks.manager_based.manipulation.reach.reach_env_cfg import (
     ReachEnvCfg,
 )
-
-import isaac_ext.tasks.rsl_rl.mdp as mdp
 
 ##
 # MDP settings

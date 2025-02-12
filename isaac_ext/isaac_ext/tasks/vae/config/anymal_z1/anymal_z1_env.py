@@ -8,11 +8,11 @@ from reacher.envs.base_env import (
 )
 from reacher.robots import ANYMAL_D_Z1_CFG
 
-from omni.isaac.lab.managers import EventTermCfg as EventTerm
-from omni.isaac.lab.managers import SceneEntityCfg
-from omni.isaac.lab.utils import configclass
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.utils import configclass
 
-import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
+import isaaclab_tasks.manager_based.manipulation.reach.mdp as mdp
 
 
 @configclass
@@ -124,7 +124,7 @@ class ReacherAnymalZ1EnvCfg_RECORD(ReacherAnymalZ1EnvCfg):
 
 gym.register(
     id="Isaac-Reacher-Anymal-Z1",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": ReacherAnymalZ1EnvCfg,
@@ -134,7 +134,7 @@ gym.register(
 
 gym.register(
     id="Isaac-Reacher-Anymal-Z1-Record",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": ReacherAnymalZ1EnvCfg_RECORD,

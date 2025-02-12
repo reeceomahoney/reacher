@@ -1,7 +1,7 @@
 import gymnasium as gym
-import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
-from omni.isaac.lab.utils import configclass
-from omni.isaac.lab_assets import FRANKA_PANDA_HIGH_PD_CFG
+import isaaclab_tasks.manager_based.manipulation.reach.mdp as mdp
+from isaaclab.utils import configclass
+from isaaclab_assets import FRANKA_PANDA_HIGH_PD_CFG
 
 from isaac_ext.tasks.vae.vae_env_cfg import ReacherEnvCfg
 
@@ -62,7 +62,7 @@ class ReacherFrankaEnvCfg_RECORD(ReacherFrankaEnvCfg):
 
 gym.register(
     id="Isaac-Reacher-Franka",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": ReacherFrankaEnvCfg,
@@ -72,7 +72,7 @@ gym.register(
 
 gym.register(
     id="Isaac-Reacher-Franka-Record",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": ReacherFrankaEnvCfg_RECORD,

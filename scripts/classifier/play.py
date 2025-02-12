@@ -7,7 +7,7 @@
 
 """Launch Isaac Sim Simulator first."""
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # launch omniverse app
 app_launcher = AppLauncher()
@@ -21,18 +21,18 @@ import time
 
 import gymnasium as gym
 import matplotlib.pyplot as plt
-import omni.isaac.lab.sim as sim_utils
 import torch
 from omegaconf import DictConfig
-from omni.isaac.lab.envs import ManagerBasedRLEnvCfg
-from omni.isaac.lab.markers.visualization_markers import (
+
+import isaac_ext.tasks  # noqa: F401
+import isaaclab.sim as sim_utils
+from isaaclab.envs import ManagerBasedRLEnvCfg
+from isaaclab.markers.visualization_markers import (
     VisualizationMarkers,
     VisualizationMarkersCfg,
 )
-from omni.isaac.lab.utils.math import matrix_from_quat
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
-
-import isaac_ext.tasks  # noqa: F401
+from isaaclab.utils.math import matrix_from_quat
+from isaaclab_rl.rsl_rl.vecenv_wrapper import RslRlVecEnvWrapper
 from locodiff.classifier_runner import ClassifierRunner
 from locodiff.plotting import plot_3d_guided_trajectory
 from locodiff.utils import dynamic_hydra_main

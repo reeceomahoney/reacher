@@ -10,7 +10,7 @@
 import argparse
 import sys
 
-from omni.isaac.lab.app import AppLauncher
+from isaaclab.app import AppLauncher
 
 # add argparse arguments
 parser = argparse.ArgumentParser(description="Train a latent planning agent.")
@@ -34,20 +34,18 @@ simulation_app = app_launcher.app
 
 """Rest everything follows."""
 
-import gymnasium as gym
 import os
-import torch
 
+import gymnasium as gym
 import hydra
-from hydra.core.hydra_config import HydraConfig
-from omegaconf import DictConfig, OmegaConf
-
-from omni.isaac.lab.utils.dict import print_dict
-from omni.isaac.lab.utils.io import dump_pickle, dump_yaml
-from omni.isaac.lab_tasks.utils import parse_env_cfg
-from omni.isaac.lab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
-
 import reacher.tasks  # noqa: F401
+import torch
+from hydra.core.hydra_config import HydraConfig
+from isaaclab.utils.dict import print_dict
+from isaaclab.utils.io import dump_pickle, dump_yaml
+from isaaclab_tasks.utils import parse_env_cfg
+from isaaclab_tasks.utils.wrappers.rsl_rl import RslRlVecEnvWrapper
+from omegaconf import DictConfig, OmegaConf
 from reacher.tasks.utils.runner import Runner
 from reacher.tasks.utils.utils import get_latest_run
 

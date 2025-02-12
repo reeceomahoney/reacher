@@ -4,9 +4,9 @@ import math
 from reacher.envs.base_env import ReacherEnvCfg
 from reacher.robots import Z1_CFG
 
-from omni.isaac.lab.utils import configclass
+from isaaclab.utils import configclass
 
-import omni.isaac.lab_tasks.manager_based.manipulation.reach.mdp as mdp
+import isaaclab_tasks.manager_based.manipulation.reach.mdp as mdp
 
 
 @configclass
@@ -74,7 +74,7 @@ class ReacherZ1EnvCfg_RECORD(ReacherZ1EnvCfg):
 
 gym.register(
     id="Isaac-Reacher-Z1",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": ReacherZ1EnvCfg,
@@ -84,7 +84,7 @@ gym.register(
 
 gym.register(
     id="Isaac-Reacher-Z1-Record",
-    entry_point="omni.isaac.lab.envs:ManagerBasedRLEnv",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
     disable_env_checker=True,
     kwargs={
         "env_cfg_entry_point": ReacherZ1EnvCfg_RECORD,

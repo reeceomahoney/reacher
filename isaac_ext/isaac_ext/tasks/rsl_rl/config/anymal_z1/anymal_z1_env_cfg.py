@@ -1,7 +1,6 @@
-from omni.isaac.lab.utils import configclass
-
 from isaac_ext.assets import ANYMAL_D_Z1_CFG
 from isaac_ext.tasks.rsl_rl.rsl_rl_env_cfg import LocomotionVelocityRoughEnvCfg
+from isaaclab.utils import configclass
 
 
 @configclass
