@@ -164,7 +164,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
             obs = next_obs
 
         end = time.time()
-        if end - start < 1 / 30:
+        if not args_cli.collect and end - start < 1 / 30:
             time.sleep(1 / 30 - (end - start))
 
         timestep += 1
