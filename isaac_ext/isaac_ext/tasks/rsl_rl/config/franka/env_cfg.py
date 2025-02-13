@@ -97,6 +97,7 @@ class FrankaReachEnvCfg(ReachEnvCfg):
 
         # switch robot to franka
         self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")  # type: ignore
+        self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
         # override rewards
         self.rewards.end_effector_position_tracking.params["asset_cfg"].body_names = [
             "panda_hand"
