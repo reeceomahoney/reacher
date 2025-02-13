@@ -330,6 +330,7 @@ class DiffusionPolicy(nn.Module):
 
             obstacle = torch.zeros((input.shape[0], 3)).to(self.device)
             returns = calculate_return(input[..., 25:28], data["mask"], self.gammas)
+            returns = self.normalizer.scale_return(returns)
 
             obstacle = self.normalizer.scale_3d_pos(obstacle)
             input = self.normalizer.scale_output(input)

@@ -270,6 +270,8 @@ class Normalizer(nn.Module):
         self.register_buffer("x_min", dl.x_min)
         self.register_buffer("y_max", dl.y_max)
         self.register_buffer("y_min", dl.y_min)
+        self.register_buffer("r_max", dl.r_max)
+        self.register_buffer("r_min", dl.r_min)
 
         # gaussian scaling
         self.register_buffer("x_mean", dl.x_mean)
@@ -333,6 +335,9 @@ class Normalizer(nn.Module):
             return y * self.y_std + self.y_mean
         else:
             raise ValueError(f"Unknown scaling {self.scaling}")
+
+    def scale_return(self, r) -> torch.Tensor:
+        return (r - self.r_min) / (self.r_max - self.r_min)
 
     def clip(self, y):
         return torch.clamp(y, self.y_bounds[0, :], self.y_bounds[1, :])
