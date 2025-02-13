@@ -245,7 +245,7 @@ class DiffusionPolicy(nn.Module):
         B = data["obs"].shape[0]
         x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
         # we should need this but performance is better without it
-        x *= self.noise_scheduler.init_noise_sigma
+        # x *= self.noise_scheduler.init_noise_sigma
 
         # create inpainting conditioning
         cond = self.create_conditioning(data)
@@ -282,7 +282,7 @@ class DiffusionPolicy(nn.Module):
         B = data["obs"].shape[0]
         x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
         # we should need this but performance is better without it
-        x *= self.noise_scheduler.init_noise_sigma
+        # x *= self.noise_scheduler.init_noise_sigma
 
         # create inpainting conditioning
         cond = self.create_conditioning(data)

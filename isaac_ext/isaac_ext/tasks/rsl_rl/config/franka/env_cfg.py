@@ -122,4 +122,4 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         )
 
         # general settings
-        self.episode_length_s = 12.0
+        self.episode_length_s = 6.0
