@@ -129,6 +129,23 @@ def get_latest_run(base_path, resume=False):
         return target_dir
 
 
+def check_collisions(traj: torch.Tensor) -> torch.Tensor:
+    x_mask = (traj[..., 0] >= 0.45) & (traj[..., 0] <= 0.55)
+    y_mask = (traj[..., 1] >= -0.8) & (traj[..., 1] <= 0.8)
+    z_mask = (traj[..., 2] >= 0.0) & (traj[..., 2] <= 0.8)
+    return x_mask & y_mask & z_mask
+
+
+def calculate_return(
+    traj: torch.Tensor, mask: torch.Tensor, gammas: torch.Tensor
+) -> torch.Tensor:
+    reward = check_collisions(traj)
+    reward = ((~reward) * mask).float()
+    # average reward for valid timesteps
+    returns = (reward * gammas).sum(dim=-1) / mask.sum(dim=-1)
+    return returns.unsqueeze(-1)
+
+
 class SinusoidalPosEmb(nn.Module):
     def __init__(self, dim, device):
         super().__init__()

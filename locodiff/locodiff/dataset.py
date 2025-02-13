@@ -7,6 +7,8 @@ import minari
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
+from locodiff.utils import calculate_return
+
 log = logging.getLogger(__name__)
 
 
@@ -14,10 +16,12 @@ class ExpertDataset(Dataset):
     def __init__(
         self,
         data_directory: str | None,
+        T: int,
         T_cond: int,
         task_name: str | None,
         device="cpu",
     ):
+        self.T = T
         self.T_cond = T_cond
         self.device = device
 
@@ -38,7 +42,10 @@ class ExpertDataset(Dataset):
                 f.visititems(load_dataset)
 
             # (B, T, D)
-            data = {k: torch.from_numpy(v).transpose(0, 1) for k, v in data.items()}
+            data = {
+                k: torch.from_numpy(v).transpose(0, 1).to(device)
+                for k, v in data.items()
+            }
             obs = data["observations"]
             # remove commands
             obs = torch.cat([obs[..., :27], obs[..., 34:]], dim=-1)
@@ -54,7 +61,7 @@ class ExpertDataset(Dataset):
             if os.path.exists(dataset_path):
                 # load pre-processed dataset
                 obs_splits, actions_splits = self.load_dataset(dataset_path)
-                print("[INFO] Loaded pre-processed dataset")
+                log.info("Loaded pre-processed dataset")
             else:
                 # process the dataset
                 dataset_name = self.get_dataset_name(task_name)
@@ -81,6 +88,7 @@ class ExpertDataset(Dataset):
         actions = self.add_padding(actions_splits, max_len, temporal=True)
         masks = self.create_masks(obs_splits, max_len)
 
+        self.calculate_value_range(obs, masks)
         self.data = {"obs": obs, "action": actions, "mask": masks}
 
         obs_size = list(self.data["obs"].shape)
@@ -99,8 +107,8 @@ class ExpertDataset(Dataset):
 
     def split_eps(self, x, split_indices):
         x = torch.tensor_split(x.reshape(-1, x.shape[-1]), split_indices.tolist())
-        # remove first empty split
-        return x[1:]
+        # remove last empty split
+        return x[:-1]
 
     def add_padding(self, splits, max_len, temporal):
         x = []
@@ -143,7 +151,6 @@ class ExpertDataset(Dataset):
     def calculate_norm_data(self, obs_splits, actions_splits):
         all_obs = torch.cat(obs_splits)
         all_actions = torch.cat(actions_splits)
-        # all_obs_acts = torch.cat([all_obs, all_actions], dim=-1)
         all_obs_acts = torch.cat([all_actions, all_obs], dim=-1)
 
         self.x_mean = all_obs.mean(0)
@@ -155,6 +162,12 @@ class ExpertDataset(Dataset):
         self.y_std = all_obs_acts.std(0)
         self.y_min = all_obs_acts.min(0).values
         self.y_max = all_obs_acts.max(0).values
+
+    def calculate_value_range(self, obs, masks):
+        gammas = torch.tensor([0.99**i for i in range(self.T)]).to(self.device)
+        returns = calculate_return(obs[..., 18:21], masks, gammas)
+        self.r_min = returns.min()
+        self.r_max = returns.max()
 
     # Save the dataset
     def save_dataset(self, obs_splits, actions_splits, filename="dataset.pkl"):
@@ -214,7 +227,7 @@ def get_dataloaders(
     num_workers: int,
 ):
     # Build the datasets
-    dataset = ExpertDataset(data_directory, T_cond, task_name)
+    dataset = ExpertDataset(data_directory, T, T_cond, task_name)
     train, val = random_split(dataset, [train_fraction, 1 - train_fraction])
     train_set = SlicerWrapper(train, T_cond, T)
     test_set = SlicerWrapper(val, T_cond, T)

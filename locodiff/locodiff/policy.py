@@ -4,19 +4,20 @@ import random
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-import wandb
 from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
     EDMDPMSolverMultistepScheduler,
 )
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
+import wandb
 from locodiff.models.unet import ValueUnet1D
 from locodiff.plotting import plot_guided_trajectory
 from locodiff.utils import (
     CFGWrapper,
     Normalizer,
     apply_conditioning,
+    calculate_return,
     rand_log_logistic,
 )
 
@@ -328,7 +329,7 @@ class DiffusionPolicy(nn.Module):
             input = torch.cat([input_act, input_obs], dim=-1)
 
             obstacle = torch.zeros((input.shape[0], 3)).to(self.device)
-            returns = self.calculate_return(input, data["mask"])
+            returns = calculate_return(input[..., 25:28], data["mask"], self.gammas)
 
             obstacle = self.normalizer.scale_3d_pos(obstacle)
             input = self.normalizer.scale_output(input)
@@ -355,25 +356,11 @@ class DiffusionPolicy(nn.Module):
         else:
             return {}
 
-    def calculate_return(self, input, mask):
-        reward = self.check_collisions(input[..., 25:28])
-        reward = ((~reward) * mask).float()
-        # average reward for valid timesteps
-        returns = (reward * self.gammas).sum(dim=-1) / mask.sum(dim=-1)
-        returns = (returns - returns.min()) / (returns.max() - returns.min())
-        return returns.unsqueeze(-1)
-
     def calculate_obstacles(self, size: int) -> torch.Tensor:
         # Sample random coordinates within the maze (bottom left corner)
         idx = torch.randint(0, len(self.open_squares), (size,))
         samples = self.open_squares[idx].to(self.device)
         return samples.to(self.device)
-
-    def check_collisions(self, traj: torch.Tensor) -> torch.Tensor:
-        x_mask = (traj[..., 0] >= 0.45) & (traj[..., 0] <= 0.55)
-        y_mask = (traj[..., 1] >= -0.8) & (traj[..., 1] <= 0.8)
-        z_mask = (traj[..., 2] >= 0.0) & (traj[..., 2] <= 0.8)
-        return x_mask & y_mask & z_mask
 
     ###########
     # Helpers #
