@@ -23,8 +23,6 @@ from isaaclab.utils.configclass import configclass
 from isaaclab.utils.math import (
     combine_frame_transforms,
     compute_pose_error,
-    quat_from_euler_xyz,
-    quat_unique,
 )
 
 
@@ -69,6 +67,7 @@ class ScheduledPoseCommand(CommandTerm):
         self.pose_command_b = torch.zeros(self.num_envs, 7, device=self.device)
         self.pose_command_b[:, 3] = 1.0
         self.pose_command_w = torch.zeros_like(self.pose_command_b)
+        self.current_stage = 0
         # -- metrics
         self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["orientation_error"] = torch.zeros(
@@ -118,24 +117,14 @@ class ScheduledPoseCommand(CommandTerm):
         self.metrics["orientation_error"] = torch.norm(rot_error, dim=-1)
 
     def _resample_command(self, env_ids: Sequence[int]):
-        # sample new pose targets
-        # -- position
-        r = torch.empty(len(env_ids), device=self.device)
-        self.pose_command_b[env_ids, 0] = r.uniform_(*self.cfg.ranges.pos_x)
-        self.pose_command_b[env_ids, 1] = r.uniform_(*self.cfg.ranges.pos_y)
-        self.pose_command_b[env_ids, 2] = r.uniform_(*self.cfg.ranges.pos_z)
-        # -- orientation
-        euler_angles = torch.zeros_like(self.pose_command_b[env_ids, :3])
-        euler_angles[:, 0].uniform_(*self.cfg.ranges.roll)
-        euler_angles[:, 1].uniform_(*self.cfg.ranges.pitch)
-        euler_angles[:, 2].uniform_(*self.cfg.ranges.yaw)
-        quat = quat_from_euler_xyz(
-            euler_angles[:, 0], euler_angles[:, 1], euler_angles[:, 2]
-        )
-        # make sure the quaternion has real part as positive
-        self.pose_command_b[env_ids, 3:] = (
-            quat_unique(quat) if self.cfg.make_quat_unique else quat
-        )
+        # Use the current stage to select the fixed command
+        fixed_command = self.cfg.fixed_commands[self.current_stage]
+        self.pose_command_b[env_ids, 0] = fixed_command[0]
+        self.pose_command_b[env_ids, 1] = fixed_command[1]
+        self.pose_command_b[env_ids, 2] = fixed_command[2]
+
+        # Increment the current stage and wrap around
+        self.current_stage = (self.current_stage + 1) % len(self.cfg.fixed_commands)
 
     def _update_command(self):
         pass
@@ -193,30 +182,8 @@ class ScheduledPoseCommandCfg(CommandTermCfg):
     If True, the quaternion is made unique by ensuring the real part is positive.
     """
 
-    @configclass
-    class Ranges:
-        """Uniform distribution ranges for the pose commands."""
-
-        pos_x: tuple[float, float] = MISSING
-        """Range for the x position (in m)."""
-
-        pos_y: tuple[float, float] = MISSING
-        """Range for the y position (in m)."""
-
-        pos_z: tuple[float, float] = MISSING
-        """Range for the z position (in m)."""
-
-        roll: tuple[float, float] = MISSING
-        """Range for the roll angle (in rad)."""
-
-        pitch: tuple[float, float] = MISSING
-        """Range for the pitch angle (in rad)."""
-
-        yaw: tuple[float, float] = MISSING
-        """Range for the yaw angle (in rad)."""
-
-    ranges: Ranges = MISSING
-    """Ranges for the commands."""
+    fixed_commands: list[tuple[float, float, float]] = MISSING
+    """List of fixed (x, y, z) commands to cycle through."""
 
     goal_pose_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(
         prim_path="/Visuals/Command/goal_pose"

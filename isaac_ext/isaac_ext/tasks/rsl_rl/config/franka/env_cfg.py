@@ -36,6 +36,18 @@ class CommandsCfg:
         ),
     )
 
+    # ee_pose = mdp.ScheduledPoseCommandCfg(
+    #     asset_name="robot",
+    #     body_name="panda_hand",
+    #     resampling_time_range=(2.0, 2.0),
+    #     debug_vis=True,
+    #     fixed_commands=[
+    #         (0.35, 0, 1.2),
+    #         (0.8, 0, 1.2),
+    #         (0.8, 0, 0.2),
+    #     ],
+    # )
+
 
 @configclass
 class ObservationsCfg:
