@@ -132,7 +132,7 @@ def get_latest_run(base_path, resume=False):
 def check_collisions(traj: torch.Tensor) -> torch.Tensor:
     x_mask = (traj[..., 0] >= 0.45) & (traj[..., 0] <= 0.55)
     y_mask = (traj[..., 1] >= -0.8) & (traj[..., 1] <= 0.8)
-    z_mask = (traj[..., 2] >= 0.0) & (traj[..., 2] <= 0.8)
+    z_mask = (traj[..., 2] >= 0.0) & (traj[..., 2] <= 0.6)
     return x_mask & y_mask & z_mask
 
 

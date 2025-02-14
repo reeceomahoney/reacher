@@ -28,7 +28,7 @@ class FrankaGuidanceEnvCfg(FrankaDiffusionEnvCfg):
         self.scene.obstacle = RigidObjectCfg(  # type: ignore
             prim_path="{ENV_REGEX_NS}/Obstacle",
             spawn=sim_utils.CuboidCfg(
-                size=(0.05, 0.8, 0.4),
+                size=(0.05, 0.8, 0.3),
                 rigid_props=sim_utils.RigidBodyPropertiesCfg(
                     disable_gravity=True,
                     retain_accelerations=False,
@@ -43,5 +43,5 @@ class FrankaGuidanceEnvCfg(FrankaDiffusionEnvCfg):
                     collision_enabled=False
                 ),
             ),
-            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, 0, 0.2)),
+            init_state=RigidObjectCfg.InitialStateCfg(pos=(0.5, 0, 0.15)),
         )
