@@ -13,7 +13,7 @@ import torch
 from omegaconf import MISSING
 
 from isaaclab.assets import Articulation
-from isaaclab.envs import ManagerBasedEnv
+from isaaclab.envs.manager_based_rl_env import ManagerBasedRLEnv
 from isaaclab.managers import CommandTerm
 from isaaclab.managers.manager_term_cfg import CommandTermCfg
 from isaaclab.markers import VisualizationMarkers
@@ -48,7 +48,7 @@ class ScheduledPoseCommand(CommandTerm):
     cfg: ScheduledPoseCommandCfg
     """Configuration for the command generator."""
 
-    def __init__(self, cfg: ScheduledPoseCommand, env: ManagerBasedEnv):
+    def __init__(self, cfg: ScheduledPoseCommand, env: ManagerBasedRLEnv):
         """Initialize the command generator class.
 
         Args:
@@ -56,18 +56,21 @@ class ScheduledPoseCommand(CommandTerm):
             env: The environment object.
         """
         # initialize the base class
-        super().__init__(cfg, env)
+        super().__init__(cfg, env)  # type: ignore
 
         # extract the robot and body index for which the command is generated
-        self.robot: Articulation = env.scene[cfg.asset_name]
-        self.body_idx = self.robot.find_bodies(cfg.body_name)[0][0]
+        self.robot: Articulation = env.scene[cfg.asset_name]  # type: ignore
+        self.body_idx = self.robot.find_bodies(cfg.body_name)[0][0]  # type: ignore
 
         # create buffers
         # -- commands: (x, y, z, qw, qx, qy, qz) in root frame
         self.pose_command_b = torch.zeros(self.num_envs, 7, device=self.device)
-        self.pose_command_b[:, 3] = 1.0
+        self.pose_command_b[:, 5] = 1.0
         self.pose_command_w = torch.zeros_like(self.pose_command_b)
         self.current_stage = 0
+        self.cycle_envs = torch.zeros(
+            self.num_envs, dtype=torch.bool, device=self.device
+        )
         # -- metrics
         self.metrics["position_error"] = torch.zeros(self.num_envs, device=self.device)
         self.metrics["orientation_error"] = torch.zeros(
@@ -96,6 +99,14 @@ class ScheduledPoseCommand(CommandTerm):
     Implementation specific functions.
     """
 
+    def reset(self, env_ids: Sequence[int] | None = None) -> dict[str, float]:
+        # Randomly assign half of the environments to cycle through commands
+        num_cycle_envs = self.num_envs // 2
+        self.cycle_envs[:] = False
+        cycle_indices = torch.randperm(self.num_envs)[:num_cycle_envs]
+        self.cycle_envs[cycle_indices] = True
+        return super().reset(env_ids)
+
     def _update_metrics(self):
         # transform command from base frame to simulation world frame
         self.pose_command_w[:, :3], self.pose_command_w[:, 3:] = (
@@ -117,13 +128,21 @@ class ScheduledPoseCommand(CommandTerm):
         self.metrics["orientation_error"] = torch.norm(rot_error, dim=-1)
 
     def _resample_command(self, env_ids: Sequence[int]):
-        # Use the current stage to select the fixed command
-        fixed_command = self.cfg.fixed_commands[self.current_stage]
-        self.pose_command_b[env_ids, 0] = fixed_command[0]
-        self.pose_command_b[env_ids, 1] = fixed_command[1]
-        self.pose_command_b[env_ids, 2] = fixed_command[2]
+        for env_id in env_ids:
+            if self.cycle_envs[env_id]:
+                # Cycle through commands
+                fixed_command = self.cfg.fixed_commands[self.current_stage]
+                self.pose_command_b[env_id, 0] = fixed_command[0]
+                self.pose_command_b[env_id, 1] = fixed_command[1]
+                self.pose_command_b[env_id, 2] = fixed_command[2]
+            else:
+                # Use only the final command
+                final_command = self.cfg.fixed_commands[-1]
+                self.pose_command_b[env_id, 0] = final_command[0]
+                self.pose_command_b[env_id, 1] = final_command[1]
+                self.pose_command_b[env_id, 2] = final_command[2]
 
-        # Increment the current stage and wrap around
+        # Increment the current stage and wrap around for cycling envs
         self.current_stage = (self.current_stage + 1) % len(self.cfg.fixed_commands)
 
     def _update_command(self):
@@ -185,16 +204,16 @@ class ScheduledPoseCommandCfg(CommandTermCfg):
     fixed_commands: list[tuple[float, float, float]] = MISSING
     """List of fixed (x, y, z) commands to cycle through."""
 
-    goal_pose_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(
+    goal_pose_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(  # type: ignore
         prim_path="/Visuals/Command/goal_pose"
     )
     """The configuration for the goal pose visualization marker. Defaults to FRAME_MARKER_CFG."""
 
-    current_pose_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(
+    current_pose_visualizer_cfg: VisualizationMarkersCfg = FRAME_MARKER_CFG.replace(  # type: ignore
         prim_path="/Visuals/Command/body_pose"
     )
     """The configuration for the current pose visualization marker. Defaults to FRAME_MARKER_CFG."""
 
     # Set the scale of the visualization markers to (0.1, 0.1, 0.1)
-    goal_pose_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
-    current_pose_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)
+    goal_pose_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)  # type: ignore
+    current_pose_visualizer_cfg.markers["frame"].scale = (0.1, 0.1, 0.1)  # type: ignore

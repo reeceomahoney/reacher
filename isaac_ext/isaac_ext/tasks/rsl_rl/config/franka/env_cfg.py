@@ -1,5 +1,3 @@
-import math
-
 import isaac_ext.tasks.rsl_rl.mdp as mdp
 from isaaclab.managers import EventTermCfg as EventTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
@@ -21,32 +19,32 @@ from isaaclab_tasks.manager_based.manipulation.reach.reach_env_cfg import (
 class CommandsCfg:
     """Command terms for the MDP."""
 
-    ee_pose = mdp.UniformPoseCommandCfg(
-        asset_name="robot",
-        body_name="panda_hand",
-        resampling_time_range=(2.0, 6.0),
-        debug_vis=True,
-        ranges=mdp.UniformPoseCommandCfg.Ranges(
-            pos_x=(0.35, 1),
-            pos_y=(-0.5, 0.5),
-            pos_z=(0.15, 1.2),
-            roll=(0.0, 0.0),
-            pitch=(math.pi, math.pi),
-            yaw=(-math.pi, math.pi),
-        ),
-    )
-
-    # ee_pose = mdp.ScheduledPoseCommandCfg(
+    # ee_pose = mdp.UniformPoseCommandCfg(
     #     asset_name="robot",
     #     body_name="panda_hand",
-    #     resampling_time_range=(2.0, 2.0),
+    #     resampling_time_range=(2.0, 6.0),
     #     debug_vis=True,
-    #     fixed_commands=[
-    #         (0.35, 0, 1.2),
-    #         (0.8, 0, 1.2),
-    #         (0.8, 0, 0.2),
-    #     ],
+    #     ranges=mdp.UniformPoseCommandCfg.Ranges(
+    #         pos_x=(0.35, 1),
+    #         pos_y=(-0.5, 0.5),
+    #         pos_z=(0.15, 1.2),
+    #         roll=(0.0, 0.0),
+    #         pitch=(math.pi, math.pi),
+    #         yaw=(-math.pi, math.pi),
+    #     ),
     # )
+
+    ee_pose = mdp.ScheduledPoseCommandCfg(
+        asset_name="robot",
+        body_name="panda_hand",
+        resampling_time_range=(2.0, 2.0),
+        debug_vis=True,
+        fixed_commands=[
+            (0.4, 0, 0.8),
+            (0.8, 0, 0.8),
+            (0.8, 0, 0.2),
+        ],
+    )
 
 
 @configclass
