@@ -83,7 +83,29 @@ def plot_3d_guided_trajectory(
     )
     goal_ = goal.cpu().numpy()
 
+    # obstacle
+    cuboid_vertices = [
+        [0.55, -0.8, 0.0],
+        [0.65, -0.8, 0.0],
+        [0.65, 0.8, 0.0],
+        [0.55, 0.8, 0.0],
+        [0.55, -0.8, 0.6],
+        [0.65, -0.8, 0.6],
+        [0.65, 0.8, 0.6],
+        [0.55, 0.8, 0.6],
+    ]
+    cuboid_faces = [
+        [cuboid_vertices[j] for j in [0, 1, 5, 4]],
+        [cuboid_vertices[j] for j in [1, 2, 6, 5]],
+        [cuboid_vertices[j] for j in [2, 3, 7, 6]],
+        [cuboid_vertices[j] for j in [3, 0, 4, 7]],
+        [cuboid_vertices[j] for j in [0, 1, 2, 3]],
+        [cuboid_vertices[j] for j in [4, 5, 6, 7]],
+    ]
+    poly3d = Poly3DCollection(cuboid_faces, alpha=0.5, facecolor="red")
+
     for i, alpha in enumerate(alphas):
+        print(alpha)
         # Compute trajectory
         policy.alpha = alpha
         traj = policy.act({"obs": obs, "obstacle": obstacle, "goal": goal})
@@ -101,29 +123,7 @@ def plot_3d_guided_trajectory(
         axes[i].plot(
             goal_[0, 0], goal_[0, 1], goal_[0, 2], "x", color="red", **marker_params
         )
-
-        # Add cuboid
-        cuboid_vertices = [
-            [0.55, -0.8, 0.0],
-            [0.65, -0.8, 0.0],
-            [0.65, 0.8, 0.0],
-            [0.55, 0.8, 0.0],
-            [0.55, -0.8, 0.6],
-            [0.65, -0.8, 0.6],
-            [0.65, 0.8, 0.6],
-            [0.55, 0.8, 0.6],
-        ]
-        cuboid_faces = [
-            [cuboid_vertices[j] for j in [0, 1, 5, 4]],
-            [cuboid_vertices[j] for j in [1, 2, 6, 5]],
-            [cuboid_vertices[j] for j in [2, 3, 7, 6]],
-            [cuboid_vertices[j] for j in [3, 0, 4, 7]],
-            [cuboid_vertices[j] for j in [0, 1, 2, 3]],
-            [cuboid_vertices[j] for j in [4, 5, 6, 7]],
-        ]
-        poly3d = Poly3DCollection(cuboid_faces, alpha=0.5, facecolor="red")
         axes[i].add_collection3d(poly3d)
-
         axes[i].view_init(elev=0, azim=90)
         axes[i].set_title(f"alphas={alpha}")
 

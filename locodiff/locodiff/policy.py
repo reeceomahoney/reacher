@@ -271,7 +271,7 @@ class DiffusionPolicy(nn.Module):
             if self.alpha > 0:
                 with torch.enable_grad():
                     x_grad = x.detach().clone().requires_grad_(True)
-                    y = self.classifier(x_grad, t, data)
+                    y = self.classifier(x_grad, t.expand(B), data)
                     grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
                     x = x_grad + self.alpha * torch.exp(4 * t) * grad.detach()
 
