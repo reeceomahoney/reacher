@@ -11,8 +11,9 @@ from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 import wandb
+from isaaclab.utils.math import matrix_from_quat
 from locodiff.models.unet import ValueUnet1D
-from locodiff.plotting import plot_guided_trajectory
+from locodiff.plotting import plot_3d_guided_trajectory, plot_guided_trajectory
 from locodiff.utils import (
     CFGWrapper,
     Normalizer,
@@ -218,12 +219,18 @@ class DiffusionPolicy(nn.Module):
         loss = torch.nn.functional.mse_loss(pred_value, data["returns"])
 
         if plot:
-            obs = torch.tensor([[-2.5, -0.5, 0, 0]]).to(self.device)
-            goal = torch.tensor([[2.5, 2.5, 0, 0]]).to(self.device)
-            obstacle = torch.tensor([[-1, 0]]).to(self.device)
-            alphas = [0, 200, 300, 500, 700, 1e3]
-            # Generate plots
-            fig = plot_guided_trajectory(self, self.env, obs, goal, obstacle, alphas)
+            # get goal
+            goal = self.env.unwrapped.command_manager.get_command("ee_pose")  # type: ignore
+            rot_mat = matrix_from_quat(goal[:, 3:])
+            ortho6d = rot_mat[..., :2].reshape(-1, 6)
+            goal = torch.cat([goal[:, :3], ortho6d], dim=-1)
+
+            # plot trajectory
+            alphas = [0, 5, 10, 20, 100, 500]
+            obs, _ = self.env.get_observations()
+            obstacle = torch.zeros_like(goal)
+            fig = plot_3d_guided_trajectory(self, obs, goal, obstacle[:, :3], alphas)
+
             # log
             wandb.log({"Guided Trajectory": wandb.Image(fig)})
             plt.close(fig)
@@ -330,7 +337,7 @@ class DiffusionPolicy(nn.Module):
 
             obstacle = torch.zeros((input.shape[0], 3)).to(self.device)
             returns = calculate_return(input[..., 25:28], data["mask"], self.gammas)
-            returns = self.normalizer.scale_return(returns)
+            # returns = self.normalizer.scale_return(returns)
 
             obstacle = self.normalizer.scale_3d_pos(obstacle)
             input = self.normalizer.scale_output(input)

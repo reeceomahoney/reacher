@@ -76,8 +76,10 @@ class ClassifierRunner:
             # evaluation
             if it % self.cfg.eval_interval == 0:
                 test_mse = []
+                plot = True
                 for batch in tqdm(self.test_loader, desc="Testing...", leave=False):
-                    mse = self.policy.test_classifier(batch, False)
+                    mse = self.policy.test_classifier(batch, plot)
+                    plot = False
                     test_mse.append(mse)
                 test_mse = statistics.mean(test_mse)
 
@@ -143,7 +145,9 @@ class ClassifierRunner:
         loaded_dict = torch.load(path)
         self.policy.model.load_state_dict(loaded_dict["model_state_dict"])
         self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
-        self.policy.normalizer.load_state_dict(loaded_dict["norm_state_dict"])
+        loaded_dict["norm_state_dict"].pop("r_min")
+        loaded_dict["norm_state_dict"].pop("r_max")
+        self.policy.normalizer.load_state_dict(loaded_dict["norm_state_dict"], strict=False)
         self.policy.classifier.load_state_dict(loaded_dict["classifier_state_dict"])
         # self.current_learning_iteration = loaded_dict["iter"]
         return loaded_dict["infos"]
