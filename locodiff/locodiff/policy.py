@@ -223,11 +223,12 @@ class DiffusionPolicy(nn.Module):
             goal = self.env.unwrapped.command_manager.get_command("ee_pose")  # type: ignore
             rot_mat = matrix_from_quat(goal[:, 3:])
             ortho6d = rot_mat[..., :2].reshape(-1, 6)
-            goal = torch.cat([goal[:, :3], ortho6d], dim=-1)
+            goal = torch.cat([goal[:, :3], ortho6d], dim=-1)[0].unsqueeze(0)
 
             # plot trajectory
             alphas = [0, 5, 10, 20, 100, 500]
             obs, _ = self.env.get_observations()
+            obs = obs[0].unsqueeze(0)
             obstacle = torch.zeros_like(goal)
             fig = plot_3d_guided_trajectory(self, obs, goal, obstacle[:, :3], alphas)
 
@@ -271,7 +272,7 @@ class DiffusionPolicy(nn.Module):
             if self.alpha > 0:
                 with torch.enable_grad():
                     x_grad = x.detach().clone().requires_grad_(True)
-                    y = self.classifier(x_grad, t.expand(B), data)
+                    y = self.classifier(x_grad, t, data)
                     grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
                     x = x_grad + self.alpha * torch.exp(4 * t) * grad.detach()
 
