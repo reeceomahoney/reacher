@@ -186,7 +186,7 @@ class DiffusionPolicy(nn.Module):
     # Classifier API #
     ##################
 
-    def update_classifier(self, data):
+    def update_classifier(self, data: dict) -> float:
         # preprocess data
         data = self.process(data)
 
@@ -206,7 +206,7 @@ class DiffusionPolicy(nn.Module):
 
         return loss.item()
 
-    def test_classifier(self, data, plot) -> float:
+    def test_classifier(self, data: dict) -> float:
         # preprocess data
         data = self.process(data)
 
@@ -214,29 +214,27 @@ class DiffusionPolicy(nn.Module):
         timesteps = random.randint(0, self.sampling_steps - 1)
         x, t = self.truncated_forward(data, timesteps)
         pred_value = self.classifier(x, t, data)
-
         # calculate loss
-        loss = torch.nn.functional.mse_loss(pred_value, data["returns"])
+        return torch.nn.functional.mse_loss(pred_value, data["returns"]).item()
 
-        if plot:
-            # get goal
-            goal = self.env.unwrapped.command_manager.get_command("ee_pose")  # type: ignore
-            rot_mat = matrix_from_quat(goal[:, 3:])
-            ortho6d = rot_mat[..., :2].reshape(-1, 6)
-            goal = torch.cat([goal[:, :3], ortho6d], dim=-1)[0].unsqueeze(0)
+    def plot_guided_trajectory(self, it: int):
+        # get obs
+        obs, _ = self.env.get_observations()
+        obs = obs[0].unsqueeze(0)
+        # get goal
+        goal = self.env.unwrapped.command_manager.get_command("ee_pose")  # type: ignore
+        rot_mat = matrix_from_quat(goal[:, 3:])
+        ortho6d = rot_mat[..., :2].reshape(-1, 6)
+        goal = torch.cat([goal[:, :3], ortho6d], dim=-1)[0].unsqueeze(0)
 
-            # plot trajectory
-            alphas = [0, 5, 10, 20, 100]
-            obs, _ = self.env.get_observations()
-            obs = obs[0].unsqueeze(0)
-            obstacle = torch.zeros_like(goal)
-            fig = plot_3d_guided_trajectory(self, obs, goal, obstacle[:, :3], alphas)
+        # plot trajectory
+        alphas = [0, 5, 10, 20, 100]
+        obstacle = torch.zeros_like(goal)
+        fig = plot_3d_guided_trajectory(self, obs, goal, obstacle[:, :3], alphas)
 
-            # log
-            wandb.log({"Guided Trajectory": wandb.Image(fig)})
-            plt.close(fig)
-
-        return loss.item()
+        # log
+        wandb.log({"Guided Trajectory": wandb.Image(fig)}, step=it)
+        plt.close(fig)
 
     def reset(self, dones=None):
         if dones is not None:
