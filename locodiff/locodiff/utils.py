@@ -143,7 +143,7 @@ def calculate_return(
     # reward = ((~reward) * mask).float()
     reward = traj[..., 2]
     # average reward for valid timesteps
-    returns = (reward * gammas).sum(dim=-1) / mask.sum(dim=-1)
+    returns = (reward * gammas).sum(dim=-1)
     return returns.unsqueeze(-1)
 
 
