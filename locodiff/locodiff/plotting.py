@@ -104,7 +104,6 @@ def plot_3d_guided_trajectory(
     ]
 
     for i, alpha in enumerate(alphas):
-        print(alpha)
         # Compute trajectory
         policy.alpha = alpha
         traj = policy.act({"obs": obs, "obstacle": obstacle, "goal": goal})

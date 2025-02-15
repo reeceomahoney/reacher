@@ -226,7 +226,7 @@ class DiffusionPolicy(nn.Module):
             goal = torch.cat([goal[:, :3], ortho6d], dim=-1)[0].unsqueeze(0)
 
             # plot trajectory
-            alphas = [0, 5, 10, 20, 100, 500]
+            alphas = [0, 5, 10, 20, 100]
             obs, _ = self.env.get_observations()
             obs = obs[0].unsqueeze(0)
             obstacle = torch.zeros_like(goal)
