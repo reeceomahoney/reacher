@@ -1,4 +1,3 @@
-import math
 import random
 
 import matplotlib.pyplot as plt
@@ -19,7 +18,6 @@ from locodiff.utils import (
     Normalizer,
     apply_conditioning,
     calculate_return,
-    rand_log_logistic,
 )
 
 
@@ -296,6 +294,8 @@ class DiffusionPolicy(nn.Module):
         # this needs to called every time we do inference
         self.noise_scheduler.set_timesteps(self.sampling_steps)
 
+        # TODO: change this to batch samples from every step
+
         # inference loop
         for i, t in enumerate(self.noise_scheduler.timesteps):
             x_in = self.noise_scheduler.scale_model_input(x, t)
@@ -378,10 +378,8 @@ class DiffusionPolicy(nn.Module):
         """
         Generate a density function for training sigmas
         """
-        loc = math.log(self.sigma_data)
-        density = rand_log_logistic(
-            (size,), loc, 0.5, self.sigma_min, self.sigma_max, self.device
-        )
+        log_normal = torch.distributions.log_normal.LogNormal(-1.2, 1.2)
+        density = log_normal.sample((size,)).to(self.device)
         return density
 
     def update_history(self, x):

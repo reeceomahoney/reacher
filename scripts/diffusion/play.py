@@ -7,10 +7,17 @@
 
 """Launch Isaac Sim Simulator first."""
 
+import argparse
+
 from isaaclab.app import AppLauncher
 
+# parse args
+parser = argparse.ArgumentParser()
+AppLauncher.add_app_launcher_args(parser)
+args_cli, hydra_args = parser.parse_known_args()
+args_cli.headless = True
 # launch omniverse app
-app_launcher = AppLauncher()
+app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
 """Rest everything follows."""
@@ -33,8 +40,7 @@ from isaaclab.markers.visualization_markers import (
 from isaaclab.utils.math import matrix_from_quat
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 from locodiff.runner import DiffusionRunner
-from locodiff.utils import dynamic_hydra_main
-from vae.utils import get_latest_run
+from locodiff.utils import dynamic_hydra_main, get_latest_run
 
 task = "Isaac-Franka-Diffusion"
 
