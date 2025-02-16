@@ -341,10 +341,10 @@ class ValueUnet1D(nn.Module):
         horizon = T
         for _ in range(4):
             horizon = (horizon + 1) // 2
-        fc_dim = 64 * horizon
+        fc_dim = 64 * horizon + 256
 
         self.final_block = nn.Sequential(
-            nn.Linear(fc_dim + 256, fc_dim // 2),
+            nn.Linear(fc_dim, fc_dim // 2),
             nn.Mish(),
             nn.Linear(fc_dim // 2, 1),
         )

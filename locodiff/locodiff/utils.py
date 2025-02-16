@@ -139,9 +139,8 @@ def check_collisions(traj: torch.Tensor) -> torch.Tensor:
 def calculate_return(
     traj: torch.Tensor, mask: torch.Tensor, gammas: torch.Tensor
 ) -> torch.Tensor:
-    # reward = check_collisions(traj)
-    # reward = ((~reward) * mask).float()
-    reward = traj[..., 2]
+    reward = check_collisions(traj)
+    reward = ((~reward) * mask).float()
     # average reward for valid timesteps
     returns = (reward * gammas).sum(dim=-1)
     return returns.unsqueeze(-1)
