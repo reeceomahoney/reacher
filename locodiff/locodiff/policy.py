@@ -3,9 +3,7 @@ import random
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
-from diffusers.schedulers.scheduling_edm_dpmsolver_multistep import (
-    EDMDPMSolverMultistepScheduler,
-)
+from diffusers.schedulers.scheduling_edm_euler import EDMEulerScheduler
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
@@ -59,7 +57,7 @@ class DiffusionPolicy(nn.Module):
         self.env = env
         self.normalizer = normalizer
         self.obs_hist = torch.zeros((num_envs, T_cond, obs_dim), device=device)
-        self.noise_scheduler = EDMDPMSolverMultistepScheduler(
+        self.noise_scheduler = EDMEulerScheduler(
             sigma_min=sigma_min,
             sigma_max=sigma_max,
             sigma_data=sigma_data,
@@ -128,8 +126,14 @@ class DiffusionPolicy(nn.Module):
 
         # noise data
         noise = torch.randn_like(data["input"])
-        sigma = self.sample_training_density(len(noise)).view(-1, 1, 1)
-        x_noise = data["input"] + noise * sigma
+        indices = torch.randint(
+            0, self.noise_scheduler.num_train_timesteps, (noise.shape[0],)
+        )
+        timesteps = self.noise_scheduler.timesteps[indices].to(
+            device=data["input"].device
+        )
+        x_noise = self.noise_scheduler.add_noise(data["input"], noise, timesteps)
+        sigma = torch.exp(4 * timesteps).view(-1, 1, 1)
         # scale inputs
         x_noise_in = self.noise_scheduler.precondition_inputs(x_noise, sigma)
         x_noise_in = apply_conditioning(x_noise_in, cond, self.action_dim)
@@ -250,7 +254,8 @@ class DiffusionPolicy(nn.Module):
         B = data["obs"].shape[0]
         x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
         # we should need this but performance is better without it
-        # x *= self.noise_scheduler.init_noise_sigma
+        x *= self.noise_scheduler.init_noise_sigma
+        # x *= self.init_sigma
 
         # create inpainting conditioning
         cond = self.create_conditioning(data)
@@ -262,15 +267,16 @@ class DiffusionPolicy(nn.Module):
             x_in = self.noise_scheduler.scale_model_input(x, t)
             x_in = apply_conditioning(x_in, cond, self.action_dim)
             output = self.model(x_in, t.expand(B), data)
-            x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
 
             # guidance
             if self.alpha > 0:
                 with torch.enable_grad():
-                    x_grad = x.detach().clone().requires_grad_(True)
+                    x_grad = output.detach().clone().requires_grad_(True)
                     y = self.classifier(x_grad, t, data)
                     grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
-                    x = x_grad + self.alpha * torch.exp(4 * t) * grad.detach()
+                    output = x_grad + self.alpha * torch.exp(4 * t) * grad.detach()
+
+            x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
 
         # final conditioning
         x = apply_conditioning(x, cond, self.action_dim)
@@ -304,9 +310,9 @@ class DiffusionPolicy(nn.Module):
             x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
 
             if i >= timesteps:
-                return x, t.expand(B)
+                return output, t.expand(B)
 
-        return x, t.expand(B)
+        return output, t.expand(B)
 
     ###################
     # Data processing #
