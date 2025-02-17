@@ -1,6 +1,6 @@
 defaults:
-  - model: unet
-  - classifier: unet
+  - model: transformer
+  - classifier: transformer
   - _self_
 
 logger: wandb
