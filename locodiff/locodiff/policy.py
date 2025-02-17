@@ -126,14 +126,9 @@ class DiffusionPolicy(nn.Module):
 
         # noise data
         noise = torch.randn_like(data["input"])
-        indices = torch.randint(
-            0, self.noise_scheduler.num_train_timesteps, (noise.shape[0],)
-        )
-        timesteps = self.noise_scheduler.timesteps[indices].to(
-            device=data["input"].device
-        )
-        x_noise = self.noise_scheduler.add_noise(data["input"], noise, timesteps)
-        sigma = torch.exp(4 * timesteps).view(-1, 1, 1)
+        sigma = self.sample_training_density(noise.shape[0]).view(-1, 1, 1)
+        x_noise = data["input"] + noise * sigma
+
         # scale inputs
         x_noise_in = self.noise_scheduler.precondition_inputs(x_noise, sigma)
         x_noise_in = apply_conditioning(x_noise_in, cond, self.action_dim)
