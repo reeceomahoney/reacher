@@ -110,12 +110,8 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     )
 
     # specify directory for logging experiments
-    if sys.gettrace() is not None:
-        log_dir = HydraConfig.get().runtime.output_dir
-        log.info(f"Logging experiment in directory: {log_dir}")
-    else:
-        log_dir = None
-        log.info("Running in debug mode")
+    log_dir = HydraConfig.get().runtime.output_dir
+    log.info(f"Logging experiment in directory: {log_dir}")
 
     # create isaac environment
     env = gym.make(
@@ -142,12 +138,11 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     runner = DiffusionRunner(env, agent_cfg, log_dir=log_dir, device=agent_cfg.device)
 
     # dump the configuration into log-directory
-    if log_dir is not None:
-        agent_cfg_dict = OmegaConf.to_container(agent_cfg)
-        dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
-        dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg_dict)
-        dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
-        dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), agent_cfg_dict)
+    agent_cfg_dict = OmegaConf.to_container(agent_cfg)
+    dump_yaml(os.path.join(log_dir, "params", "env.yaml"), env_cfg)
+    dump_yaml(os.path.join(log_dir, "params", "agent.yaml"), agent_cfg_dict)
+    dump_pickle(os.path.join(log_dir, "params", "env.pkl"), env_cfg)
+    dump_pickle(os.path.join(log_dir, "params", "agent.pkl"), agent_cfg_dict)
 
     # run training
     runner.learn()
@@ -158,9 +153,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
 if __name__ == "__main__":
     # check if running in debug mode
-    if sys.gettrace() is not None:
-        sys.argv.append("hydra.output_subdir=null")
-        sys.argv.append("hydra.run.dir=.")
     # run the main function
     main()  # type: ignore
     # close sim app
