@@ -249,7 +249,7 @@ class DiffusionPolicy(nn.Module):
         B = data["obs"].shape[0]
         x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
         # we should need this but performance is better without it
-        x *= self.noise_scheduler.init_noise_sigma
+        # x *= self.noise_scheduler.init_noise_sigma
         # x *= self.init_sigma
 
         # create inpainting conditioning
@@ -379,7 +379,7 @@ class DiffusionPolicy(nn.Module):
         """
         Generate a density function for training sigmas
         """
-        log_normal = torch.distributions.log_normal.LogNormal(-1.2, 1.2)
+        log_normal = torch.distributions.log_normal.LogNormal(-3.1, 0.8)
         density = log_normal.sample((size,)).to(self.device)
         return density
 
