@@ -158,7 +158,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
 if __name__ == "__main__":
     # check if running in debug mode
-    if sys.gettrace() is None:
+    if sys.gettrace() is not None:
         sys.argv.append("hydra.output_subdir=null")
         sys.argv.append("hydra.run.dir=.")
     # run the main function
