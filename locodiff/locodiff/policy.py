@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
 from diffusers.schedulers.scheduling_edm_euler import EDMEulerScheduler
+from torch import Tensor
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
@@ -122,29 +123,23 @@ class DiffusionPolicy(nn.Module):
     def update(self, data):
         # preprocess data
         data = self.process(data)
-        cond = self.create_conditioning(data)
 
         # noise data
-        noise = torch.randn_like(data["input"])
-        sigma = self.sample_training_density(noise.shape[0]).view(-1, 1, 1)
-        x_noise = data["input"] + noise * sigma
+        x_1 = data["input"]
+        x_0 = torch.randn_like(x_1)
+        t = torch.rand(len(x_1), 1, 1).to(self.device)
 
-        # scale inputs
-        x_noise_in = self.noise_scheduler.precondition_inputs(x_noise, sigma)
-        x_noise_in = apply_conditioning(x_noise_in, cond, self.action_dim)
-        sigma_in = self.noise_scheduler.precondition_noise(sigma)
+        x_t = (1 - t) * x_0 + t * x_1
+        dx_t = x_1 - x_0
 
         # cfg masking
         if self.cond_mask_prob > 0:
-            cond_mask = torch.rand(noise.shape[0], 1) < self.cond_mask_prob
+            cond_mask = torch.rand(x_1.shape[0], 1) < self.cond_mask_prob
             data["returns"][cond_mask.expand_as(data["returns"])] = 0
 
         # compute model output
-        out = self.model(x_noise_in, sigma_in, data)
-        out = self.noise_scheduler.precondition_outputs(x_noise, out, sigma)
-        out = apply_conditioning(out, cond, self.action_dim)
-        # calculate loss
-        loss = torch.nn.functional.mse_loss(out, data["input"])
+        out = self.model(x_t, t, data)
+        loss = torch.nn.functional.mse_loss(out, dx_t)
 
         # update model
         self.optimizer.zero_grad()
@@ -243,38 +238,36 @@ class DiffusionPolicy(nn.Module):
     # Inference backend #
     #####################
 
+    def step(self, x_t: Tensor, t_start: Tensor, t_end: Tensor, data: dict) -> Tensor:
+        t_start = t_start.view(1, 1, 1).expand(x_t.shape[0], 1, 1)
+
+        return x_t + (t_end - t_start) * self.model(
+            x_t + self.model(x_t, t_start, data) * (t_end - t_start) / 2,
+            t_start + (t_end - t_start) / 2,
+            data,
+        )
+
     @torch.no_grad()
     def forward(self, data: dict) -> torch.Tensor:
         # sample noise
         B = data["obs"].shape[0]
         x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
-        # we should need this but performance is better without it
-        # x *= self.noise_scheduler.init_noise_sigma
-        # x *= self.init_sigma
-
-        # create inpainting conditioning
-        cond = self.create_conditioning(data)
-        # this needs to called every time we do inference
-        self.noise_scheduler.set_timesteps(self.sampling_steps)
+        time_steps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
 
         # inference loop
-        for t in self.noise_scheduler.timesteps:
-            x_in = self.noise_scheduler.scale_model_input(x, t)
-            x_in = apply_conditioning(x_in, cond, self.action_dim)
-            output = self.model(x_in, t.expand(B), data)
+        for i in range(self.sampling_steps):
+            x = self.step(x, time_steps[i], time_steps[i + 1], data)
 
             # guidance
-            if self.alpha > 0:
-                with torch.enable_grad():
-                    x_grad = output.detach().clone().requires_grad_(True)
-                    y = self.classifier(x_grad, t, data)
-                    grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
-                    output = x_grad + self.alpha * torch.exp(4 * t) * grad.detach()
+            # if self.alpha > 0:
+            #     with torch.enable_grad():
+            #         x_grad = output.detach().clone().requires_grad_(True)
+            #         y = self.classifier(x_grad, t, data)
+            #         grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
+            #         output = x_grad + self.alpha * torch.exp(4 * t) * grad.detach()
+            #
+            # x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
 
-            x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
-
-        # final conditioning
-        x = apply_conditioning(x, cond, self.action_dim)
         # denormalize
         x = self.normalizer.clip(x)
         x = self.normalizer.inverse_scale_output(x)
