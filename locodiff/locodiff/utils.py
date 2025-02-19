@@ -47,33 +47,6 @@ def dynamic_hydra_main(task_name: str):
     return decorator
 
 
-def apply_conditioning(x, conditions, action_dim):
-    for t, val in conditions.items():
-        x[:, t, action_dim:] = val.clone()
-    return x
-
-
-def rand_log_logistic(
-    shape,
-    loc=0.0,
-    scale=1.0,
-    min_value=0.0,
-    max_value=float("inf"),
-    device="cpu",
-    dtype=torch.float32,
-):
-    """Draws samples from an optionally truncated log-logistic distribution."""
-    min_value = torch.as_tensor(min_value, device=device, dtype=torch.float64)
-    max_value = torch.as_tensor(max_value, device=device, dtype=torch.float64)
-    min_cdf = min_value.log().sub(loc).div(scale).sigmoid()
-    max_cdf = max_value.log().sub(loc).div(scale).sigmoid()
-    u = (
-        torch.rand(shape, device=device, dtype=torch.float64) * (max_cdf - min_cdf)
-        + min_cdf
-    )
-    return u.logit().mul(scale).add(loc).exp().to(dtype)
-
-
 def get_open_maze_squares(maze):
     coordinates = []
 
