@@ -32,27 +32,32 @@ class DiffusionTransformer(nn.Module):
         self.weight_decay = weight_decay
         self.inpaint = inpaint
         self.device = device
+        self.T = T
 
         # embeddings
         self.input_emb = nn.Linear(input_dim, d_model)
         self.obs_emb = nn.Linear(obs_dim, d_model)
         self.goal_emb = nn.Linear(9, d_model)
-        self.sigma_emb = nn.Linear(1, d_model)
+        self.sigma_emb = SinusoidalPosEmb(d_model, device)
         # self.returns_emb = nn.Linear(3, d_model)
         # self.obstacle_emb = nn.Linear(2, d_model)
 
         # change dims depending on if we're inpainting the obs
-        input_len = T + T_cond - 1 if inpaint else T
-        cond_len = 1 if inpaint else T_cond + 2
+        input_len = T + 2
 
         # dropout and position encoding
         self.pos_emb = SinusoidalPosEmb(d_model, device)(torch.arange(input_len))
-        self.cond_pos_emb = SinusoidalPosEmb(d_model, device)(torch.arange(cond_len))
         self.drop = nn.Dropout(emb_dropout)
 
+        self.encoder = nn.Sequential(
+            nn.Linear(2 * d_model, d_model),
+            nn.SiLU(),
+            nn.Linear(d_model, d_model),
+        )
+
         # transformer
-        self.decoder = nn.TransformerDecoder(
-            nn.TransformerDecoderLayer(
+        self.decoder = nn.TransformerEncoder(
+            nn.TransformerEncoderLayer(
                 d_model=d_model,
                 nhead=nhead,
                 dim_feedforward=4 * d_model,
@@ -63,7 +68,7 @@ class DiffusionTransformer(nn.Module):
             ),
             num_layers=num_layers,
         )
-        self.register_buffer("mask", self.generate_mask(input_len))
+        # self.register_buffer("mask", self.generate_mask(input_len))
         # output
         self.ln_f = nn.LayerNorm(d_model)
         self.output_pred = nn.Linear(d_model, input_dim)
@@ -77,11 +82,13 @@ class DiffusionTransformer(nn.Module):
     def _init_weights(self, module):
         ignore_types = (
             nn.Dropout,
-            nn.TransformerDecoderLayer,
-            nn.TransformerDecoder,
+            nn.TransformerEncoderLayer,
+            nn.TransformerEncoder,
             nn.ModuleList,
             nn.Sequential,
+            nn.SiLU,
             DiffusionTransformer,
+            SinusoidalPosEmb,
         )
         if isinstance(module, (nn.Linear, nn.Embedding)):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
@@ -170,25 +177,20 @@ class DiffusionTransformer(nn.Module):
 
     def forward(self, x, sigma, data_dict):
         # embeddings
-        sigma = sigma.to(self.device)
-        sigma_emb = self.sigma_emb(sigma.view(-1, 1, 1))
+        sigma = sigma.to(self.device).squeeze(1)
+        sigma_emb = self.sigma_emb(sigma).squeeze(0).expand(-1, x.shape[1], -1)
         x_emb = self.input_emb(x)
+        x_emb = torch.cat([x_emb, sigma_emb], dim=-1)
+        x_emb = self.encoder(x_emb)
 
-        # create conditioning
-        if self.inpaint:
-            cond_emb = sigma_emb
-        else:
-            obs_emb = self.obs_emb(data_dict["obs"])
-            goal_emb = self.goal_emb(data_dict["goal"]).unsqueeze(1)
-            # returns_emb = self.returns_emb(data_dict["returns"]).unsqueeze(1)
-            # obstacle_emb = self.obstacle_emb(data_dict["obstacles"]).unsqueeze(1)
-            cond_emb = torch.cat([sigma_emb, obs_emb, goal_emb], dim=1)
-        # add position encoding and dropout
-        cond_emb = self.drop(cond_emb + self.cond_pos_emb)
-        x_emb = self.drop(x_emb + self.pos_emb)
+        obs_emb = self.obs_emb(data_dict["obs"])
+        goal_emb = self.goal_emb(data_dict["goal"]).unsqueeze(1)
+
+        x = torch.cat([obs_emb, goal_emb, x_emb], dim=1)
+        x += self.pos_emb
 
         # output
-        x = self.decoder(tgt=x_emb, memory=cond_emb, tgt_mask=self.mask)
+        x = self.decoder(x)[:, -self.T:]
         x = self.ln_f(x)
         return self.output_pred(x)
 
