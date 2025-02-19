@@ -6,10 +6,10 @@ from collections import deque
 
 import hydra
 import torch
+import wandb
 from rsl_rl.utils import store_code_state
 from tqdm import tqdm, trange
 
-import wandb
 from isaaclab.utils.math import matrix_from_quat
 from isaaclab_rl.rsl_rl.vecenv_wrapper import RslRlVecEnvWrapper
 from locodiff.dataset import get_dataloaders
@@ -38,9 +38,9 @@ class DiffusionRunner:
         self.train_loader, self.test_loader = get_dataloaders(**self.cfg.dataset)
         self.normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
         model = hydra.utils.instantiate(self.cfg.model)
-        classifier = hydra.utils.instantiate(self.cfg.classifier)
+        classifier = hydra.utils.instantiate(self.cfg.model, value=True)
         self.policy = DiffusionPolicy(
-            model, self.normalizer, env, **self.cfg.policy, classifier=classifier
+            model, classifier, self.normalizer, env, **self.cfg.policy
         )
 
         # ema
@@ -156,7 +156,7 @@ class DiffusionRunner:
                 with InferenceContext(self):
                     test_mse, test_obs_mse, test_act_mse = [], [], []
                     for batch in tqdm(self.test_loader, desc="Testing...", leave=False):
-                        mse, obs_mse, act_mse = self.policy.test(batch, plot=False)
+                        mse, obs_mse, act_mse = self.policy.test(batch)
                         test_mse.append(mse)
                         test_obs_mse.append(obs_mse)
                         test_act_mse.append(act_mse)

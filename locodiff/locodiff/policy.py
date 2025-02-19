@@ -3,19 +3,17 @@ import random
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 import wandb
-from diffusers.schedulers.scheduling_edm_euler import EDMEulerScheduler
 from torch import Tensor
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from isaaclab.utils.math import matrix_from_quat
-from locodiff.models.unet import ValueUnet1D
-from locodiff.plotting import plot_3d_guided_trajectory, plot_guided_trajectory
+from locodiff.models.transformer import DiffusionTransformer
+from locodiff.plotting import plot_3d_guided_trajectory
 from locodiff.utils import (
-    CFGWrapper,
     Normalizer,
-    apply_conditioning,
     calculate_return,
 )
 
@@ -23,65 +21,40 @@ from locodiff.utils import (
 class DiffusionPolicy(nn.Module):
     def __init__(
         self,
-        model,
+        model: DiffusionTransformer,
+        classifier: DiffusionTransformer | None,
         normalizer: Normalizer,
         env,
         obs_dim: int,
         act_dim: int,
         T: int,
-        T_cond: int,
         T_action: int,
-        num_envs: int,
         sampling_steps: int,
-        sigma_data: float,
-        sigma_min: float,
-        sigma_max: float,
         cond_lambda: int,
         cond_mask_prob: float,
         lr: float,
         betas: tuple,
         num_iters: int,
-        inpaint: bool,
         device: str,
-        classifier: ValueUnet1D | None = None,
     ):
         super().__init__()
         # model
         if classifier is not None:
             self.classifier = classifier
             self.alpha = 0.0
-        elif cond_mask_prob > 0:
-            model = CFGWrapper(model, cond_lambda, cond_mask_prob)
         self.model = model
-
         # other classes
         self.env = env
         self.normalizer = normalizer
-        self.obs_hist = torch.zeros((num_envs, T_cond, obs_dim), device=device)
-        self.noise_scheduler = EDMEulerScheduler(
-            sigma_min=sigma_min,
-            sigma_max=sigma_max,
-            sigma_data=sigma_data,
-            num_train_timesteps=sampling_steps,
-        )
 
         # dims
-        self.obs_dim = obs_dim
         self.input_dim = obs_dim + act_dim
         self.action_dim = act_dim
-        self.input_len = T + T_cond - 1 if inpaint else T
         self.T = T
-        self.T_cond = T_cond
         self.T_action = T_action
-        self.num_envs = num_envs
 
-        # diffusion
+        # flow matching
         self.sampling_steps = sampling_steps
-        self.sigma_data = sigma_data
-        self.sigma_min = sigma_min
-        self.sigma_max = sigma_max
-        self.cond_mask_prob = cond_mask_prob
-        self.inpaint = inpaint
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
 
         # optimizer and lr scheduler
@@ -94,9 +67,10 @@ class DiffusionPolicy(nn.Module):
             self.classifier_optimizer, T_max=num_iters
         )
 
-        # reward guidance
+        # guidance
         self.gammas = torch.tensor([0.99**i for i in range(self.T)]).to(device)
-        # self.open_squares = get_open_maze_squares(self.env.get_maze())
+        self.cond_mask_prob = cond_mask_prob
+        self.cond_lambda = cond_lambda
 
         self.device = device
         self.to(device)
@@ -110,28 +84,19 @@ class DiffusionPolicy(nn.Module):
         data = self.process(data)
         x = self.forward(data)
         obs = x[:, :, self.action_dim :]
-
-        # extract action
-        if self.inpaint:
-            action = x[
-                :, self.T_cond - 1 : self.T_cond + self.T_action - 1, : self.action_dim
-            ]
-        else:
-            action = x[:, : self.T_action, : self.action_dim]
-
+        action = x[:, : self.T_action, : self.action_dim]
         return {"action": action, "obs_traj": obs}
 
     def update(self, data):
-        # preprocess data
         data = self.process(data)
 
-        # noise data
+        # sample noise and timestep
         x_1 = data["input"]
         x_0 = torch.randn_like(x_1)
-        # t = torch.rand(len(x_1), 1, 1).to(self.device)
         samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
         t = 0.999 * (1 - samples)
 
+        # compute target
         x_t = (1 - t) * x_0 + t * x_1
         dx_t = x_1 - x_0
 
@@ -142,8 +107,7 @@ class DiffusionPolicy(nn.Module):
 
         # compute model output
         out = self.model(x_t, t, data)
-        loss = torch.nn.functional.mse_loss(out, dx_t)
-
+        loss = F.mse_loss(out, dx_t)
         # update model
         self.optimizer.zero_grad()
         loss.backward()
@@ -153,46 +117,32 @@ class DiffusionPolicy(nn.Module):
         return loss.item()
 
     @torch.no_grad()
-    def test(self, data: dict, plot) -> tuple[float, float, float]:
+    def test(self, data: dict) -> tuple[float, float, float]:
         data = self.process(data)
         x = self.forward(data)
+
         # calculate losses
         input = self.normalizer.inverse_scale_output(data["input"])
-        loss = nn.functional.mse_loss(x, input, reduction="none")
-        obs_loss = loss[:, :, self.action_dim :].mean()
-        action_loss = loss[:, :, : self.action_dim].mean()
+        loss = F.mse_loss(x, input, reduction="none")
+        obs_loss = loss[:, :, self.action_dim :].mean().item()
+        action_loss = loss[:, :, : self.action_dim].mean().item()
 
-        if plot:
-            obs = torch.tensor([[-2.5, -0.5, 0, 0]]).to(self.device)
-            goal = torch.tensor([[2.5, 2.5, 0, 0]]).to(self.device)
-            obstacle = torch.tensor([[-1, 0]]).to(self.device)
-            alphas = [0, 200, 300, 500, 700, 1e3]
-            # Generate plots
-            fig = plot_guided_trajectory(self, self.env, obs, goal, obstacle, alphas)
-            # log
-            wandb.log({"CFG Trajectory": wandb.Image(fig)})
-            plt.close(fig)
-
-            self.plot_collsion_rate(100)
-
-        return loss.mean().item(), obs_loss.item(), action_loss.item()
+        return loss.mean().item(), obs_loss, action_loss
 
     ##################
     # Classifier API #
     ##################
 
     def update_classifier(self, data: dict) -> float:
-        # preprocess data
         data = self.process(data)
 
         # compute partially denoised sample
-        timesteps = random.randint(0, self.sampling_steps - 1)
-        x, t = self.truncated_forward(data, timesteps)
+        n = random.randint(0, self.sampling_steps - 1)
+        x, t = self.truncated_forward(data, n)
+
+        # compute model output
         pred_value = self.classifier(x, t, data)
-
-        # calculate loss
-        loss = torch.nn.functional.mse_loss(pred_value, data["returns"])
-
+        loss = F.mse_loss(pred_value, data["returns"])
         # update model
         self.classifier_optimizer.zero_grad()
         loss.backward()
@@ -202,15 +152,14 @@ class DiffusionPolicy(nn.Module):
         return loss.item()
 
     def test_classifier(self, data: dict) -> float:
-        # preprocess data
         data = self.process(data)
 
         # compute partially denoised sample
-        timesteps = random.randint(0, self.sampling_steps - 1)
-        x, t = self.truncated_forward(data, timesteps)
+        n = random.randint(0, self.sampling_steps - 1)
+        x, t = self.truncated_forward(data, n)
         pred_value = self.classifier(x, t, data)
-        # calculate loss
-        return torch.nn.functional.mse_loss(pred_value, data["returns"]).item()
+
+        return F.mse_loss(pred_value, data["returns"]).item()
 
     def plot_guided_trajectory(self, it: int):
         # get obs
@@ -231,12 +180,6 @@ class DiffusionPolicy(nn.Module):
         wandb.log({"Guided Trajectory": wandb.Image(fig)}, step=it)
         plt.close(fig)
 
-    def reset(self, dones=None):
-        if dones is not None:
-            self.obs_hist[dones.bool()] = 0
-        else:
-            self.obs_hist.zero_()
-
     #####################
     # Inference backend #
     #####################
@@ -253,57 +196,41 @@ class DiffusionPolicy(nn.Module):
     @torch.no_grad()
     def forward(self, data: dict) -> torch.Tensor:
         # sample noise
-        B = data["obs"].shape[0]
-        x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
+        bsz = data["obs"].shape[0]
+        x = torch.randn((bsz, self.input_len, self.input_dim)).to(self.device)
         time_steps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
 
-        # inference loop
+        # inference
         for i in range(self.sampling_steps):
             x = self.step(x, time_steps[i], time_steps[i + 1], data)
-
             # guidance
-            # if self.alpha > 0:
-            #     with torch.enable_grad():
-            #         x_grad = output.detach().clone().requires_grad_(True)
-            #         y = self.classifier(x_grad, t, data)
-            #         grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
-            #         output = x_grad + self.alpha * torch.exp(4 * t) * grad.detach()
-            #
-            # x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
+            if self.alpha > 0:
+                with torch.enable_grad():
+                    x_grad = x.detach().clone().requires_grad_(True)
+                    y = self.classifier(x_grad, time_steps[i], data)
+                    grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
+                    x = x_grad + self.alpha * time_steps[i] * grad.detach()
 
         # denormalize
         x = self.normalizer.clip(x)
-        x = self.normalizer.inverse_scale_output(x)
-        return x
+        return self.normalizer.inverse_scale_output(x)
 
     @torch.no_grad()
     def truncated_forward(
-        self, data: dict, timesteps: int
+        self, data: dict, n: int
     ) -> tuple[torch.Tensor, torch.Tensor]:
         # sample noise
-        B = data["obs"].shape[0]
-        x = torch.randn((B, self.input_len, self.input_dim)).to(self.device)
-        # we should need this but performance is better without it
-        # x *= self.noise_scheduler.init_noise_sigma
+        bsz = data["obs"].shape[0]
+        x = torch.randn((bsz, self.input_len, self.input_dim)).to(self.device)
+        time_steps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
+        time_steps = time_steps[:n]
 
-        # create inpainting conditioning
-        cond = self.create_conditioning(data)
-        # this needs to called every time we do inference
-        self.noise_scheduler.set_timesteps(self.sampling_steps)
-
+        # inference
         # TODO: change this to batch samples from every step
+        for i in range(n):
+            x = self.step(x, time_steps[i], time_steps[i + 1], data)
 
-        # inference loop
-        for i, t in enumerate(self.noise_scheduler.timesteps):
-            x_in = self.noise_scheduler.scale_model_input(x, t)
-            x_in = apply_conditioning(x_in, cond, self.action_dim)
-            output = self.model(x_in, t.expand(B), data)
-            x = self.noise_scheduler.step(output, t, x, return_dict=False)[0]
-
-            if i >= timesteps:
-                return output, t.expand(B)
-
-        return output, t.expand(B)
+        return x, time_steps[-1]
 
     ###################
     # Data processing #
@@ -316,7 +243,6 @@ class DiffusionPolicy(nn.Module):
 
         if raw_action is None:
             # sim
-            # data = self.update_history(data)
             input, returns = None, None
             raw_obs = data["obs"].unsqueeze(1)
             obstacle = self.normalizer.scale_3d_pos(data["obstacle"])
@@ -354,12 +280,6 @@ class DiffusionPolicy(nn.Module):
             "obstacle": obstacle,
         }
 
-    def create_conditioning(self, data: dict) -> dict:
-        if self.inpaint:
-            return {0: data["obs"].squeeze(1)}
-        else:
-            return {}
-
     def calculate_obstacles(self, size: int) -> torch.Tensor:
         # Sample random coordinates within the maze (bottom left corner)
         idx = torch.randint(0, len(self.open_squares), (size,))
@@ -369,21 +289,6 @@ class DiffusionPolicy(nn.Module):
     ###########
     # Helpers #
     ###########
-
-    @torch.no_grad()
-    def sample_training_density(self, size):
-        """
-        Generate a density function for training sigmas
-        """
-        log_normal = torch.distributions.log_normal.LogNormal(-1.2, 1.2)
-        density = log_normal.sample((size,)).to(self.device)
-        return density
-
-    def update_history(self, x):
-        self.obs_hist[:, :-1] = self.obs_hist[:, 1:].clone()
-        self.obs_hist[:, -1] = x["obs"]
-        x["obs"] = self.obs_hist.clone()
-        return x
 
     def dict_to_device(self, data):
         return {k: v.to(self.device) for k, v in data.items()}
@@ -402,7 +307,7 @@ class DiffusionPolicy(nn.Module):
 
         total_collisions = []
         for lam in cond_lambda:
-            self.model.cond_lambda = lam
+            self.cond_lambda = lam
             obs_traj = self.act({"obs": obs, "obstacle": obstacle, "goal": goal})
             collisions = self.check_collisions(obs_traj["obs_traj"][..., :2], obstacle)
             total_collisions.append(collisions.sum().item())

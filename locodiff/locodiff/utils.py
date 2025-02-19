@@ -158,8 +158,7 @@ class SinusoidalPosEmb(nn.Module):
         emb = math.log(10000) / (half_dim - 1)
         emb = torch.exp(torch.arange(half_dim, device=self.device) * -emb)
         emb = x[:, None] * emb[None, :]
-        emb = torch.cat((emb.sin(), emb.cos()), dim=-1)
-        return emb.unsqueeze(0)
+        return torch.cat((emb.sin(), emb.cos()), dim=-1)
 
 
 # copied from https://github.com/yang-song/score_sde_pytorch/blob/main/models/ema.py
