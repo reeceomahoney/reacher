@@ -197,7 +197,7 @@ class DiffusionPolicy(nn.Module):
     def forward(self, data: dict) -> torch.Tensor:
         # sample noise
         bsz = data["obs"].shape[0]
-        x = torch.randn((bsz, self.input_len, self.input_dim)).to(self.device)
+        x = torch.randn((bsz, self.T, self.input_dim)).to(self.device)
         time_steps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
 
         # inference
@@ -221,7 +221,7 @@ class DiffusionPolicy(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         # sample noise
         bsz = data["obs"].shape[0]
-        x = torch.randn((bsz, self.input_len, self.input_dim)).to(self.device)
+        x = torch.randn((bsz, self.T, self.input_dim)).to(self.device)
         time_steps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
         time_steps = time_steps[:n]
 
@@ -250,12 +250,7 @@ class DiffusionPolicy(nn.Module):
         else:
             # train and test
             raw_obs = data["obs"]
-            if self.inpaint:
-                input_obs, input_act = raw_obs, raw_action
-            else:
-                input_obs = raw_obs[:, self.T_cond - 1 :]
-                input_act = raw_action[:, self.T_cond - 1 :]
-            input = torch.cat([input_act, input_obs], dim=-1)
+            input = torch.cat([raw_action, raw_obs], dim=-1)
 
             obstacle = torch.zeros((input.shape[0], 3)).to(self.device)
             returns = calculate_return(input[..., 25:28], data["mask"], self.gammas)
@@ -271,7 +266,7 @@ class DiffusionPolicy(nn.Module):
                 self.action_dim + 18 : self.action_dim + 27,
             ]
 
-        obs = self.normalizer.scale_input(raw_obs[:, : self.T_cond])
+        obs = self.normalizer.scale_input(raw_obs[:, :1])
         return {
             "obs": obs,
             "input": input,

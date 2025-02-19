@@ -72,7 +72,6 @@ class DiffusionRunner:
     def learn(self):
         obs, _ = self.env.get_observations()
         obs = obs.to(self.device)
-        self.policy.reset()
         self.train_mode()
 
         rewbuffer = deque()
@@ -116,8 +115,6 @@ class DiffusionRunner:
                         # step the environment
                         for i in range(self.policy.T_action):
                             obs, rewards, dones, infos = self.env.step(actions[:, i])
-                            if i < self.policy.T_action - 1:
-                                self.policy.update_history({"obs": obs})
 
                             if t == self.num_steps_per_env - 1:
                                 dones = torch.ones_like(dones)
@@ -128,7 +125,6 @@ class DiffusionRunner:
                                 rewards.to(self.device),
                                 dones.to(self.device),
                             )
-                            self.policy.reset(dones)
 
                             if self.log_dir is not None:
                                 # rewards and dones
