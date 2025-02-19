@@ -3,12 +3,12 @@ import random
 import matplotlib.pyplot as plt
 import torch
 import torch.nn as nn
+import wandb
 from diffusers.schedulers.scheduling_edm_euler import EDMEulerScheduler
 from torch import Tensor
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
-import wandb
 from isaaclab.utils.math import matrix_from_quat
 from locodiff.models.unet import ValueUnet1D
 from locodiff.plotting import plot_3d_guided_trajectory, plot_guided_trajectory
@@ -82,6 +82,7 @@ class DiffusionPolicy(nn.Module):
         self.sigma_max = sigma_max
         self.cond_mask_prob = cond_mask_prob
         self.inpaint = inpaint
+        self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
 
         # optimizer and lr scheduler
         self.optimizer = AdamW(self.model.parameters(), lr=lr, betas=betas)
@@ -127,7 +128,9 @@ class DiffusionPolicy(nn.Module):
         # noise data
         x_1 = data["input"]
         x_0 = torch.randn_like(x_1)
-        t = torch.rand(len(x_1), 1, 1).to(self.device)
+        # t = torch.rand(len(x_1), 1, 1).to(self.device)
+        samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
+        t = 0.999 * (1 - samples)
 
         x_t = (1 - t) * x_0 + t * x_1
         dx_t = x_1 - x_0
