@@ -16,7 +16,7 @@ sim_interval: 5e3
 device: cuda
 ema_decay: 0.999
 use_ema: True
-scaling: gaussian
+scaling: linear
 
 #dims
 obs_dim: null

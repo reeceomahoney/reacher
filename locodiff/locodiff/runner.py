@@ -87,7 +87,7 @@ class DiffusionRunner:
         start_iter = self.current_learning_iteration
         tot_iter = int(start_iter + self.cfg.num_iters)
         generator = iter(self.train_loader)
-        for it in trange(start_iter, tot_iter):
+        for it in trange(start_iter, tot_iter, dynamic_ncols=True):
             start = time.time()
 
             # simulation
