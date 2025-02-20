@@ -2,6 +2,7 @@ import logging
 
 import torch
 import torch.nn as nn
+from einops.layers.torch import Rearrange
 
 from locodiff.utils import SinusoidalPosEmb
 
@@ -63,7 +64,9 @@ class DiffusionTransformer(nn.Module):
         self.ln_f = nn.LayerNorm(d_model)
 
         if value:
-            self.output = nn.Sequential(nn.Linear(d_model, 1), nn.Linear(T, 1))
+            self.output = nn.Sequential(
+                nn.Linear(d_model, 1), Rearrange("b t 1 -> b t"), nn.Linear(T, 1)
+            )
         else:
             self.output = nn.Linear(d_model, input_dim)
 
@@ -83,6 +86,7 @@ class DiffusionTransformer(nn.Module):
             nn.SiLU,
             DiffusionTransformer,
             SinusoidalPosEmb,
+            Rearrange,
         )
         if isinstance(module, (nn.Linear, nn.Embedding)):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)

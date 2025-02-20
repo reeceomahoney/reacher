@@ -148,7 +148,7 @@ class ClassifierRunner:
         self.policy.normalizer.load_state_dict(
             loaded_dict["norm_state_dict"], strict=False
         )
-        self.policy.classifier.load_state_dict(loaded_dict["classifier_state_dict"])
+        # self.policy.classifier.load_state_dict(loaded_dict["classifier_state_dict"])
         return loaded_dict["infos"]
 
     def get_inference_policy(self, device=None):

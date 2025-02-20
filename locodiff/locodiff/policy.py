@@ -18,6 +18,10 @@ from locodiff.utils import (
 )
 
 
+def expand_t(tensor: Tensor, bsz: int) -> Tensor:
+    return tensor.view(1, 1, 1).expand(bsz, -1, -1)
+
+
 class DiffusionPolicy(nn.Module):
     def __init__(
         self,
@@ -185,7 +189,7 @@ class DiffusionPolicy(nn.Module):
     #####################
 
     def step(self, x_t: Tensor, t_start: Tensor, t_end: Tensor, data: dict) -> Tensor:
-        t_start = t_start.view(1, 1, 1).expand(x_t.shape[0], 1, 1)
+        t_start = expand_t(t_start, x_t.shape[0])
 
         return x_t + (t_end - t_start) * self.model(
             x_t + self.model(x_t, t_start, data) * (t_end - t_start) / 2,
@@ -207,7 +211,7 @@ class DiffusionPolicy(nn.Module):
             if self.alpha > 0:
                 with torch.enable_grad():
                     x_grad = x.detach().clone().requires_grad_(True)
-                    y = self.classifier(x_grad, time_steps[i], data)
+                    y = self.classifier(x_grad, expand_t(time_steps[i], bsz), data)
                     grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
                     x = x_grad + self.alpha * time_steps[i] * grad.detach()
 
@@ -230,8 +234,7 @@ class DiffusionPolicy(nn.Module):
         for i in range(n):
             x = self.step(x, time_steps[i], time_steps[i + 1], data)
 
-        t = time_steps[-1].view(1, 1, 1).expand(x.shape[0], 1, 1)
-        return x, t
+        return x, expand_t(time_steps[-1], bsz)
 
     ###################
     # Data processing #
