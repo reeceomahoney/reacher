@@ -2,7 +2,7 @@ import logging
 
 import torch
 import torch.nn as nn
-from einops.layers.torch import Rearrange
+from einops.layers.torch import Rearrange, Reduce
 
 from locodiff.utils import SinusoidalPosEmb
 
@@ -36,13 +36,20 @@ class DiffusionTransformer(nn.Module):
         # embeddings
         self.x_emb = nn.Linear(input_dim, d_model)
         self.obs_emb = nn.Linear(obs_dim, d_model)
-        self.goal_emb = nn.Linear(9, d_model)
+        self.goal_emb = nn.Sequential(
+            nn.Linear(9, d_model),
+            Rearrange("b d -> b 1 d"),
+        )
+        self.t_emb = nn.Sequential(
+            Rearrange("b 1 1 -> b 1"),
+            SinusoidalPosEmb(d_model, device),
+            Reduce("b 1 d -> b t d", reduction="repeat", t=T),
+        )
         self.x_t_emb = nn.Sequential(
             nn.Linear(2 * d_model, d_model),
             nn.SiLU(),
             nn.Linear(d_model, d_model),
         )
-        self.t_emb = SinusoidalPosEmb(d_model, device)
         self.pos_emb = SinusoidalPosEmb(d_model, device)(
             torch.arange(input_len)
         ).unsqueeze(0)
@@ -87,6 +94,7 @@ class DiffusionTransformer(nn.Module):
             DiffusionTransformer,
             SinusoidalPosEmb,
             Rearrange,
+            Reduce,
         )
         if isinstance(module, (nn.Linear, nn.Embedding)):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
@@ -175,11 +183,11 @@ class DiffusionTransformer(nn.Module):
 
     def forward(self, x, t, data):
         # embed
-        t_emb = self.t_emb(t.squeeze(1)).expand(-1, x.shape[1], -1)
+        t_emb = self.t_emb(t)
         x_emb = self.x_emb(x)
         x_t_emb = self.x_t_emb(torch.cat([x_emb, t_emb], dim=-1))
         obs_emb = self.obs_emb(data["obs"])
-        goal_emb = self.goal_emb(data["goal"]).unsqueeze(1)
+        goal_emb = self.goal_emb(data["goal"])
         # construct input
         x = torch.cat([obs_emb, goal_emb, x_t_emb], dim=1)
         x += self.pos_emb
