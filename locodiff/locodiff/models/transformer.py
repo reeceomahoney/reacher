@@ -27,7 +27,7 @@ class DiffusionTransformer(nn.Module):
         super().__init__()
         # variables
         input_dim = obs_dim + act_dim
-        input_len = T + 2
+        input_len = T + 3
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
         self.device = device
@@ -38,6 +38,10 @@ class DiffusionTransformer(nn.Module):
         self.obs_emb = nn.Linear(obs_dim, d_model)
         self.goal_emb = nn.Sequential(
             nn.Linear(9, d_model),
+            Rearrange("b d -> b 1 d"),
+        )
+        self.return_emb = nn.Sequential(
+            nn.Linear(1, d_model),
             Rearrange("b d -> b 1 d"),
         )
         self.t_emb = nn.Sequential(
@@ -188,8 +192,9 @@ class DiffusionTransformer(nn.Module):
         x_t_emb = self.x_t_emb(torch.cat([x_emb, t_emb], dim=-1))
         obs_emb = self.obs_emb(data["obs"])
         goal_emb = self.goal_emb(data["goal"])
+        return_emb = self.return_emb(data["returns"])
         # construct input
-        x = torch.cat([obs_emb, goal_emb, x_t_emb], dim=1)
+        x = torch.cat([obs_emb, goal_emb, return_emb, x_t_emb], dim=1)
         x += self.pos_emb
         # output
         x = self.encoder(x, mask=self.mask)[:, -self.T :]

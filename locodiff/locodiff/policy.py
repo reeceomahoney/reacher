@@ -204,8 +204,17 @@ class DiffusionPolicy(nn.Module):
         x = torch.randn((bsz, self.T, self.input_dim)).to(self.device)
         time_steps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
 
+        if self.cond_lambda > 0:
+            data = {
+                k: torch.cat([v] * 2) if v is not None else None
+                for k, v in data.items()
+            }
+            data["returns"][bsz:] = 0
+
         # inference
         for i in range(self.sampling_steps):
+            if self.cond_lambda > 0:
+                x = torch.cat([x] * 2)
             x = self.step(x, time_steps[i], time_steps[i + 1], data)
             # guidance
             if self.alpha > 0:
@@ -214,6 +223,9 @@ class DiffusionPolicy(nn.Module):
                     y = self.classifier(x_grad, expand_t(time_steps[i], bsz), data)
                     grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
                     x = x_grad + self.alpha * (1 - time_steps[i]) * grad.detach()
+            elif self.cond_lambda > 0:
+                x_cond, x_uncond = x.chunk(2)
+                x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
 
         # denormalize
         x = self.normalizer.clip(x)
@@ -247,7 +259,8 @@ class DiffusionPolicy(nn.Module):
 
         if raw_action is None:
             # sim
-            input, returns = None, None
+            input = None
+            returns = torch.ones((data["obs"].shape[0], 1)).to(self.device)
             raw_obs = data["obs"].unsqueeze(1)
             obstacle = self.normalizer.scale_3d_pos(data["obstacle"])
             goal = self.normalizer.scale_9d_pos(data["goal"])
