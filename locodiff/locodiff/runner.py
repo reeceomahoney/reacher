@@ -36,11 +36,11 @@ class DiffusionRunner:
 
         # classes
         self.train_loader, self.test_loader = get_dataloaders(**self.cfg.dataset)
-        self.normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
+        normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
         model = hydra.utils.instantiate(self.cfg.model)
         classifier = hydra.utils.instantiate(self.cfg.model, value=True)
         self.policy = DiffusionPolicy(
-            model, classifier, self.normalizer, env, **self.cfg.policy
+            model, classifier, normalizer, env, **self.cfg.policy
         )
 
         # ema

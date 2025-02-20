@@ -5,11 +5,11 @@ import time
 
 import hydra
 import torch
+import wandb
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 from tqdm import tqdm, trange
 
-import wandb
 from locodiff.dataset import get_dataloaders
 from locodiff.envs import MazeEnv
 from locodiff.policy import DiffusionPolicy
@@ -32,9 +32,9 @@ class ClassifierRunner:
         self.train_loader, self.test_loader = get_dataloaders(**self.cfg.dataset)
         normalizer = Normalizer(self.train_loader, agent_cfg.scaling, device)
         model = hydra.utils.instantiate(self.cfg.model)
-        classifier = hydra.utils.instantiate(self.cfg.classifier)
+        classifier = hydra.utils.instantiate(self.cfg.model, value=True)
         self.policy = DiffusionPolicy(
-            model, normalizer, env, **self.cfg.policy, classifier=classifier
+            model, classifier, normalizer, env, **self.cfg.policy
         )
 
         # ema
@@ -146,9 +146,10 @@ class ClassifierRunner:
         self.policy.optimizer.load_state_dict(loaded_dict["optimizer_state_dict"])
         loaded_dict["norm_state_dict"].pop("r_min")
         loaded_dict["norm_state_dict"].pop("r_max")
-        self.policy.normalizer.load_state_dict(loaded_dict["norm_state_dict"], strict=False)
+        self.policy.normalizer.load_state_dict(
+            loaded_dict["norm_state_dict"], strict=False
+        )
         self.policy.classifier.load_state_dict(loaded_dict["classifier_state_dict"])
-        # self.current_learning_iteration = loaded_dict["iter"]
         return loaded_dict["infos"]
 
     def get_inference_policy(self, device=None):
