@@ -35,8 +35,7 @@ from isaaclab.utils.math import matrix_from_quat
 from isaaclab_rl.rsl_rl.vecenv_wrapper import RslRlVecEnvWrapper
 from locodiff.classifier_runner import ClassifierRunner
 from locodiff.plotting import plot_3d_guided_trajectory
-from locodiff.utils import dynamic_hydra_main
-from vae.utils import get_latest_run
+from locodiff.utils import dynamic_hydra_main, get_latest_run
 
 task = "Isaac-Franka-Classifier"
 
