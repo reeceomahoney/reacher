@@ -213,7 +213,7 @@ class DiffusionPolicy(nn.Module):
                     x_grad = x.detach().clone().requires_grad_(True)
                     y = self.classifier(x_grad, expand_t(time_steps[i], bsz), data)
                     grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
-                    x = x_grad + self.alpha * time_steps[i] * grad.detach()
+                    x = x_grad + self.alpha * (1 - time_steps[i]) * grad.detach()
 
         # denormalize
         x = self.normalizer.clip(x)
