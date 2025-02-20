@@ -223,14 +223,15 @@ class DiffusionPolicy(nn.Module):
         bsz = data["obs"].shape[0]
         x = torch.randn((bsz, self.T, self.input_dim)).to(self.device)
         time_steps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
-        time_steps = time_steps[:n + 1]
+        time_steps = time_steps[: n + 1]
 
         # inference
         # TODO: change this to batch samples from every step
         for i in range(n):
             x = self.step(x, time_steps[i], time_steps[i + 1], data)
 
-        return x, time_steps[-1]
+        t = time_steps[-1].view(1, 1, 1).expand(x.shape[0], 1, 1)
+        return x, t
 
     ###################
     # Data processing #
