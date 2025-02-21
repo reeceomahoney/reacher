@@ -105,7 +105,7 @@ def plot_3d_guided_trajectory(
 
     for i, alpha in enumerate(alphas):
         # Compute trajectory
-        policy.alpha = alpha
+        policy.cond_lambda = alpha
         traj = policy.act({"obs": obs, "obstacle": obstacle, "goal": goal})
         traj = traj["obs_traj"][0, :, 18:21].detach().cpu().numpy()
 

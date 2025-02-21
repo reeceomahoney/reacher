@@ -15,7 +15,7 @@ from isaaclab.app import AppLauncher
 parser = argparse.ArgumentParser()
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
-args_cli.headless = True
+# args_cli.headless = True
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
@@ -27,6 +27,7 @@ import sys
 import time
 
 import gymnasium as gym
+import matplotlib.pyplot as plt
 import torch
 from omegaconf import DictConfig
 
@@ -39,10 +40,11 @@ from isaaclab.markers.visualization_markers import (
 )
 from isaaclab.utils.math import matrix_from_quat
 from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
+from locodiff.plotting import plot_3d_guided_trajectory
 from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main, get_latest_run
 
-task = "Isaac-Franka-Diffusion"
+task = "Isaac-Franka-Classifier"
 
 
 def interpolate_color(t):
@@ -110,7 +112,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
     # reset environment
     obs, _ = env.get_observations()
-    timestep = 0
     # simulate environment
     while simulation_app.is_running():
         start = time.time()
@@ -120,6 +121,11 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         rot_mat = matrix_from_quat(goal[:, 3:])
         ortho6d = rot_mat[..., :2].reshape(-1, 6)
         goal = torch.cat([goal[:, :3], ortho6d], dim=-1)
+
+        # plot trajectory
+        alphas = [0, 1, 2, 5, 10]
+        plot_3d_guided_trajectory(runner.policy, obs, goal, obstacle[:, :3], alphas)
+        plt.savefig("trajectory.png")
 
         # agent stepping
         output = policy({"obs": obs, "obstacle": obstacle[:, :3], "goal": goal})
@@ -132,13 +138,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
             end = time.time()
             if end - start < 1 / 30:
                 time.sleep(1 / 30 - (end - start))
-
             start = time.time()
-
-        if dones.any():
-            runner.policy.reset(dones)
-
-        timestep += 1
 
     # close the simulator
     env.close()
