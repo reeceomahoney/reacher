@@ -107,14 +107,9 @@ class RewardsCfg:
             "command_name": "ee_pose",
         },
     )
-
-    # action penalty
+    # penalty terms
     action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.0001)
-    joint_vel = RewTerm(
-        func=mdp.joint_vel_l2,
-        weight=-0.0001,
-        params={"asset_cfg": SceneEntityCfg("robot")},
-    )
+    joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.0001)
 
 
 @configclass
@@ -141,6 +136,7 @@ class CurriculumCfg:
 class FrankaReachEnvCfg(ReachEnvCfg):
     commands: CommandsCfg = CommandsCfg()
     observations: ObservationsCfg = ObservationsCfg()
+    rewards: RewardsCfg = RewardsCfg()
 
     def __post_init__(self):
         # post init of parent
@@ -148,17 +144,6 @@ class FrankaReachEnvCfg(ReachEnvCfg):
 
         # switch robot to franka
         self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")  # type: ignore
-        # override rewards
-        self.rewards.end_effector_position_tracking.params["asset_cfg"].body_names = [
-            "panda_hand"
-        ]
-        self.rewards.end_effector_position_tracking_fine_grained.params[
-            "asset_cfg"
-        ].body_names = ["panda_hand"]
-        self.rewards.end_effector_orientation_tracking.params[
-            "asset_cfg"
-        ].body_names = ["panda_hand"]
-
         # curriculum
         self.curriculum.action_rate.params["weight"] = -0.05
         self.curriculum.joint_vel.params["weight"] = -0.01
