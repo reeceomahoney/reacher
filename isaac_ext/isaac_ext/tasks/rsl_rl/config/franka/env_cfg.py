@@ -6,7 +6,7 @@ from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
-from isaaclab_assets import FRANKA_PANDA_CFG
+from isaaclab_assets.robots.franka import FRANKA_PANDA_CFG
 from isaaclab_tasks.manager_based.manipulation.reach.reach_env_cfg import (
     ReachEnvCfg,
 )
@@ -28,7 +28,7 @@ class CommandsCfg:
         ranges=mdp.UniformPoseCommandCfg.Ranges(
             pos_x=(0.35, 1),
             pos_y=(-0.5, 0.5),
-            pos_z=(0.15, 1.2),
+            pos_z=(0.15, 0.9),
             roll=(0.0, 0.0),
             pitch=(math.pi, math.pi),
             yaw=(-math.pi, math.pi),
@@ -97,6 +97,17 @@ class FrankaReachEnvCfg(ReachEnvCfg):
 
         # switch robot to franka
         self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")  # type: ignore
+        # override rewards
+        self.rewards.end_effector_position_tracking.params["asset_cfg"].body_names = [
+            "panda_hand"
+        ]
+        self.rewards.end_effector_position_tracking_fine_grained.params[
+            "asset_cfg"
+        ].body_names = ["panda_hand"]
+        self.rewards.end_effector_orientation_tracking.params[
+            "asset_cfg"
+        ].body_names = ["panda_hand"]
+
         # curriculum
         self.curriculum.action_rate.params["weight"] = -0.05
         self.curriculum.joint_vel.params["weight"] = -0.01
