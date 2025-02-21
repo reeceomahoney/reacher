@@ -133,6 +133,12 @@ def plot_3d_guided_trajectory(
         axes[i].view_init(elev=0, azim=90)
         axes[i].set_title(f"{alphas_or_lambdas}={scale}")
 
+    # reset guidance scale
+    if alphas_or_lambdas == "alphas":
+        policy.alpha = 0
+    elif alphas_or_lambdas == "lambda":
+        policy.cond_lambda = 0
+
     fig.tight_layout()
     return fig
 
