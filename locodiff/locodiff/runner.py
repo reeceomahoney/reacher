@@ -6,10 +6,10 @@ from collections import deque
 
 import hydra
 import torch
+import wandb
 from rsl_rl.utils import store_code_state
 from tqdm import tqdm, trange
 
-import wandb
 from isaaclab.utils.math import matrix_from_quat
 from isaaclab_rl.rsl_rl.vecenv_wrapper import RslRlVecEnvWrapper
 from locodiff.dataset import get_dataloaders

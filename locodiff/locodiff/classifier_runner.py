@@ -5,11 +5,11 @@ import time
 
 import hydra
 import torch
+import wandb
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 from tqdm import tqdm, trange
 
-import wandb
 from isaaclab_rl.rsl_rl.vecenv_wrapper import RslRlVecEnvWrapper
 from locodiff.dataset import get_dataloaders
 from locodiff.envs import MazeEnv
