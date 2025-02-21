@@ -1,9 +1,10 @@
 import math
 
 import isaac_ext.tasks.rsl_rl.mdp as mdp
-from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
+from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
@@ -24,7 +25,7 @@ class CommandsCfg:
     ee_pose = mdp.UniformPoseCommandCfg(
         asset_name="robot",
         body_name="panda_hand",
-        resampling_time_range=(2.0, 6.0),
+        resampling_time_range=(4.0, 4.0),
         debug_vis=True,
         ranges=mdp.UniformPoseCommandCfg.Ranges(
             pos_x=(0.35, 1),
@@ -73,6 +74,7 @@ class ObservationsCfg:
             func=mdp.generated_commands, params={"command_name": "ee_pose"}
         )
         actions = ObsTerm(func=mdp.last_action)
+        time = ObsTerm(func=mdp.time)
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -83,13 +85,50 @@ class ObservationsCfg:
 
 
 @configclass
-class EventCfg:
-    """Configuration for events."""
+class RewardsCfg:
+    """Reward terms for the MDP."""
 
-    reset_robot_joints = EventTerm(
-        func=mdp.reset_joints_random,
-        mode="reset",
+    # task terms
+    end_effector_position_tracking = RewTerm(
+        func=mdp.timed_position_command_error,
+        weight=-0.2,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            "command_name": "ee_pose",
+            "timesteps_left": 10,
+            "threshold": 0.1,
+        },
+    )
+    end_effector_orientation_tracking = RewTerm(
+        func=mdp.orientation_command_error,
+        weight=-0.1,
+        params={
+            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
+            "command_name": "ee_pose",
+        },
+    )
+
+    # action penalty
+    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.0001)
+    joint_vel = RewTerm(
+        func=mdp.joint_vel_l2,
+        weight=-0.0001,
         params={"asset_cfg": SceneEntityCfg("robot")},
+    )
+
+
+@configclass
+class CurriculumCfg:
+    """Curriculum terms for the MDP."""
+
+    action_rate = CurrTerm(
+        func=mdp.modify_reward_weight,
+        params={"term_name": "action_rate", "weight": -0.005, "num_steps": 4500},
+    )
+
+    joint_vel = CurrTerm(
+        func=mdp.modify_reward_weight,
+        params={"term_name": "joint_vel", "weight": -0.001, "num_steps": 4500},
     )
 
 
@@ -109,7 +148,6 @@ class FrankaReachEnvCfg(ReachEnvCfg):
 
         # switch robot to franka
         self.scene.robot = FRANKA_PANDA_CFG.replace(prim_path="{ENV_REGEX_NS}/Robot")  # type: ignore
-        self.events.reset_robot_joints.params["position_range"] = (1.0, 1.0)
         # override rewards
         self.rewards.end_effector_position_tracking.params["asset_cfg"].body_names = [
             "panda_hand"
@@ -134,4 +172,4 @@ class FrankaReachEnvCfg(ReachEnvCfg):
         )
 
         # general settings
-        self.episode_length_s = 6.0
+        self.episode_length_s = 4.0
