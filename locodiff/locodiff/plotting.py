@@ -108,7 +108,7 @@ def plot_3d_guided_trajectory(
         # set guidance scale
         if alphas_or_lambdas == "alphas":
             policy.alpha = scale
-        elif alphas_or_lambdas == "lambda":
+        elif alphas_or_lambdas == "lambdas":
             policy.cond_lambda = scale
 
         # Compute trajectory
@@ -136,7 +136,7 @@ def plot_3d_guided_trajectory(
     # reset guidance scale
     if alphas_or_lambdas == "alphas":
         policy.alpha = 0
-    elif alphas_or_lambdas == "lambda":
+    elif alphas_or_lambdas == "lambdas":
         policy.cond_lambda = 0
 
     fig.tight_layout()
