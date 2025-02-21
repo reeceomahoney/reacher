@@ -165,27 +165,6 @@ class DiffusionPolicy(nn.Module):
 
         return F.mse_loss(pred_value, data["returns"]).item()
 
-    def plot_guided_trajectory(self, it: int):
-        # get obs
-        obs, _ = self.env.get_observations()
-        obs = obs[0].unsqueeze(0)
-        # get goal
-        goal = self.env.unwrapped.command_manager.get_command("ee_pose")  # type: ignore
-        rot_mat = matrix_from_quat(goal[:, 3:])
-        ortho6d = rot_mat[..., :2].reshape(-1, 6)
-        goal = torch.cat([goal[:, :3], ortho6d], dim=-1)[0].unsqueeze(0)
-
-        # plot trajectory
-        alphas = [0, 5, 10, 20, 100]
-        obstacle = torch.zeros_like(goal)
-        fig = plot_3d_guided_trajectory(
-            self, obs, goal, obstacle[:, :3], alphas, "alphas"
-        )
-
-        # log
-        wandb.log({"Guided Trajectory": wandb.Image(fig)}, step=it)
-        plt.close(fig)
-
     #####################
     # Inference backend #
     #####################
@@ -323,3 +302,23 @@ class DiffusionPolicy(nn.Module):
         plt.plot(cond_lambda, total_collisions)
         wandb.log({"Collision Rate": wandb.Image(plt)})
         plt.close()
+
+    def plot_guided_trajectory(self, it: int, scales: list, alphas_or_lambdas: str):
+        # get obs
+        obs, _ = self.env.get_observations()
+        obs = obs[0].unsqueeze(0)
+        # get goal
+        goal = self.env.unwrapped.command_manager.get_command("ee_pose")  # type: ignore
+        rot_mat = matrix_from_quat(goal[:, 3:])
+        ortho6d = rot_mat[..., :2].reshape(-1, 6)
+        goal = torch.cat([goal[:, :3], ortho6d], dim=-1)[0].unsqueeze(0)
+
+        # plot trajectory
+        obstacle = torch.zeros_like(goal)
+        fig = plot_3d_guided_trajectory(
+            self, obs, goal, obstacle[:, :3], scales, alphas_or_lambdas
+        )
+
+        # log
+        wandb.log({"Guided Trajectory": wandb.Image(fig)}, step=it)
+        plt.close(fig)

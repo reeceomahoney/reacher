@@ -156,6 +156,9 @@ class DiffusionRunner:
                     test_mse = statistics.mean(test_mse)
                     test_obs_mse = statistics.mean(test_obs_mse)
                     test_act_mse = statistics.mean(test_act_mse)
+                    
+                    lambdas = [0, 1, 2, 5, 10]
+                    self.policy.plot_guided_trajectory(it, lambdas, "lambdas")
 
             # training
             try:
