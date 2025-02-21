@@ -5,11 +5,12 @@ import time
 
 import hydra
 import torch
-import wandb
 from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 from tqdm import tqdm, trange
 
+import wandb
+from isaaclab_rl.rsl_rl.vecenv_wrapper import RslRlVecEnvWrapper
 from locodiff.dataset import get_dataloaders
 from locodiff.envs import MazeEnv
 from locodiff.policy import DiffusionPolicy
@@ -21,7 +22,11 @@ log = logging.getLogger(__name__)
 
 class ClassifierRunner:
     def __init__(
-        self, env: VecEnv | MazeEnv, agent_cfg, log_dir: str | None = None, device="cpu"
+        self,
+        env: RslRlVecEnvWrapper | MazeEnv,
+        agent_cfg,
+        log_dir: str | None = None,
+        device="cpu",
     ):
         self.env = env
         self.env.reset()
@@ -45,7 +50,7 @@ class ClassifierRunner:
 
         # variables
         if isinstance(env, VecEnv):
-            self.num_steps_per_env = self.env.cfg.max_episode_length # type: ignore
+            self.num_steps_per_env = self.env.max_episode_length  # type: ignore
         elif isinstance(env, MazeEnv):
             self.num_steps_per_env = int(self.cfg.episode_length / 0.1)
         self.log_dir = log_dir

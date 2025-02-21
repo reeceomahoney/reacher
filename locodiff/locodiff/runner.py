@@ -6,10 +6,10 @@ from collections import deque
 
 import hydra
 import torch
-import wandb
 from rsl_rl.utils import store_code_state
 from tqdm import tqdm, trange
 
+import wandb
 from isaaclab.utils.math import matrix_from_quat
 from isaaclab_rl.rsl_rl.vecenv_wrapper import RslRlVecEnvWrapper
 from locodiff.dataset import get_dataloaders
@@ -51,7 +51,7 @@ class DiffusionRunner:
 
         # variables
         if isinstance(env, RslRlVecEnvWrapper):
-            self.num_steps_per_env = self.env.cfg.max_episdode_length  # type: ignore
+            self.num_steps_per_env = self.env.max_episdode_length  # type: ignore
         elif isinstance(env, MazeEnv):
             self.num_steps_per_env = int(self.cfg.episode_length / 0.1)
         self.log_dir = log_dir
