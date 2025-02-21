@@ -62,9 +62,9 @@ class DiffusionPolicy(nn.Module):
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
 
         # optimizer and lr scheduler
-        self.optimizer = AdamW(self.model.parameters(), lr=lr, betas=betas)
+        self.optimizer = AdamW(self.model.get_optim_groups(), lr=lr, betas=betas)
         self.classifier_optimizer = AdamW(
-            self.classifier.parameters(), lr=lr, betas=betas
+            self.classifier.get_optim_groups(), lr=lr, betas=betas
         )
         self.lr_scheduler = CosineAnnealingLR(self.optimizer, T_max=num_iters)
         self.classifier_lr_scheduler = CosineAnnealingLR(

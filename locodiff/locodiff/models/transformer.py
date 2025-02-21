@@ -203,19 +203,6 @@ class DiffusionTransformer(nn.Module):
         )
         return mask
 
-    def mask_cond(self, cond, force_mask=False):
-        cond = cond.clone()
-        if force_mask:
-            cond[...] = 0
-            return cond
-        elif self.training and self.cond_mask_prob > 0:
-            mask = (torch.rand(cond.shape[0], 1) > self.cond_mask_prob).float()
-            mask = mask.expand_as(cond)
-            cond[mask == 0] = 0
-            return cond
-        else:
-            return cond
-
     def detach_all(self):
         for _, param in self.named_parameters():
             param.detach_()
