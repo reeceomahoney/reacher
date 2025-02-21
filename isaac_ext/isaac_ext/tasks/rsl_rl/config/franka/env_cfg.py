@@ -1,10 +1,8 @@
 import math
 
 import isaac_ext.tasks.rsl_rl.mdp as mdp
-from isaaclab.managers import CurriculumTermCfg as CurrTerm
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
-from isaaclab.managers import RewardTermCfg as RewTerm
 from isaaclab.managers import SceneEntityCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
@@ -74,7 +72,6 @@ class ObservationsCfg:
             func=mdp.generated_commands, params={"command_name": "ee_pose"}
         )
         actions = ObsTerm(func=mdp.last_action)
-        time = ObsTerm(func=mdp.time)
 
         def __post_init__(self):
             self.enable_corruption = True
@@ -82,49 +79,6 @@ class ObservationsCfg:
 
     # observation groups
     policy: PolicyCfg = PolicyCfg()
-
-
-@configclass
-class RewardsCfg:
-    """Reward terms for the MDP."""
-
-    # task terms
-    end_effector_position_tracking = RewTerm(
-        func=mdp.timed_position_command_error,
-        weight=-0.2,
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
-            "command_name": "ee_pose",
-            "timesteps_left": 10,
-            "threshold": 0.1,
-        },
-    )
-    end_effector_orientation_tracking = RewTerm(
-        func=mdp.orientation_command_error,
-        weight=-0.1,
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
-            "command_name": "ee_pose",
-        },
-    )
-    # penalty terms
-    action_rate = RewTerm(func=mdp.action_rate_l2, weight=-0.0001)
-    joint_vel = RewTerm(func=mdp.joint_vel_l2, weight=-0.0001)
-
-
-@configclass
-class CurriculumCfg:
-    """Curriculum terms for the MDP."""
-
-    action_rate = CurrTerm(
-        func=mdp.modify_reward_weight,
-        params={"term_name": "action_rate", "weight": -0.005, "num_steps": 4500},
-    )
-
-    joint_vel = CurrTerm(
-        func=mdp.modify_reward_weight,
-        params={"term_name": "joint_vel", "weight": -0.001, "num_steps": 4500},
-    )
 
 
 ##
@@ -136,7 +90,6 @@ class CurriculumCfg:
 class FrankaReachEnvCfg(ReachEnvCfg):
     commands: CommandsCfg = CommandsCfg()
     observations: ObservationsCfg = ObservationsCfg()
-    rewards: RewardsCfg = RewardsCfg()
 
     def __post_init__(self):
         # post init of parent

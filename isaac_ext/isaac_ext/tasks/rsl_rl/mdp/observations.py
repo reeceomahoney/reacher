@@ -31,11 +31,3 @@ def ee_pose_l(env: ManagerBasedRLEnv, asset_cfg: SceneEntityCfg) -> torch.Tensor
 def position_commands(env: ManagerBasedRLEnv, command_name: str) -> torch.Tensor:
     """The generated command from command term in the command manager with the given name."""
     return env.command_manager.get_command(command_name)[:, :3]
-
-
-def time(env: ManagerBasedRLEnv) -> torch.Tensor:
-    """The current time elapsed in the episode."""
-    timesteps = torch.tensor(
-        [env.sim.current_time_step_index * env.cfg.sim.dt * env.cfg.decimation]
-    )
-    return timesteps.expand(env.num_envs).unsqueeze(-1).to(env.device)

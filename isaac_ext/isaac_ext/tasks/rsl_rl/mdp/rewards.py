@@ -90,35 +90,3 @@ def ee_9d_pose_error(
 
     reward = torch.exp(-(pos_error / std + orientation_error / 4 * std))
     return reward
-
-
-def timed_position_command_error(
-    env: ManagerBasedRLEnv,
-    command_name: str,
-    asset_cfg: SceneEntityCfg,
-    timesteps_left: int,
-    threshold: float,
-) -> torch.Tensor:
-    """Reward the end-effector position being close to the desired position after a certain number of timesteps are left."""
-    # extract the asset (to enable type hinting)
-    asset: RigidObject = env.scene[asset_cfg.name]
-    command = env.command_manager.get_command(command_name)
-    # obtain the desired and current positions
-    des_pos_b = command[:, :3]
-    des_pos_w, _ = combine_frame_transforms(
-        asset.data.root_state_w[:, :3], asset.data.root_state_w[:, 3:7], des_pos_b
-    )
-    curr_pos_w = asset.data.body_state_w[:, asset_cfg.body_ids[0], :3]  # type: ignore
-    dist = torch.norm(curr_pos_w - des_pos_w, dim=1)
-    # check if the episode is over time
-    curr_timestep = env.episode_length_buf
-    tot_timesteps = int(
-        env.cfg.episode_length_s / (env.cfg.decimation * env.cfg.sim.dt)
-    )
-    over_time = tot_timesteps - timesteps_left - curr_timestep < 0
-
-    return torch.where(
-        over_time & (dist < threshold),
-        torch.ones_like(dist),
-        torch.zeros_like(dist),
-    )
