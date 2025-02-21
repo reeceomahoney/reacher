@@ -45,10 +45,7 @@ class ClassifierRunner:
 
         # variables
         if isinstance(env, VecEnv):
-            self.num_steps_per_env = int(
-                self.env.cfg.episode_length_s  # type: ignore
-                / (self.env.cfg.decimation * self.env.cfg.sim.dt)  # type: ignore
-            )
+            self.num_steps_per_env = self.env.cfg.max_episode_length # type: ignore
         elif isinstance(env, MazeEnv):
             self.num_steps_per_env = int(self.cfg.episode_length / 0.1)
         self.log_dir = log_dir
