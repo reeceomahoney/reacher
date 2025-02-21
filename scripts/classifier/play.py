@@ -107,7 +107,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
     # reset environment
     obs, _ = env.get_observations()
-    timestep = 0
     # simulate environment
     while simulation_app.is_running():
         start = time.time()
@@ -130,18 +129,12 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
         # env stepping
         for i in range(runner.policy.T_action):
-            obs, _, dones, _ = env.step(output["action"][:, i])
+            obs = env.step(output["action"][:, i])[0]
 
             end = time.time()
             if end - start < 1 / 30:
                 time.sleep(1 / 30 - (end - start))
-
             start = time.time()
-
-        if dones.any():
-            runner.policy.reset(dones)
-
-        timestep += 1
 
     # close the simulator
     env.close()
