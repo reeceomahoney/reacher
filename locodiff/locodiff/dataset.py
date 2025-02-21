@@ -88,8 +88,10 @@ class ExpertDataset(Dataset):
         actions = self.add_padding(actions_splits, max_len, temporal=True)
         masks = self.create_masks(obs_splits, max_len)
 
-        self.calculate_value_range(obs, masks)
-        self.data = {"obs": obs, "action": actions, "mask": masks}
+        # TODO: this is a hack, get the real last timestep
+        goal =  obs[:,-1:,18:27].expand(-1, obs.shape[1],-1)
+
+        self.data = {"obs": obs, "action": actions, "mask": masks, "goal": goal}
 
         obs_size = list(self.data["obs"].shape)
         action_size = list(self.data["action"].shape)
@@ -103,6 +105,7 @@ class ExpertDataset(Dataset):
             "obs": self.data["obs"][idx],
             "action": self.data["action"][idx],
             "mask": self.data["mask"][idx],
+            "goal": self.data["goal"][idx],
         }
 
     def split_eps(self, x, split_indices):
@@ -162,12 +165,6 @@ class ExpertDataset(Dataset):
         self.y_std = all_obs_acts.std(0)
         self.y_min = all_obs_acts.min(0).values
         self.y_max = all_obs_acts.max(0).values
-
-    def calculate_value_range(self, obs, masks):
-        gammas = torch.tensor([0.99**i for i in range(self.T)]).to(self.device)
-        returns = calculate_return(obs[..., 18:21], masks, gammas)
-        self.r_min = returns.min()
-        self.r_max = returns.max()
 
     # Save the dataset
     def save_dataset(self, obs_splits, actions_splits, filename="dataset.pkl"):
@@ -247,5 +244,18 @@ def get_dataloaders(
         num_workers=num_workers,
         pin_memory=True,
     )
+
+    # calculate value range
+    gammas = torch.tensor([0.99**i for i in range(T)])
+    returns = []
+    for batch in train_dataloader:
+        obs = batch["obs"]
+        mask = batch["mask"]
+        returns.append(calculate_return(obs[..., 18:21], mask, gammas))
+    returns = torch.cat(returns)
+
+    dl = train_dataloader.dataset.dataset.dataset
+    dl.r_max = returns.max()
+    dl.r_min = returns.min()
 
     return train_dataloader, test_dataloader

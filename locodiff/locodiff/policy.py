@@ -178,7 +178,9 @@ class DiffusionPolicy(nn.Module):
         # plot trajectory
         alphas = [0, 5, 10, 20, 100]
         obstacle = torch.zeros_like(goal)
-        fig = plot_3d_guided_trajectory(self, obs, goal, obstacle[:, :3], alphas, "alphas")
+        fig = plot_3d_guided_trajectory(
+            self, obs, goal, obstacle[:, :3], alphas, "alphas"
+        )
 
         # log
         wandb.log({"Guided Trajectory": wandb.Image(fig)}, step=it)
@@ -213,9 +215,9 @@ class DiffusionPolicy(nn.Module):
 
         # inference
         for i in range(self.sampling_steps):
-            if self.cond_lambda > 0:
-                x = torch.cat([x] * 2)
+            x = torch.cat([x] * 2) if self.cond_lambda > 0 else x
             x = self.step(x, time_steps[i], time_steps[i + 1], data)
+
             # guidance
             if self.alpha > 0:
                 with torch.enable_grad():
@@ -275,13 +277,7 @@ class DiffusionPolicy(nn.Module):
 
             obstacle = self.normalizer.scale_3d_pos(obstacle)
             input = self.normalizer.scale_output(input)
-
-            lengths = data["mask"].sum(dim=-1).int()
-            goal = input[
-                range(input.shape[0]),
-                lengths - 1,
-                self.action_dim + 18 : self.action_dim + 27,
-            ]
+            goal = self.normalizer.scale_9d_pos(data["goal"][:, 0])
 
         obs = self.normalizer.scale_input(raw_obs[:, :1])
         return {

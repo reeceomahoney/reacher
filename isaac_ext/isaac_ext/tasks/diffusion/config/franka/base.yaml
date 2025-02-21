@@ -20,14 +20,14 @@ scaling: linear
 #dims
 obs_dim: null
 act_dim: null
-T: 180
+T: 30
 T_cond: 1
-T_action: 180
+T_action: 30
 num_envs: 64
 
 # diffusion
 sampling_steps: 10
-cond_mask_prob: 0.1
+cond_mask_prob: 0.0
 
 policy:
   obs_dim: ${obs_dim}
@@ -35,7 +35,7 @@ policy:
   T: ${T}
   T_action: ${T_action}
   sampling_steps: ${sampling_steps}
-  cond_lambda: 2
+  cond_lambda: 0
   cond_mask_prob: ${cond_mask_prob}
   lr: 1e-4
   betas: [0.9, 0.999]
@@ -45,7 +45,7 @@ policy:
 dataset:
   task_name: ${task}
   data_directory: data/rsl_rl/franka/data.hdf5
-  train_fraction: 0.995
+  train_fraction: 0.99
   T_cond: ${T_cond}
   T: ${T}
   train_batch_size: 1024
