@@ -125,7 +125,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
         # plot trajectory
         alphas = [0, 10, 50, 100, 200]
-        plot_3d_guided_trajectory(runner.policy, obs, goal, obstacle[:, :3], alphas)
+        plot_3d_guided_trajectory(runner.policy, obs, goal, obstacle[:, :3], alphas, "alphas")
         plt.show()
 
         # env stepping

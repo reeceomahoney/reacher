@@ -123,8 +123,8 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         goal = torch.cat([goal[:, :3], ortho6d], dim=-1)
 
         # plot trajectory
-        alphas = [0, 1, 2, 5, 10]
-        plot_3d_guided_trajectory(runner.policy, obs, goal, obstacle[:, :3], alphas)
+        lambdas = [0, 1, 2, 5, 10]
+        plot_3d_guided_trajectory(runner.policy, obs, goal, obstacle[:, :3], lambdas, "lambdas")
         plt.savefig("trajectory.png")
 
         # agent stepping

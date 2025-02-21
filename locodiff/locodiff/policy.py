@@ -178,7 +178,7 @@ class DiffusionPolicy(nn.Module):
         # plot trajectory
         alphas = [0, 5, 10, 20, 100]
         obstacle = torch.zeros_like(goal)
-        fig = plot_3d_guided_trajectory(self, obs, goal, obstacle[:, :3], alphas)
+        fig = plot_3d_guided_trajectory(self, obs, goal, obstacle[:, :3], alphas, "alphas")
 
         # log
         wandb.log({"Guided Trajectory": wandb.Image(fig)}, step=it)

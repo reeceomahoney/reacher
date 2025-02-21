@@ -76,10 +76,11 @@ def plot_3d_guided_trajectory(
     obs: torch.Tensor,
     goal: torch.Tensor,
     obstacle: torch.Tensor,
-    alphas: list,
+    scales: list,
+    alphas_or_lambdas: str,
 ):
     fig, axes = plt.subplots(
-        1, len(alphas), figsize=(16, 3.5), subplot_kw={"projection": "3d"}
+        1, len(scales), figsize=(16, 3.5), subplot_kw={"projection": "3d"}
     )
     goal_ = goal.cpu().numpy()
 
@@ -103,9 +104,14 @@ def plot_3d_guided_trajectory(
         [cuboid_vertices[j] for j in [4, 5, 6, 7]],
     ]
 
-    for i, alpha in enumerate(alphas):
+    for i, scale in enumerate(scales):
+        # set guidance scale
+        if alphas_or_lambdas == "alphas":
+            policy.alpha = scale
+        elif alphas_or_lambdas == "lambda":
+            policy.cond_lambda = scale
+
         # Compute trajectory
-        policy.cond_lambda = alpha
         traj = policy.act({"obs": obs, "obstacle": obstacle, "goal": goal})
         traj = traj["obs_traj"][0, :, 18:21].detach().cpu().numpy()
 
@@ -125,7 +131,7 @@ def plot_3d_guided_trajectory(
             Poly3DCollection(cuboid_faces, alpha=0.5, facecolor="red")
         )
         axes[i].view_init(elev=0, azim=90)
-        axes[i].set_title(f"alphas={alpha}")
+        axes[i].set_title(f"{alphas_or_lambdas}={scale}")
 
     fig.tight_layout()
     return fig
