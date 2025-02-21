@@ -51,7 +51,7 @@ class DiffusionRunner:
 
         # variables
         if isinstance(env, RslRlVecEnvWrapper):
-            self.num_steps_per_env = self.env.max_episdode_length  # type: ignore
+            self.num_steps_per_env = self.env.max_episode_length  # type: ignore
         elif isinstance(env, MazeEnv):
             self.num_steps_per_env = int(self.cfg.episode_length / 0.1)
         self.log_dir = log_dir
