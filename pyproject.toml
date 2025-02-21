@@ -59,6 +59,7 @@ known-first-party = [
   "isaaclab_rl",
   "isaaclab_tasks",
 ]
+known-third-party = ["wandb"]
 
 [tool.pyright]
 typeCheckingMode = "basic"
