@@ -44,7 +44,7 @@ from locodiff.plotting import plot_3d_guided_trajectory
 from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main, get_latest_run
 
-task = "Isaac-Franka-Classifier"
+task = "Isaac-Franka-Diffusion"
 
 
 def interpolate_color(t):
@@ -110,6 +110,8 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     # create trajectory visualizer
     trajectory_visualizer = create_trajectory_visualizer(agent_cfg)
 
+    plot_guidance = False
+
     # reset environment
     obs, _ = env.get_observations()
     # simulate environment
@@ -123,9 +125,12 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         goal = torch.cat([goal[:, :3], ortho6d], dim=-1)
 
         # plot trajectory
-        lambdas = [0, 1, 2, 5, 10]
-        plot_3d_guided_trajectory(runner.policy, obs, goal, obstacle[:, :3], lambdas, "lambdas")
-        plt.savefig("trajectory.png")
+        if plot_guidance:
+            lambdas = [0, 1, 2, 5, 10]
+            plot_3d_guided_trajectory(
+                runner.policy, obs, goal, obstacle[:, :3], lambdas, "lambdas"
+            )
+            plt.show()
 
         # agent stepping
         output = policy({"obs": obs, "obstacle": obstacle[:, :3], "goal": goal})
@@ -133,7 +138,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
         # env stepping
         for i in range(runner.policy.T_action):
-            obs, _, dones, _ = env.step(output["action"][:, i])
+            obs = env.step(output["action"][:, i])[0]
 
             end = time.time()
             if end - start < 1 / 30:
