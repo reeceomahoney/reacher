@@ -10,8 +10,6 @@ class FrankaDiffusionEnvCfg(FrankaReachEnvCfg):
         super().__post_init__()
         self.observations.policy.pose_command = None  # type: ignore
         self.curriculum = None  # type: ignore
-        self.episode_length_s = 6.0
-        self.commands.ee_pose.resampling_time_range = (6.0, 6.0)
 
 
 @configclass
