@@ -190,7 +190,7 @@ class DiffusionPolicy(nn.Module):
                 k: torch.cat([v] * 2) if v is not None else None
                 for k, v in data.items()
             }
-            data["returns"][bsz:] = 0
+            data["returns"][bsz:] = -1
 
         # inference
         for i in range(self.sampling_steps):
