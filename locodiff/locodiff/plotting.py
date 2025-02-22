@@ -110,6 +110,10 @@ def plot_3d_guided_trajectory(
             policy.alpha = scale
         elif alphas_or_lambdas == "lambdas":
             policy.cond_lambda = scale
+        else:
+            raise ValueError(
+                f"Invalid argument: {alphas_or_lambdas}. Must be 'alphas' or 'lambdas'."
+            )
 
         # Compute trajectory
         traj = policy.act({"obs": obs, "obstacle": obstacle, "goal": goal})
@@ -138,6 +142,10 @@ def plot_3d_guided_trajectory(
         policy.alpha = 0
     elif alphas_or_lambdas == "lambdas":
         policy.cond_lambda = 0
+    else:
+        raise ValueError(
+            f"Invalid argument: {alphas_or_lambdas}. Must be 'alphas' or 'lambdas'."
+        )
 
     fig.tight_layout()
     return fig
