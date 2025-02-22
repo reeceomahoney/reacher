@@ -130,7 +130,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
         # plot trajectory
         if args_cli.plot:
-            lambdas = [0, 1, 2, 5, 10, 50, 100, 1000]
+            lambdas = [0, 1, 2, 5, 10]
             plot_3d_guided_trajectory(
                 runner.policy, obs, goal, obstacle[:, :3], lambdas, "lambdas"
             )
