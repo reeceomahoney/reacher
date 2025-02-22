@@ -185,9 +185,9 @@ class DiffusionTransformer(nn.Module):
         t_emb = self.t_emb(t)
         obs_emb = self.obs_emb(data["obs"])
         goal_emb = self.goal_emb(data["goal"])
-        # return_emb = self.return_emb(data["returns"])
+        return_emb = self.return_emb(data["returns"])
         # construct input
-        x = torch.cat([t_emb, obs_emb, goal_emb, x_emb], dim=1)
+        x = torch.cat([t_emb, obs_emb, goal_emb, return_emb, x_emb], dim=1)
         x += self.pos_emb
         # output
         x = self.encoder(x, mask=self.mask)[:, -self.T :]
