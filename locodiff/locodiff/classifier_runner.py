@@ -6,7 +6,6 @@ import time
 import hydra
 import torch
 import wandb
-from rsl_rl.env import VecEnv
 from rsl_rl.utils import store_code_state
 from tqdm import tqdm, trange
 
@@ -49,7 +48,7 @@ class ClassifierRunner:
         self.use_ema = agent_cfg.use_ema
 
         # variables
-        if isinstance(env, VecEnv):
+        if isinstance(env, RslRlVecEnvWrapper):
             self.num_steps_per_env = self.env.max_episode_length  # type: ignore
         elif isinstance(env, MazeEnv):
             self.num_steps_per_env = int(self.cfg.episode_length / 0.1)
@@ -81,7 +80,8 @@ class ClassifierRunner:
                     mse = self.policy.test_classifier(batch)
                     test_mse.append(mse)
                 test_mse = statistics.mean(test_mse)
-                self.policy.plot_guided_trajectory(it)
+                alphas = [0, 10, 50, 100, 200]
+                self.policy.plot_guided_trajectory(it, alphas, "alphas")
 
             # training
             try:
@@ -150,7 +150,7 @@ class ClassifierRunner:
         self.policy.normalizer.load_state_dict(
             loaded_dict["norm_state_dict"], strict=False
         )
-        # self.policy.classifier.load_state_dict(loaded_dict["classifier_state_dict"])
+        self.policy.classifier.load_state_dict(loaded_dict["classifier_state_dict"])
         return loaded_dict["infos"]
 
     def get_inference_policy(self, device=None):
