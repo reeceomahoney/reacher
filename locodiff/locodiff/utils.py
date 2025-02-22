@@ -340,30 +340,3 @@ class InferenceContext:
         if self.use_ema:
             self.ema_helper.restore(self.policy.parameters())
         self.inference_mode_context.__exit__(exc_type, exc_value, traceback)
-
-
-class CFGWrapper(nn.Module):
-    """
-    Classifier-free guidance wrapper
-    """
-
-    def __init__(self, model, cond_lambda: int, cond_mask_prob: float):
-        super().__init__()
-        self.model = model
-        self.cond_lambda = cond_lambda
-        self.cond_mask_prob = cond_mask_prob
-
-    def __call__(self, x_t: torch.Tensor, sigma: torch.Tensor, data: dict):
-        out = self.model(x_t, sigma, data)
-
-        if not self.training:
-            data_uncond = data.copy()
-            data_uncond["returns"] = torch.zeros_like(data_uncond["returns"])
-            out_uncond = self.model(x_t, sigma, data_uncond)
-
-            out = out_uncond + self.cond_lambda * (out - out_uncond)
-
-        return out
-
-    def get_optim_groups(self):
-        return self.model.get_optim_groups()
