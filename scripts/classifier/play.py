@@ -7,10 +7,23 @@
 
 """Launch Isaac Sim Simulator first."""
 
+import argparse
+import sys
+
 from isaaclab.app import AppLauncher
 
+# parse args
+parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--plot", action="store_true", default=False, help="Whether to plot guidance."
+)
+AppLauncher.add_app_launcher_args(parser)
+args_cli, hydra_args = parser.parse_known_args()
+sys.argv = [sys.argv[0]] + hydra_args
+if args_cli.plot:
+    args_cli.headless = True
 # launch omniverse app
-app_launcher = AppLauncher()
+app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
 
 """Rest everything follows."""
@@ -103,8 +116,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     # create trajectory visualizer
     trajectory_visualizer = create_trajectory_visualizer(agent_cfg)
 
-    # set classifier scale
-
     # reset environment
     obs, _ = env.get_observations()
     # simulate environment
@@ -117,15 +128,20 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         ortho6d = rot_mat[..., :2].reshape(-1, 6)
         goal = torch.cat([goal[:, :3], ortho6d], dim=-1)
 
+        # plot trajectory
+        if args_cli.plot:
+            alphas = [0, 10, 50, 100, 200, 1000]
+            plot_3d_guided_trajectory(
+                runner.policy, obs, goal, obstacle[:, :3], alphas, "alphas"
+            )
+            plt.savefig("guidance.png")
+            simulation_app.close()
+            exit()
+
         # agent stepping
         runner.policy.alpha = 200
         output = policy({"obs": obs, "obstacle": obstacle[:, :3], "goal": goal})
         trajectory_visualizer.visualize(output["obs_traj"][0, :, 18:21])
-
-        # plot trajectory
-        alphas = [0, 10, 50, 100, 200]
-        plot_3d_guided_trajectory(runner.policy, obs, goal, obstacle[:, :3], alphas, "alphas")
-        plt.show()
 
         # env stepping
         for i in range(runner.policy.T_action):
