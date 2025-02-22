@@ -60,3 +60,4 @@ _build
 
 *.pkl
 *.hdf5
+*.png
