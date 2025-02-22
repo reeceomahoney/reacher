@@ -27,7 +27,7 @@ class DiffusionTransformer(nn.Module):
         super().__init__()
         # variables
         input_dim = obs_dim + act_dim
-        input_len = T + 3
+        input_len = T + 4
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
         self.device = device
