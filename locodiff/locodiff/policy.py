@@ -141,7 +141,7 @@ class DiffusionPolicy(nn.Module):
         data = self.process(data)
 
         # compute partially denoised sample
-        n = random.randint(0, self.sampling_steps - 1)
+        n = random.randint(0, self.sampling_steps)
         x, t = self.truncated_forward(data, n)
 
         # compute model output
