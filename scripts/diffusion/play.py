@@ -8,14 +8,20 @@
 """Launch Isaac Sim Simulator first."""
 
 import argparse
+import sys
 
 from isaaclab.app import AppLauncher
 
 # parse args
 parser = argparse.ArgumentParser()
+parser.add_argument(
+    "--plot", action="store_true", default=False, help="Whether to plot guidance."
+)
 AppLauncher.add_app_launcher_args(parser)
 args_cli, hydra_args = parser.parse_known_args()
-# args_cli.headless = True
+sys.argv = [sys.argv[0]] + hydra_args
+if args_cli.plot:
+    args_cli.headless = True
 # launch omniverse app
 app_launcher = AppLauncher(args_cli)
 simulation_app = app_launcher.app
@@ -44,7 +50,7 @@ from locodiff.plotting import plot_3d_guided_trajectory
 from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main, get_latest_run
 
-task = "Isaac-Franka-Diffusion"
+task = "Isaac-Franka-Diffusion" if not args_cli.plot else "Isaac-Franka-Classifier"
 
 
 def interpolate_color(t):
@@ -110,8 +116,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     # create trajectory visualizer
     trajectory_visualizer = create_trajectory_visualizer(agent_cfg)
 
-    plot_guidance = False
-
     # reset environment
     obs, _ = env.get_observations()
     # simulate environment
@@ -125,12 +129,14 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         goal = torch.cat([goal[:, :3], ortho6d], dim=-1)
 
         # plot trajectory
-        if plot_guidance:
-            lambdas = [0, 1, 2, 5, 10]
+        if args_cli.plot:
+            lambdas = [0, 1, 2, 5, 10, 50, 100, 1000]
             plot_3d_guided_trajectory(
                 runner.policy, obs, goal, obstacle[:, :3], lambdas, "lambdas"
             )
-            plt.show()
+            plt.savefig("guidance.png")
+            simulation_app.close()
+            exit()
 
         # agent stepping
         output = policy({"obs": obs, "obstacle": obstacle[:, :3], "goal": goal})
