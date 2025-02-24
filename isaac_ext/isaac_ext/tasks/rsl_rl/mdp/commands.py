@@ -65,10 +65,10 @@ class ScheduledPoseCommand(CommandTerm):
         # create buffers
         # -- commands: (x, y, z, qw, qx, qy, qz) in root frame
         self.pose_command_b = torch.zeros(self.num_envs, 7, device=self.device)
-        self.pose_command_b[:, 5] = 1.0
+        self.pose_command_b[:, 4] = 1.0
         self.pose_command_w = torch.zeros_like(self.pose_command_b)
         self.current_stage = 0
-        self.cycle_envs = torch.zeros(
+        self.cycle_envs = torch.ones(
             self.num_envs, dtype=torch.bool, device=self.device
         )
         # -- metrics
@@ -98,14 +98,6 @@ class ScheduledPoseCommand(CommandTerm):
     """
     Implementation specific functions.
     """
-
-    def reset(self, env_ids: Sequence[int] | None = None) -> dict[str, float]:
-        # Randomly assign half of the environments to cycle through commands
-        num_cycle_envs = self.num_envs // 2
-        self.cycle_envs[:] = False
-        cycle_indices = torch.randperm(self.num_envs)[:num_cycle_envs]
-        self.cycle_envs[cycle_indices] = True
-        return super().reset(env_ids)
 
     def _update_metrics(self):
         # transform command from base frame to simulation world frame

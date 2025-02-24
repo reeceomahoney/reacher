@@ -4,6 +4,7 @@ import isaac_ext.tasks.rsl_rl.mdp as mdp
 from isaaclab.managers import ObservationGroupCfg as ObsGroup
 from isaaclab.managers import ObservationTermCfg as ObsTerm
 from isaaclab.managers import SceneEntityCfg
+from isaaclab.managers.manager_term_cfg import EventTermCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 from isaaclab_assets.robots.franka import FRANKA_PANDA_CFG
@@ -35,17 +36,16 @@ class CommandsCfg:
         ),
     )
 
-    # ee_pose = mdp.ScheduledPoseCommandCfg(
-    #     asset_name="robot",
-    #     body_name="panda_hand",
-    #     resampling_time_range=(2.0, 2.0),
-    #     debug_vis=True,
-    #     fixed_commands=[
-    #         (0.4, 0, 0.8),
-    #         (0.8, 0, 0.8),
-    #         (0.8, 0, 0.2),
-    #     ],
-    # )
+    ee_pose = mdp.ScheduledPoseCommandCfg(
+        asset_name="robot",
+        body_name="panda_hand",
+        resampling_time_range=(2.0, 2.0),
+        debug_vis=True,
+        fixed_commands=[
+            (0.8, 0, 0.6),
+            (0.8, 0, 0.2),
+        ],
+    )
 
 
 @configclass
@@ -81,6 +81,16 @@ class ObservationsCfg:
     policy: PolicyCfg = PolicyCfg()
 
 
+@configclass
+class EventCfg:
+    """Configuration for events."""
+
+    reset_robot_joints = EventTermCfg(
+        func=mdp.reset_joints_fixed,
+        mode="reset",
+    )
+
+
 ##
 # Environment configuration
 ##
@@ -90,6 +100,7 @@ class ObservationsCfg:
 class FrankaReachEnvCfg(ReachEnvCfg):
     commands: CommandsCfg = CommandsCfg()
     observations: ObservationsCfg = ObservationsCfg()
+    events: EventCfg = EventCfg()
 
     def __post_init__(self):
         # post init of parent
