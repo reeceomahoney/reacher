@@ -7,7 +7,7 @@ import minari
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
-from locodiff.utils import calculate_return
+from locodiff.utils import calculate_return, sample_goal_poses
 
 log = logging.getLogger(__name__)
 
@@ -89,7 +89,7 @@ class ExpertDataset(Dataset):
         masks = self.create_masks(obs_splits, max_len)
 
         # TODO: this is a hack, get the real last timestep
-        goal =  obs[:,-1:,18:27].expand(-1, obs.shape[1],-1)
+        goal = obs[:, -1:, 18:27].expand(-1, obs.shape[1], -1)
 
         self.data = {"obs": obs, "action": actions, "mask": masks, "goal": goal}
 
@@ -251,7 +251,8 @@ def get_dataloaders(
     for batch in train_dataloader:
         obs = batch["obs"]
         mask = batch["mask"]
-        returns.append(calculate_return(obs[..., 18:21], mask, gammas))
+        goal = sample_goal_poses(obs.shape[0], obs.device)
+        returns.append(calculate_return(obs[..., 18:21], goal, mask, gammas))
     returns = torch.cat(returns)
 
     dl = train_dataloader.dataset.dataset.dataset

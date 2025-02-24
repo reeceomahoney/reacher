@@ -15,6 +15,7 @@ from locodiff.plotting import plot_3d_guided_trajectory
 from locodiff.utils import (
     Normalizer,
     calculate_return,
+    sample_goal_poses,
 )
 
 
@@ -235,6 +236,7 @@ class DiffusionPolicy(nn.Module):
 
     @torch.no_grad()
     def process(self, data: dict) -> dict:
+        bsz = data["obs"].shape[0]
         data = self.dict_to_device(data)
         raw_action = data.get("action", None)
 
@@ -249,10 +251,12 @@ class DiffusionPolicy(nn.Module):
             # train and test
             raw_obs = data["obs"]
             input = torch.cat([raw_action, raw_obs], dim=-1)
-            goal = data["goal"][:, 0]
+            goal = sample_goal_poses(bsz, self.device)
 
             obstacle = torch.zeros((input.shape[0], 3)).to(self.device)
-            returns = calculate_return(input[..., 25:28], goal, data["mask"], self.gammas)
+            returns = calculate_return(
+                input[..., 25:28], goal, data["mask"], self.gammas
+            )
             returns = self.normalizer.scale_return(returns)
 
             obstacle = self.normalizer.scale_3d_pos(obstacle)

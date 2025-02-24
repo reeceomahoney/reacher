@@ -11,6 +11,8 @@ import torch.nn as nn
 from omegaconf import DictConfig
 from torch import Tensor
 
+from isaaclab.utils.math import matrix_from_euler
+
 
 def dynamic_hydra_main(task_name: str):
     """
@@ -103,6 +105,33 @@ def get_latest_run(base_path, resume=False):
         return target_dir
 
 
+def sample_goal_poses(bsz, device):
+    goal_ranges = [
+        (0.35, 1),
+        (-0.5, 0.5),
+        (0.15, 0.9),
+        (0.0, 0.0),
+        (math.pi, math.pi),
+        (-math.pi, math.pi),
+    ]
+
+    # goal position
+    goal_pos = torch.zeros((bsz, 3), device=device)
+    goal_pos[:, 0].uniform_(*goal_ranges[0])
+    goal_pos[:, 1].uniform_(*goal_ranges[1])
+    goal_pos[:, 2].uniform_(*goal_ranges[2])
+    # goal orientation
+    goal_euler = torch.zeros((bsz, 3), device=device)
+    goal_euler[:, 0].uniform_(*goal_ranges[3])
+    goal_euler[:, 1].uniform_(*goal_ranges[4])
+    goal_euler[:, 2].uniform_(*goal_ranges[5])
+
+    # convert to ortho6d and concatenate
+    rot_mat = matrix_from_euler(goal_euler, "XYZ")
+    ortho6d = rot_mat[..., :2].reshape(-1, 6)
+    return torch.cat([goal_pos, ortho6d], dim=-1)
+
+
 def check_collisions(traj: Tensor) -> Tensor:
     """0 if in collision, 1 otherwise"""
     x_mask = (traj[..., 0] >= 0.55) & (traj[..., 0] <= 0.65)
@@ -115,7 +144,9 @@ def calculate_return(
     traj: Tensor, goal: Tensor, mask: Tensor, gammas: Tensor
 ) -> Tensor:
     coll_reward = check_collisions(traj)
-    goal_reward = 1 - torch.exp(torch.norm(traj[:, -1, :3] - goal, dim=-1))
+    goal_reward = 1 - torch.exp(
+        torch.norm(traj[:, -1, :3] - goal[:, :3], dim=-1, keepdim=True)
+    )
     reward = ((coll_reward + goal_reward) * mask).float()
     returns = (reward * gammas).sum(dim=-1)
     return returns.unsqueeze(-1)
