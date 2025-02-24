@@ -142,7 +142,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     )
 
     if args_cli.collect:
-        collector = DataCollector(env, "data/rsl_rl/franka/data.hdf5")
+        collector = DataCollector(env, "data/rsl_rl/franka/stitch_data.hdf5")
         pbar = tqdm(total=args_cli.num_timesteps, desc="Collecting data")
 
     # reset environment

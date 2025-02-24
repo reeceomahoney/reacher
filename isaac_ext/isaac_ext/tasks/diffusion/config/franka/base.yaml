@@ -44,7 +44,7 @@ policy:
 
 dataset:
   task_name: ${task}
-  data_directory: data/rsl_rl/franka/data.hdf5
+  data_directory: data/rsl_rl/franka/stitch_data.hdf5
   train_fraction: 0.99
   T_cond: ${T_cond}
   T: ${T}

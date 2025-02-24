@@ -251,7 +251,8 @@ def get_dataloaders(
     for batch in train_dataloader:
         obs = batch["obs"]
         mask = batch["mask"]
-        goal = sample_goal_poses(obs.shape[0], obs.device)
+        # goal = sample_goal_poses(obs.shape[0], obs.device)
+        goal = obs[:, -1, 18:27]
         returns.append(calculate_return(obs[..., 18:21], goal, mask, gammas))
     returns = torch.cat(returns)
 
