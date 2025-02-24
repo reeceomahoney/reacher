@@ -249,14 +249,15 @@ class DiffusionPolicy(nn.Module):
             # train and test
             raw_obs = data["obs"]
             input = torch.cat([raw_action, raw_obs], dim=-1)
+            goal = data["goal"][:, 0]
 
             obstacle = torch.zeros((input.shape[0], 3)).to(self.device)
-            returns = calculate_return(input[..., 25:28], data["mask"], self.gammas)
+            returns = calculate_return(input[..., 25:28], goal, data["mask"], self.gammas)
             returns = self.normalizer.scale_return(returns)
 
             obstacle = self.normalizer.scale_3d_pos(obstacle)
             input = self.normalizer.scale_output(input)
-            goal = self.normalizer.scale_9d_pos(data["goal"][:, 0])
+            goal = self.normalizer.scale_9d_pos(goal)
 
         obs = self.normalizer.scale_input(raw_obs[:, :1])
         return {

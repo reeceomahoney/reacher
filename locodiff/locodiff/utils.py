@@ -9,6 +9,7 @@ import hydra
 import torch
 import torch.nn as nn
 from omegaconf import DictConfig
+from torch import Tensor
 
 
 def dynamic_hydra_main(task_name: str):
@@ -102,19 +103,20 @@ def get_latest_run(base_path, resume=False):
         return target_dir
 
 
-def check_collisions(traj: torch.Tensor) -> torch.Tensor:
+def check_collisions(traj: Tensor) -> Tensor:
+    """0 if in collision, 1 otherwise"""
     x_mask = (traj[..., 0] >= 0.55) & (traj[..., 0] <= 0.65)
     y_mask = (traj[..., 1] >= -0.8) & (traj[..., 1] <= 0.8)
     z_mask = (traj[..., 2] >= 0.0) & (traj[..., 2] <= 0.6)
-    return x_mask & y_mask & z_mask
+    return ~(x_mask & y_mask & z_mask)
 
 
 def calculate_return(
-    traj: torch.Tensor, mask: torch.Tensor, gammas: torch.Tensor
-) -> torch.Tensor:
-    reward = check_collisions(traj)
-    reward = ((~reward) * mask).float()
-    # average reward for valid timesteps
+    traj: Tensor, goal: Tensor, mask: Tensor, gammas: Tensor
+) -> Tensor:
+    coll_reward = check_collisions(traj)
+    goal_reward = 1 - torch.exp(torch.norm(traj[:, -1, :3] - goal, dim=-1))
+    reward = ((coll_reward + goal_reward) * mask).float()
     returns = (reward * gammas).sum(dim=-1)
     return returns.unsqueeze(-1)
 
