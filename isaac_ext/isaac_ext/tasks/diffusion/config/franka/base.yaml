@@ -20,14 +20,14 @@ scaling: linear
 #dims
 obs_dim: null
 act_dim: null
-T: 30
+T: 60
 T_cond: 1
-T_action: 30
+T_action: 60
 num_envs: 64
 
 # diffusion
 sampling_steps: 10
-cond_mask_prob: 0.1
+cond_mask_prob: 0.0
 
 policy:
   obs_dim: ${obs_dim}
