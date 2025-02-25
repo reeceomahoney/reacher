@@ -194,7 +194,7 @@ class DiffusionPolicy(nn.Module):
 
         # inpaint
         x[:, 0, self.action_dim :] = data["obs"][:, 0]
-        x[:, -1, 25:34] = data["goal"][:, 0]
+        x[:, -1, 25:34] = data["goal"]
 
         # inference
         for i in range(self.sampling_steps):
@@ -259,7 +259,7 @@ class DiffusionPolicy(nn.Module):
             raw_obs = data["obs"]
             input = torch.cat([raw_action, raw_obs], dim=-1)
             # goal = sample_goal_poses_from_list(bsz, self.device)
-            goal = raw_obs[:, -1, 18:27]
+            goal = data["goal"][:, 0]
 
             obstacle = torch.zeros((input.shape[0], 3)).to(self.device)
             returns = calculate_return(
