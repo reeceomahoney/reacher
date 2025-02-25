@@ -7,7 +7,7 @@ import minari
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
-from locodiff.utils import calculate_return, sample_goal_poses
+from locodiff.utils import calculate_return, sample_goal_poses, sample_goal_poses_from_list
 
 log = logging.getLogger(__name__)
 
@@ -251,8 +251,7 @@ def get_dataloaders(
     for batch in train_dataloader:
         obs = batch["obs"]
         mask = batch["mask"]
-        # goal = sample_goal_poses(obs.shape[0], obs.device)
-        goal = obs[:, -1, 18:27]
+        goal = sample_goal_poses_from_list(obs.shape[0], obs.device)
         returns.append(calculate_return(obs[..., 18:21], goal, mask, gammas))
     returns = torch.cat(returns)
 

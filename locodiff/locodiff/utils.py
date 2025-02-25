@@ -132,6 +132,16 @@ def sample_goal_poses(bsz, device):
     return torch.cat([goal_pos, ortho6d], dim=-1)
 
 
+def sample_goal_poses_from_list(bsz, device):
+    goal_list = [
+        [0.8, 0, 0.6, 0, 1, 0, 0],
+        [0.8, 0, 0.2, 0, 1, 0, 0],
+    ]
+    goal_tensor = torch.tensor(goal_list, device=device, dtype=torch.float)
+    random_indices = torch.randint(0, len(goal_list), (bsz,), device=device)
+    return goal_tensor[random_indices]
+
+
 def check_collisions(traj: Tensor) -> Tensor:
     """0 if in collision, 1 otherwise"""
     x_mask = (traj[..., 0] >= 0.55) & (traj[..., 0] <= 0.65)
@@ -143,10 +153,10 @@ def check_collisions(traj: Tensor) -> Tensor:
 def calculate_return(
     traj: Tensor, goal: Tensor, mask: Tensor, gammas: Tensor
 ) -> Tensor:
-    reward = check_collisions(traj).float()
+    # reward = check_collisions(traj).float()
     goal_reward = 1 - torch.exp(-torch.norm(traj[:, -1, :3] - goal[:, :3], dim=-1))
-    reward[:, -1] += 10 * goal_reward
-    return ((reward * mask) * gammas).sum(dim=-1, keepdim=True)
+    # reward[:, -1] += goal_reward
+    return ((goal_reward * mask) * gammas).sum(dim=-1, keepdim=True)
 
 
 class SinusoidalPosEmb(nn.Module):
