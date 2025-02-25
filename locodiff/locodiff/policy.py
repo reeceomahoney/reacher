@@ -260,7 +260,7 @@ class DiffusionPolicy(nn.Module):
             # train and test
             raw_obs = data["obs"]
             input = torch.cat([raw_action, raw_obs], dim=-1)
-            goal = sample_goal_poses_from_list(bsz, self.device)
+            # goal = sample_goal_poses_from_list(bsz, self.device)
             goal = raw_obs[:, -1, 18:27]
 
             obstacle = torch.zeros((input.shape[0], 3)).to(self.device)
