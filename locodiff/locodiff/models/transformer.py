@@ -64,7 +64,6 @@ class DiffusionTransformer(nn.Module):
             num_layers=num_layers,
         )
         self.register_buffer("mask", self.generate_mask(input_len))
-        breakpoint()
         self.ln_f = nn.LayerNorm(d_model)
 
         if value:
