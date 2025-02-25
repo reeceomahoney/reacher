@@ -202,7 +202,7 @@ class DiffusionTransformer(nn.Module):
         # Calculate absolute distance between indices
         distance = torch.abs(indices.unsqueeze(1) - indices.unsqueeze(0))
         # Allow attention where distance is 0 (self) or 1 (adjacent)
-        mask = mask | (distance <= 2)
+        mask = mask | (distance <= 1)
 
         mask = (
             mask.float()
