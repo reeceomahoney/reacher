@@ -194,6 +194,10 @@ class DiffusionPolicy(nn.Module):
             }
             data["returns"][bsz:] = -1
 
+        # inpaint
+        x[:, 0, self.action_dim:] = data["obs"][:, 0]
+        x[:, -1, 25:34] = data["goal"]
+
         # inference
         for i in range(self.sampling_steps):
             x = torch.cat([x] * 2) if self.cond_lambda > 0 else x
@@ -209,6 +213,10 @@ class DiffusionPolicy(nn.Module):
             elif self.cond_lambda > 0:
                 x_cond, x_uncond = x.chunk(2)
                 x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
+
+            # inpaint
+            x[:, 0, self.action_dim:] = data["obs"][:, 0]
+            x[:, -1, 25:34] = data["goal"]
 
         # denormalize
         x = self.normalizer.clip(x)
