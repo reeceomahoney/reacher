@@ -121,7 +121,6 @@ class ConditionalUnet1D(nn.Module):
         device,
         cond_mask_prob,
         weight_decay: float,
-        inpaint: bool,
         local_cond_dim=None,
         kernel_size=5,
         n_groups=8,
@@ -134,12 +133,12 @@ class ConditionalUnet1D(nn.Module):
         in_out = list(zip(all_dims[:-1], all_dims[1:], strict=False))
 
         # diffusion step embedding and observations
-        cond_dim = 10 if inpaint else (obs_dim * T_cond) + 10
-        self.cond_encoder = nn.Linear(cond_dim, 256)
+        # cond_dim = 10 if inpaint else (obs_dim * T_cond) + 10
+        self.cond_encoder = nn.Linear(1, 32)
 
         CondResBlock = partial(
             ConditionalResidualBlock1D,
-            cond_dim=256,
+            cond_dim=32,
             kernel_size=kernel_size,
             n_groups=n_groups,
             cond_predict_scale=cond_predict_scale,
@@ -191,7 +190,6 @@ class ConditionalUnet1D(nn.Module):
 
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
-        self.inpaint = inpaint
 
         self.local_cond_encoder = local_cond_encoder
         self.up_modules = up_modules
@@ -219,16 +217,16 @@ class ConditionalUnet1D(nn.Module):
         """
         sample = einops.rearrange(noised_action, "b t h -> b h t")
         sigma = sigma.to(sample.device).view(-1, 1)
+        global_feature = self.cond_encoder(sigma)
 
         # create global feature
-        if self.inpaint:
-            goal = data_dict["goal"]
-            global_feature = torch.cat([sigma, goal], dim=-1)
-        else:
-            obs = data_dict["obs"].reshape(sample.shape[0], -1)
-            goal = data_dict["goal"]
-            global_feature = torch.cat([sigma, obs, goal], dim=-1)
-        global_feature = self.cond_encoder(global_feature)
+        # if self.inpaint:
+        #     goal = data_dict["goal"]
+        #     global_feature = torch.cat([sigma, goal], dim=-1)
+        # else:
+        #     obs = data_dict["obs"].reshape(sample.shape[0], -1)
+        #     goal = data_dict["goal"]
+        #     global_feature = torch.cat([sigma, obs, goal], dim=-1)
 
         # encode local features
         h_local = list()

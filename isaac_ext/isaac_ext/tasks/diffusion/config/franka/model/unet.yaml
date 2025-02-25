@@ -8,4 +8,3 @@ device: ${device}
 cond_mask_prob: ${cond_mask_prob}
 weight_decay: 1e-3
 cond_predict_scale: true
-inpaint: ${policy.inpaint}
