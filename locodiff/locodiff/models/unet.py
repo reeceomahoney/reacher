@@ -125,6 +125,7 @@ class ConditionalUnet1D(nn.Module):
         kernel_size=5,
         n_groups=8,
         cond_predict_scale=False,
+        value=False,
     ):
         super().__init__()
         input_dim = obs_dim + act_dim
@@ -294,11 +295,11 @@ class ValueUnet1D(nn.Module):
         device,
         cond_mask_prob,
         weight_decay: float,
-        inpaint: bool,
         local_cond_dim=None,
         kernel_size=5,
         n_groups=8,
         cond_predict_scale=False,
+        value=False,
     ):
         super().__init__()
         input_dim = obs_dim + act_dim
@@ -306,7 +307,7 @@ class ValueUnet1D(nn.Module):
         in_out = list(zip(all_dims[:-1], all_dims[1:], strict=False))
 
         # diffusion step embedding and observations
-        cond_dim = cond_embed_dim + 3 if inpaint else obs_dim * (T_cond) + 10
+        cond_dim = cond_embed_dim + 3
         self.cond_encoder = nn.Linear(cond_dim, 256)
 
         CondResBlock = partial(
@@ -348,7 +349,7 @@ class ValueUnet1D(nn.Module):
         )
 
         self.weight_decay = weight_decay
-        self.inpaint = inpaint
+        # self.inpaint = inpaint
 
         self.down_modules = down_modules
 
