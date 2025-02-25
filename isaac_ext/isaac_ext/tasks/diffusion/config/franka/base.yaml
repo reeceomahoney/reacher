@@ -20,9 +20,9 @@ scaling: linear
 #dims
 obs_dim: null
 act_dim: null
-T: 60
+T: 10
 T_cond: 1
-T_action: 60
+T_action: 10
 num_envs: 64
 
 # diffusion
