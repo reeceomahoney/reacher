@@ -154,7 +154,7 @@ def calculate_return(
     traj: Tensor, goal: Tensor, mask: Tensor, gammas: Tensor
 ) -> Tensor:
     # reward = check_collisions(traj).float()
-    goal_reward = 1 - torch.exp(-torch.norm(traj - goal[:, :3], dim=-1))
+    goal_reward = 1 - torch.exp(-torch.norm(traj - goal[:, :3].unsqueeze(1), dim=-1))
     # reward[:, -1] += goal_reward
     return ((goal_reward * mask) * gammas).sum(dim=-1, keepdim=True)
 
