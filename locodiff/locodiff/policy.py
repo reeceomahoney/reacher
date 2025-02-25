@@ -15,8 +15,6 @@ from locodiff.plotting import plot_3d_guided_trajectory
 from locodiff.utils import (
     Normalizer,
     calculate_return,
-    sample_goal_poses,
-    sample_goal_poses_from_list,
 )
 
 
@@ -195,8 +193,8 @@ class DiffusionPolicy(nn.Module):
             data["returns"][bsz:] = -1
 
         # inpaint
-        x[:, 0, self.action_dim:] = data["obs"][:, 0]
-        x[:, -1, 25:34] = data["goal"]
+        x[:, 0, self.action_dim :] = data["obs"][:, 0]
+        x[:, -1, 25:34] = data["goal"][:, 0]
 
         # inference
         for i in range(self.sampling_steps):
@@ -215,7 +213,7 @@ class DiffusionPolicy(nn.Module):
                 x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
 
             # inpaint
-            x[:, 0, self.action_dim:] = data["obs"][:, 0]
+            x[:, 0, self.action_dim :] = data["obs"][:, 0]
             x[:, -1, 25:34] = data["goal"]
 
         # denormalize
