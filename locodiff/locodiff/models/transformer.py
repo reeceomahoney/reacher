@@ -63,7 +63,7 @@ class DiffusionTransformer(nn.Module):
             ),
             num_layers=num_layers,
         )
-        self.register_buffer("mask", self.generate_mask(input_len))
+        # self.register_buffer("mask", self.generate_mask(input_len))
         self.ln_f = nn.LayerNorm(d_model)
 
         if value:
@@ -189,7 +189,7 @@ class DiffusionTransformer(nn.Module):
         x += self.pos_emb
 
         # output
-        x = self.encoder(x, mask=self.mask)[:, -self.T :]
+        x = self.encoder(x)[:, -self.T :]
         x = self.ln_f(x)
         return self.output(x)
 
