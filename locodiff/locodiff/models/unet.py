@@ -128,18 +128,19 @@ class ConditionalUnet1D(nn.Module):
         value=False,
     ):
         super().__init__()
-        input_dim = obs_dim + act_dim
+        # input_dim = obs_dim + act_dim
+        input_dim = act_dim
         all_dims = [input_dim] + list(down_dims)
         start_dim = down_dims[0]
         in_out = list(zip(all_dims[:-1], all_dims[1:], strict=False))
 
         # diffusion step embedding and observations
         # cond_dim = 10 if inpaint else (obs_dim * T_cond) + 10
-        self.cond_encoder = nn.Linear(1 + obs_dim + 9, 32)
+        self.cond_encoder = nn.Linear(1 + obs_dim + 9, 256)
 
         CondResBlock = partial(
             ConditionalResidualBlock1D,
-            cond_dim=32,
+            cond_dim=256,
             kernel_size=kernel_size,
             n_groups=n_groups,
             cond_predict_scale=cond_predict_scale,
