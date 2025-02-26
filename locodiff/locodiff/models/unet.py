@@ -135,7 +135,7 @@ class ConditionalUnet1D(nn.Module):
 
         # diffusion step embedding and observations
         # cond_dim = 10 if inpaint else (obs_dim * T_cond) + 10
-        self.cond_encoder = nn.Linear(1, 32)
+        self.cond_encoder = nn.Linear(1 + obs_dim + 9, 32)
 
         CondResBlock = partial(
             ConditionalResidualBlock1D,
@@ -218,16 +218,16 @@ class ConditionalUnet1D(nn.Module):
         """
         sample = einops.rearrange(noised_action, "b t h -> b h t")
         sigma = sigma.to(sample.device).view(-1, 1)
-        global_feature = self.cond_encoder(sigma)
 
         # create global feature
         # if self.inpaint:
         #     goal = data_dict["goal"]
         #     global_feature = torch.cat([sigma, goal], dim=-1)
         # else:
-        #     obs = data_dict["obs"].reshape(sample.shape[0], -1)
-        #     goal = data_dict["goal"]
-        #     global_feature = torch.cat([sigma, obs, goal], dim=-1)
+        obs = data_dict["obs"].reshape(sample.shape[0], -1)
+        goal = data_dict["goal"]
+        global_feature = torch.cat([sigma, obs, goal], dim=-1)
+        global_feature = self.cond_encoder(global_feature)
 
         # encode local features
         h_local = list()
