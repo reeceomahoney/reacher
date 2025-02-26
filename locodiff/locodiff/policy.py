@@ -108,7 +108,7 @@ class DiffusionPolicy(nn.Module):
         if self.cond_mask_prob > 0:
             cond_mask = torch.rand(x_1.shape[0], 1) < self.cond_mask_prob
             # data["returns"][cond_mask] = -1
-            data["goal"][cond_mask] = 0
+            data["goal"][cond_mask.expand(-1, 9)] = 0
 
         # compute model output
         out = self.model(x_t, t, data)
