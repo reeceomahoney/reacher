@@ -11,6 +11,7 @@ class FrankaDiffusionEnvCfg(FrankaReachEnvCfg):
         self.observations.policy.pose_command = None  # type: ignore
         self.curriculum = None  # type: ignore
         self.events.force_perturbations = None  # type: ignore
+        self.commands.ee_pose.fixed_commands = [(0.8, 0, 0.2), (0.8, 0, 0.6)]  # type: ignore
 
 
 @configclass
