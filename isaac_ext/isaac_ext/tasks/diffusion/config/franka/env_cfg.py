@@ -10,6 +10,7 @@ class FrankaDiffusionEnvCfg(FrankaReachEnvCfg):
         super().__post_init__()
         self.observations.policy.pose_command = None  # type: ignore
         self.curriculum = None  # type: ignore
+        self.events.force_perturbations = None  # type: ignore
 
 
 @configclass

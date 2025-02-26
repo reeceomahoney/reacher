@@ -96,7 +96,7 @@ class EventCfg:
         interval_range_s=(0.5, 1.5),
         params={
             "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
-            "force_range": (-20, 20),
+            "force_range": (-10, 10),
             "torque_range": (0, 0),
         },
     )
