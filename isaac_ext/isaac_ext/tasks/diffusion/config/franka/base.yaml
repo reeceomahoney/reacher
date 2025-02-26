@@ -1,5 +1,5 @@
 defaults:
-  - model: unet
+  - model: transformer
   - _self_
 
 logger: wandb
@@ -27,7 +27,7 @@ num_envs: 64
 
 # diffusion
 sampling_steps: 10
-cond_mask_prob: 0.0
+cond_mask_prob: 0.1
 
 policy:
   obs_dim: ${obs_dim}

@@ -107,7 +107,8 @@ class DiffusionPolicy(nn.Module):
         # cfg masking
         if self.cond_mask_prob > 0:
             cond_mask = torch.rand(x_1.shape[0], 1) < self.cond_mask_prob
-            data["returns"][cond_mask] = -1
+            # data["returns"][cond_mask] = -1
+            data["goal"][cond_mask] = 0
 
         # compute model output
         out = self.model(x_t, t, data)
@@ -192,7 +193,8 @@ class DiffusionPolicy(nn.Module):
                 k: torch.cat([v] * 2) if v is not None else None
                 for k, v in data.items()
             }
-            data["returns"][bsz:] = -1
+            # data["returns"][bsz:] = -1
+            data["goal"][bsz:] = 0
 
         # inpaint
         # x[:, 0, self.action_dim :] = data["obs"][:, 0]
