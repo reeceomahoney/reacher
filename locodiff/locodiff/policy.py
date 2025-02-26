@@ -52,7 +52,7 @@ class DiffusionPolicy(nn.Module):
         self.normalizer = normalizer
 
         # dims
-        self.input_dim = obs_dim + act_dim
+        self.input_dim = act_dim
         self.action_dim = act_dim
         self.T = T
         self.T_action = T_action
