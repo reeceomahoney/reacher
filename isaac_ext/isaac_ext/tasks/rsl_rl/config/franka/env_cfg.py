@@ -90,17 +90,6 @@ class EventCfg:
         mode="reset",
     )
 
-    force_perturbations = EventTermCfg(
-        func=mdp.apply_external_force_torque,
-        mode="interval",
-        interval_range_s=(0.5, 1.5),
-        params={
-            "asset_cfg": SceneEntityCfg("robot", body_names="panda_hand"),
-            "force_range": (-10, 10),
-            "torque_range": (0, 0),
-        },
-    )
-
 
 ##
 # Environment configuration

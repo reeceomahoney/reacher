@@ -128,8 +128,10 @@ class DiffusionPolicy(nn.Module):
         # calculate losses
         input = self.normalizer.inverse_scale_output(data["input"])
         loss = F.mse_loss(x, input, reduction="none")
-        obs_loss = loss[:, :, self.action_dim :].mean().item()
-        action_loss = loss[:, :, : self.action_dim].mean().item()
+        # obs_loss = loss[:, :, self.action_dim :].mean().item()
+        # action_loss = loss[:, :, : self.action_dim].mean().item()
+        obs_loss = 0
+        action_loss = 0
 
         return loss.mean().item(), obs_loss, action_loss
 
@@ -257,7 +259,8 @@ class DiffusionPolicy(nn.Module):
         else:
             # train and test
             raw_obs = data["obs"]
-            input = torch.cat([raw_action, raw_obs], dim=-1)
+            # input = torch.cat([raw_action, raw_obs], dim=-1)
+            input = raw_action
             # goal = sample_goal_poses_from_list(bsz, self.device)
             goal = data["goal"][:, 0]
 

@@ -26,7 +26,8 @@ class DiffusionTransformer(nn.Module):
     ):
         super().__init__()
         # variables
-        input_dim = obs_dim + act_dim
+        # input_dim = obs_dim + act_dim
+        input_dim = act_dim
         # input_len = T + 3 if value else T + 2
         input_len = T + 3
         self.cond_mask_prob = cond_mask_prob
@@ -185,25 +186,26 @@ class DiffusionTransformer(nn.Module):
         goal_emb = self.goal_emb(data["goal"])
 
         # construct input
-        x = torch.cat([t_emb, obs_emb, x_emb, goal_emb], dim=1)
+        x = torch.cat([t_emb, obs_emb, goal_emb, x_emb], dim=1)
         x += self.pos_emb
 
         # output
-        x = self.encoder(x, mask=self.mask)[:, -(self.T + 1) : -1]
+        x = self.encoder(x, mask=self.mask)[:, -self.T :]
         x = self.ln_f(x)
         return self.output(x)
 
     def generate_mask(self, x):
-        mask = torch.zeros(x, x, dtype=torch.bool)
-        # Every token attends to the first token
-        mask[:, 0] = True
-        # Create indices for rows and columns
-        indices = torch.arange(x)
-        # Calculate absolute distance between indices
-        distance = torch.abs(indices.unsqueeze(1) - indices.unsqueeze(0))
-        # Allow attention where distance is 0 (self) or 1 (adjacent)
-        mask = mask | (distance <= 1)
+        # mask = torch.zeros(x, x, dtype=torch.bool)
+        # # Every token attends to the first token
+        # mask[:, 0] = True
+        # # Create indices for rows and columns
+        # indices = torch.arange(x)
+        # # Calculate absolute distance between indices
+        # distance = torch.abs(indices.unsqueeze(1) - indices.unsqueeze(0))
+        # # Allow attention where distance is 0 (self) or 1 (adjacent)
+        # mask = mask | (distance <= 1)
 
+        mask = (torch.triu(torch.ones(x, x)) == 1).transpose(0, 1)
         mask = (
             mask.float()
             .masked_fill(mask == 0, float("-inf"))
