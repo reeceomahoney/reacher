@@ -205,8 +205,8 @@ class DiffusionPolicy(nn.Module):
             data["goal"][bsz:] = 0
 
         # inpaint
-        x[:, 0, self.action_dim :] = data["obs"][:, 0]
-        x[:, -1, 25:34] = data["goal"]
+        # x[:, 0, self.action_dim :] = data["obs"][:, 0]
+        # x[:, -1, 25:34] = data["goal"]
 
         # inference
         for i in range(self.sampling_steps):
@@ -225,8 +225,8 @@ class DiffusionPolicy(nn.Module):
                 x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
 
             # inpaint
-            x[:, 0, self.action_dim :] = data["obs"][:, 0]
-            x[:, -1, 25:34] = data["goal"]
+            # x[:, 0, self.action_dim :] = data["obs"][:, 0]
+            # x[:, -1, 25:34] = data["goal"]
 
         # denormalize
         x = self.normalizer.clip(x)
