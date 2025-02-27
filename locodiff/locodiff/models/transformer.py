@@ -188,7 +188,6 @@ class DiffusionTransformer(nn.Module):
 
         # construct input
         x = torch.cat([obs_emb, x_emb, goal_emb], dim=1)
-        x = x_emb
         x += self.pos_emb
 
         # output
