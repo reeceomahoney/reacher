@@ -26,8 +26,8 @@ class DiffusionTransformer(nn.Module):
     ):
         super().__init__()
         # variables
-        # input_dim = obs_dim + act_dim
-        input_dim = act_dim
+        input_dim = obs_dim + act_dim
+        # input_dim = act_dim
         # input_len = T + 3 if value else T + 2
         input_len = T + 1
         self.cond_mask_prob = cond_mask_prob

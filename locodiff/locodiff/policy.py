@@ -261,8 +261,8 @@ class DiffusionPolicy(nn.Module):
         else:
             # train and test
             raw_obs = data["obs"]
-            # input = torch.cat([raw_action, raw_obs], dim=-1)
-            input = raw_action
+            input = torch.cat([raw_action, raw_obs], dim=-1)
+            # input = raw_action
             # goal = sample_goal_poses_from_list(bsz, self.device)
             goal = data["goal"][:, 0]
 

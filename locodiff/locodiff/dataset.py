@@ -158,10 +158,10 @@ class ExpertDataset(Dataset):
         all_actions = torch.cat(actions_splits)
         all_obs_acts = torch.cat([all_actions, all_obs], dim=-1)
 
-        self.x_mean = all_obs.mean(0)
-        self.x_std = all_obs.std(0)
-        self.x_min = all_obs.min(0).values
-        self.x_max = all_obs.max(0).values
+        self.x_mean = all_obs_acts.mean(0)
+        self.x_std = all_obs_acts.std(0)
+        self.x_min = all_obs_acts.min(0).values
+        self.x_max = all_obs_acts.max(0).values
 
         self.y_mean = all_actions.mean(0)
         self.y_std = all_actions.std(0)
