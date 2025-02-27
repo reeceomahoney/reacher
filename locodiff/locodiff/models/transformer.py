@@ -192,7 +192,7 @@ class DiffusionTransformer(nn.Module):
         x += self.pos_emb
 
         # output
-        x = self.encoder(x, self.mask)[:, -self.T :]
+        x = self.encoder(x, self.mask)[:, -(self.T + 1) : -1]
         x = self.ln_f(x)
         return self.output(x)
 
