@@ -50,7 +50,7 @@ class DiffusionTransformer(nn.Module):
             torch.arange(input_len)
         ).unsqueeze(0)
 
-        self.dropout = nn.Dropout(attn_dropout)
+        self.drop = nn.Dropout(attn_dropout)
 
         # transformer
         self.encoder = nn.TransformerEncoder(
