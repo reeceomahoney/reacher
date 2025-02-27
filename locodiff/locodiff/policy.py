@@ -97,9 +97,8 @@ class DiffusionPolicy(nn.Module):
         # sample noise and timestep
         x_1 = data["input"]
         x_0 = torch.randn_like(x_1)
-        # samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
-        # t = 0.999 * (1 - samples)
-        t = torch.rand(x_1.shape[0], 1, 1).to(self.device)
+        samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
+        t = 0.999 * (1 - samples)
 
         # compute target
         x_t = (1 - t) * x_0 + t * x_1
