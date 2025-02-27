@@ -160,6 +160,38 @@ def calculate_return(
     return ((goal_reward * mask) * gammas).sum(dim=-1, keepdim=True)
 
 
+def bidirectional_sliding_window_scheduler(
+    global_timesteps: Tensor, trajectory_length: int
+) -> Tensor:
+    """
+    Implements a bidirectional sliding window time step scheduler
+
+    Args:
+        global_timesteps (torch.Tensor): Tensor of global timesteps between 0 and 1.
+
+        trajectory_length (int): The length of the trajectory.
+
+    Returns:
+        torch.Tensor: A tensor of local timesteps. If global_timesteps is a single value,
+                     returns a 1D tensor of length trajectory_length. If global_timesteps is
+                     a batch, returns a 2D tensor of shape [len(global_timesteps), trajectory_length].
+    """
+
+    # Calculate normalized distances from center (0 at center, 1 at edges)
+    positions = torch.arange(trajectory_length)
+    center = (trajectory_length - 1) / 2
+    distances = torch.abs(positions - center)
+    normalized_distances = distances / distances.max()
+
+    # Calculate local timesteps
+    transition_width = 0.2
+    start_points = (1.0 - normalized_distances) * (1.0 - transition_width)
+    local_timesteps = (global_timesteps - start_points) / transition_width
+    local_timesteps = torch.clamp(local_timesteps, 0.0, 1.0)
+
+    return local_timesteps
+
+
 class SinusoidalPosEmb(nn.Module):
     def __init__(self, dim, device):
         super().__init__()

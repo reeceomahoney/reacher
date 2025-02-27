@@ -18,7 +18,6 @@ dependencies = [
   "gymnasium-robotics>=1.2.4",
   "wandb==0.12.21",
   "minari[all]>=0.5.2",
-  "diffusers>=0.32.1",
   "pyqt6>=6.8.0",
 ]
 
