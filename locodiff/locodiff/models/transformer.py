@@ -50,6 +50,8 @@ class DiffusionTransformer(nn.Module):
             torch.arange(input_len)
         ).unsqueeze(0)
 
+        self.dropout = nn.Dropout(attn_dropout)
+
         # transformer
         self.encoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(
@@ -188,7 +190,7 @@ class DiffusionTransformer(nn.Module):
 
         # construct input
         x = torch.cat([obs_emb, x_emb, goal_emb], dim=1)
-        x += self.pos_emb
+        x = self.drop(x + self.pos_emb)
 
         # output
         x = self.encoder(x, self.mask)[:, -(self.T + 1) : -1]

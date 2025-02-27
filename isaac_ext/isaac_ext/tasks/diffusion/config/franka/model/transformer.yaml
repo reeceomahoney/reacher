@@ -6,6 +6,6 @@ nhead: 4
 num_layers: 2
 T: ${T}
 cond_mask_prob: ${cond_mask_prob}
-attn_dropout: 0.0
+attn_dropout: 0.1
 weight_decay: 1e-6
 device: ${device}
