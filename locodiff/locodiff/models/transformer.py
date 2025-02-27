@@ -29,7 +29,7 @@ class DiffusionTransformer(nn.Module):
         # input_dim = obs_dim + act_dim
         input_dim = act_dim
         # input_len = T + 3 if value else T + 2
-        input_len = T + 2
+        input_len = T + 3
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
         self.device = device
@@ -50,12 +50,6 @@ class DiffusionTransformer(nn.Module):
         self.pos_emb = SinusoidalPosEmb(d_model, device)(
             torch.arange(input_len)
         ).unsqueeze(0)
-
-        self.x_encoder = nn.Sequential(
-            nn.Linear(d_model, d_model),
-            nn.SiLU(),
-            nn.Linear(d_model, d_model),
-        )
 
         # transformer
         self.encoder = nn.TransformerEncoder(
@@ -190,11 +184,9 @@ class DiffusionTransformer(nn.Module):
         t_emb = self.t_emb(t)
         obs_emb = self.obs_emb(data["obs"])
         goal_emb = self.goal_emb(data["goal"])
-        x_emb += goal_emb.expand(-1, self.T, -1)
-        x_emb = self.x_encoder(x_emb)
 
         # construct input
-        x = torch.cat([t_emb, obs_emb, x_emb], dim=1)
+        x = torch.cat([t_emb, obs_emb, goal_emb, x_emb], dim=1)
         x += self.pos_emb
 
         # output
