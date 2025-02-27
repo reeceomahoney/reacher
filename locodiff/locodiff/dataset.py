@@ -163,10 +163,10 @@ class ExpertDataset(Dataset):
         self.x_min = all_obs.min(0).values
         self.x_max = all_obs.max(0).values
 
-        self.y_mean = all_obs_acts.mean(0)
-        self.y_std = all_obs_acts.std(0)
-        self.y_min = all_obs_acts.min(0).values
-        self.y_max = all_obs_acts.max(0).values
+        self.y_mean = all_actions.mean(0)
+        self.y_std = all_actions.std(0)
+        self.y_min = all_actions.min(0).values
+        self.y_max = all_actions.max(0).values
 
     # Save the dataset
     def save_dataset(self, obs_splits, actions_splits, filename="dataset.pkl"):

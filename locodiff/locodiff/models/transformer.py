@@ -26,10 +26,10 @@ class DiffusionTransformer(nn.Module):
     ):
         super().__init__()
         # variables
-        input_dim = obs_dim + act_dim
-        # input_dim = act_dim
+        # input_dim = obs_dim + act_dim
+        input_dim = act_dim
         # input_len = T + 3 if value else T + 2
-        input_len = T + 1
+        input_len = T + 3
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
         self.device = device
@@ -182,11 +182,11 @@ class DiffusionTransformer(nn.Module):
         # embed
         x_emb = self.x_emb(x)
         t_emb = self.t_emb(t)
-        # obs_emb = self.obs_emb(data["obs"])
-        # goal_emb = self.goal_emb(data["goal"])
+        obs_emb = self.obs_emb(data["obs"])
+        goal_emb = self.goal_emb(data["goal"])
 
         # construct input
-        x = torch.cat([t_emb, x_emb], dim=1)
+        x = torch.cat([t_emb, obs_emb, goal_emb, x_emb], dim=1)
         x += self.pos_emb
 
         # output
