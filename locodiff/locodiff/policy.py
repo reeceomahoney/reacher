@@ -97,9 +97,8 @@ class DiffusionPolicy(nn.Module):
         # sample noise and timestep
         x_1 = data["input"]
         x_0 = torch.randn_like(x_1)
-        # samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
-        # t = 0.999 * (1 - samples)
-        t = torch.rand(x_1.shape[0], 1, 1).to(self.device)
+        samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
+        t = 0.999 * (1 - samples)
 
         # compute target
         x_t = (1 - t) * x_0 + t * x_1
@@ -198,8 +197,8 @@ class DiffusionPolicy(nn.Module):
             data["goal"][bsz:] = 0
 
         # inpaint
-        # x[:, 0, self.action_dim :] = data["obs"][:, 0]
-        # x[:, -1, 25:34] = data["goal"]
+        x[:, 0, self.action_dim :] = data["obs"][:, 0]
+        x[:, -1, 25:34] = data["goal"]
 
         # inference
         for i in range(self.sampling_steps):
@@ -218,8 +217,8 @@ class DiffusionPolicy(nn.Module):
                 x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
 
             # inpaint
-            # x[:, 0, self.action_dim :] = data["obs"][:, 0]
-            # x[:, -1, 25:34] = data["goal"]
+            x[:, 0, self.action_dim :] = data["obs"][:, 0]
+            x[:, -1, 25:34] = data["goal"]
 
         # denormalize
         x = self.normalizer.clip(x)
