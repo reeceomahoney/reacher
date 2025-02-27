@@ -178,7 +178,7 @@ def bidirectional_sliding_window_scheduler(
     """
 
     # Calculate normalized distances from center (0 at center, 1 at edges)
-    positions = torch.arange(trajectory_length)
+    positions = torch.arange(trajectory_length).to(global_timesteps.device)
     center = (trajectory_length - 1) / 2
     distances = torch.abs(positions - center)
     normalized_distances = distances / distances.max()
@@ -189,7 +189,7 @@ def bidirectional_sliding_window_scheduler(
     local_timesteps = (global_timesteps - start_points) / transition_width
     local_timesteps = torch.clamp(local_timesteps, 0.0, 1.0)
 
-    return local_timesteps
+    return local_timesteps.unsqueeze(-1)
 
 
 class SinusoidalPosEmb(nn.Module):

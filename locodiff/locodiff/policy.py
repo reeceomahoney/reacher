@@ -14,12 +14,13 @@ from locodiff.models.transformer import DiffusionTransformer
 from locodiff.plotting import plot_3d_guided_trajectory
 from locodiff.utils import (
     Normalizer,
+    bidirectional_sliding_window_scheduler,
     calculate_return,
 )
 
 
 def expand_t(tensor: Tensor, bsz: int) -> Tensor:
-    return tensor.view(1, 1, 1).expand(bsz, -1, -1)
+    return tensor.view(1, 1).expand(bsz, -1)
 
 
 class DiffusionPolicy(nn.Module):
@@ -97,11 +98,13 @@ class DiffusionPolicy(nn.Module):
         # sample noise and timestep
         x_1 = data["input"]
         x_0 = torch.randn_like(x_1)
-        samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
-        t = 0.999 * (1 - samples)
+        # samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
+        # t = 0.999 * (1 - samples)
+        t = torch.rand(x_1.shape[0], 1).to(self.device)
+        local_t = bidirectional_sliding_window_scheduler(t, self.T)
 
         # compute target
-        x_t = (1 - t) * x_0 + t * x_1
+        x_t = (1 - local_t) * x_0 + local_t * x_1
         dx_t = x_1 - x_0
 
         # cfg masking
@@ -111,7 +114,7 @@ class DiffusionPolicy(nn.Module):
             data["goal"][cond_mask.expand(-1, 9)] = 0
 
         # compute model output
-        out = self.model(x_t, t, data)
+        out = self.model(x_t, local_t, data)
         loss = F.mse_loss(out, dx_t)
         # update model
         self.optimizer.zero_grad()
@@ -174,10 +177,14 @@ class DiffusionPolicy(nn.Module):
 
     def step(self, x_t: Tensor, t_start: Tensor, t_end: Tensor, data: dict) -> Tensor:
         t_start = expand_t(t_start, x_t.shape[0])
+        t_end = expand_t(t_end, x_t.shape[0])
+        local_t_start = bidirectional_sliding_window_scheduler(t_start, self.T)
+        local_t_end = bidirectional_sliding_window_scheduler(t_end, self.T)
 
-        return x_t + (t_end - t_start) * self.model(
-            x_t + self.model(x_t, t_start, data) * (t_end - t_start) / 2,
-            t_start + (t_end - t_start) / 2,
+        return x_t + (local_t_end - local_t_start) * self.model(
+            x_t
+            + self.model(x_t, local_t_start, data) * (local_t_end - local_t_start) / 2,
+            local_t_start + (local_t_end - local_t_start) / 2,
             data,
         )
 
