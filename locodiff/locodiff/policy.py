@@ -102,7 +102,7 @@ class DiffusionPolicy(nn.Module):
         # t = 0.999 * (1 - samples)
         t = torch.rand(x_1.shape[0], 1).to(self.device)
         local_t = bidirectional_sliding_window_scheduler(t, self.T)
-        t_grad = torch.where(local_t == 0 | local_t == 1, 0, 1)
+        t_grad = torch.where((local_t == 0) | (local_t == 1), 0, 1)
 
         # compute target
         x_t = (1 - local_t) * x_0 + local_t * x_1
