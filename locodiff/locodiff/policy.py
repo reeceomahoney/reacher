@@ -107,15 +107,23 @@ class DiffusionPolicy(nn.Module):
         x_t = (1 - t) * x_0 + t * x_1
         dx_t = x_1 - x_0
 
+        # inpaint
+        x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
+        x_t[:, -1, 25:34] = data["goal"]
+
         # cfg masking
         if self.cond_mask_prob > 0:
             cond_mask = torch.rand(x_1.shape[0], 1) < self.cond_mask_prob
             data["returns"][cond_mask] = 0
             # data["obs"][cond_mask.expand(-1, -1, 34 + 9)] = 0
 
+        mask = torch.ones_like(x_t)
+        mask[:, 0, self.action_dim :] = 0
+        mask[:, -1, 25:34] = 0
+
         # compute model output
         out = self.model(x_t, t, data)
-        loss = F.mse_loss(out, dx_t)
+        loss = (mask * F.mse_loss(out, dx_t, reduction="none")).mean()
         # update model
         self.optimizer.zero_grad()
         loss.backward()
@@ -203,8 +211,8 @@ class DiffusionPolicy(nn.Module):
             # data["obs"][bsz:] = 0
 
         # inpaint
-        # x[:, 0, self.action_dim :] = data["obs"][:, 0]
-        # x[:, -1, 25:34] = data["goal"]
+        x[:, 0, self.action_dim :] = data["obs"][:, 0]
+        x[:, -1, 25:34] = data["goal"]
 
         # inference
         for i in range(self.sampling_steps):
@@ -223,8 +231,8 @@ class DiffusionPolicy(nn.Module):
                 x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
 
             # inpaint
-            # x[:, 0, self.action_dim :] = data["obs"][:, 0]
-            # x[:, -1, 25:34] = data["goal"]
+            x[:, 0, self.action_dim :] = data["obs"][:, 0]
+            x[:, -1, 25:34] = data["goal"]
 
         # denormalize
         x = self.normalizer.clip(x)
@@ -283,7 +291,6 @@ class DiffusionPolicy(nn.Module):
             goal = self.normalizer.scale_9d_pos(goal)
 
         obs = self.normalizer.scale_input(raw_obs[:, :1])
-        obs = torch.cat([obs, goal.unsqueeze(1)], dim=-1)
         return {
             "obs": obs,
             "input": input,
