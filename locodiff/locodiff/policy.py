@@ -113,8 +113,8 @@ class DiffusionPolicy(nn.Module):
             # data["returns"][cond_mask] = -1
             data["goal"][cond_mask.expand(-1, 9)] = 0
 
-        weights = torch.ones_like(t)
-        weights[5:-5] = 0.1
+        weights = torch.ones_like(x_1[..., :1])
+        weights[:, 5:-5] = 0.1
 
         # compute model output
         out = self.model(x_t, t, data)
