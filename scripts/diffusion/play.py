@@ -32,7 +32,6 @@ import os
 import sys
 import time
 
-import gymnasium as gym
 import matplotlib.pyplot as plt
 import torch
 from omegaconf import DictConfig
@@ -44,9 +43,7 @@ from isaaclab.markers.visualization_markers import (
     VisualizationMarkers,
     VisualizationMarkersCfg,
 )
-from isaaclab.utils.math import matrix_from_quat
-from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
-from locodiff.plotting import plot_3d_guided_trajectory
+from locodiff.plotting import plot_trajectory
 from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main, get_latest_run
 
@@ -89,12 +86,13 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     agent_cfg.dataset.task_name = task
 
     # create isaac environment
-    env = gym.make(task, cfg=env_cfg)
+    # env = gym.make(task, cfg=env_cfg)
+    env = None
 
     # wrap around environment for rsl-rl
-    env = RslRlVecEnvWrapper(env)  # type: ignore
-    agent_cfg.obs_dim = env.observation_space["policy"].shape[-1]  # type: ignore
-    agent_cfg.act_dim = env.action_space.shape[-1]  # type: ignore
+    # env = RslRlVecEnvWrapper(env)  # type: ignore
+    agent_cfg.obs_dim = 4
+    agent_cfg.act_dim = 2
 
     # load previously trained model
     runner = DiffusionRunner(env, agent_cfg, device=agent_cfg.device)
@@ -106,40 +104,48 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     runner.load(resume_path)
 
     # obtain the trained policy for inference
-    policy = runner.get_inference_policy(device=env.unwrapped.device)
+    # policy = runner.get_inference_policy(device=env.unwrapped.device)
 
     # set obstacle
-    obstacle = torch.tensor([[0.5, 0, 0.125, 1, 0, 0, 0]]).to(env.device)
-    obstacle = obstacle.expand(env.num_envs, -1)
+    obstacle = torch.tensor([[0.5, 0, 0.125, 1, 0, 0, 0]])
+    # obstacle = obstacle.expand(env.num_envs, -1)
     # env.unwrapped.scene["obstacle"].write_root_pose_to_sim(obstacle)
 
     # create trajectory visualizer
     trajectory_visualizer = create_trajectory_visualizer(agent_cfg)
 
     # reset environment
-    obs, _ = env.get_observations()
+    # obs, _ = env.get_observations()
     # simulate environment
     while simulation_app.is_running():
         start = time.time()
 
         # get goal
-        goal = env.unwrapped.command_manager.get_command("ee_pose")  # type: ignore
-        rot_mat = matrix_from_quat(goal[:, 3:])
-        ortho6d = rot_mat[..., :2].reshape(-1, 6)
-        goal = torch.cat([goal[:, :3], ortho6d], dim=-1)
+        # goal = env.unwrapped.command_manager.get_command("ee_pose")  # type: ignore
+        # rot_mat = matrix_from_quat(goal[:, 3:])
+        # ortho6d = rot_mat[..., :2].reshape(-1, 6)
+        # goal = torch.cat([goal[:, :3], ortho6d], dim=-1)
+
+        obs = torch.zeros(1, 4).to(agent_cfg.device)
+        goal = torch.ones(1, 2).to(agent_cfg.device)
+        obs[0, 1] = 1
 
         # plot trajectory
         if args_cli.plot:
-            lambdas = [0, 1, 2, 5, 10]
-            plot_3d_guided_trajectory(
-                runner.policy, obs, goal, obstacle[:, :3], lambdas, "lambdas"
+            # lambdas = [0, 1, 2, 5, 10]
+            output = runner.policy.act(
+                {"obs": obs, "obstacle": obstacle[:, :3], "goal": goal}
             )
+            traj = output["obs_traj"][0].detach().cpu().numpy()
+            plot_trajectory(traj, traj[0], goal[0].cpu().numpy())
             plt.savefig("guidance.png")
             simulation_app.close()
             exit()
 
         # agent stepping
-        output = policy({"obs": obs, "obstacle": obstacle[:, :3], "goal": goal})
+        output = runner.policy.act(
+            {"obs": obs, "obstacle": obstacle[:, :3], "goal": goal}
+        )
         trajectory_visualizer.visualize(output["obs_traj"][0, :, 18:21])
 
         # env stepping

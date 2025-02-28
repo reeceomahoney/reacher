@@ -270,7 +270,7 @@ class DiffusionPolicy(nn.Module):
             raw_obs = data["obs"].unsqueeze(1)
             obstacle = torch.zeros((data["obs"].shape[0], 3)).to(self.device)
             # obstacle = self.normalizer.scale_3d_pos(data["obstacle"])
-            goal = self.normalizer.goal(data["goal"])
+            goal = self.normalizer.scale_goal(data["goal"])
         else:
             # train and test
             raw_obs = data["obs"]

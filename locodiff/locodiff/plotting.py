@@ -23,11 +23,11 @@ def plot_obstacle(ax, obstacle: torch.Tensor):
 
 
 def plot_trajectory(
-    ax,
     obs_traj: np.ndarray,
-    start_pos: tuple,
-    goal_pos: tuple,
+    start_pos: np.ndarray,
+    goal_pos: np.ndarray,
 ):
+    fig, ax = plt.subplots(figsize=(8, 8))
     marker_params = {"markersize": 10, "markeredgewidth": 3}
     # Plot trajectory with color gradient
     gradient = np.linspace(0, 1, len(obs_traj))
@@ -35,6 +35,7 @@ def plot_trajectory(
     # Plot start and goal positions
     ax.plot(start_pos[0], start_pos[1], "x", color="green", **marker_params)
     ax.plot(goal_pos[0], goal_pos[1], "x", color="red", **marker_params)
+    return fig
 
 
 def plot_guided_trajectory(
