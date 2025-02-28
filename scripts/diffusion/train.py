@@ -114,11 +114,12 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     log.info(f"Logging experiment in directory: {log_dir}")
 
     # create isaac environment
-    env = gym.make(
-        task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
-    )
-    agent_cfg.obs_dim = env.observation_space["policy"].shape[-1]  # type: ignore
-    agent_cfg.act_dim = env.action_space.shape[-1]  # type: ignore
+    # env = gym.make(
+    #     task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
+    # )
+    env = None
+    agent_cfg.obs_dim = 4
+    agent_cfg.act_dim = 2
 
     # wrap for video recording
     if args_cli.video:
@@ -133,7 +134,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
         env = gym.wrappers.RecordVideo(env, **video_kwargs)  # type: ignore
 
     # wrap around environment for rsl-rl
-    env = RslRlVecEnvWrapper(env)  # type: ignore
+    # env = RslRlVecEnvWrapper(env)  # type: ignore
 
     runner = DiffusionRunner(env, agent_cfg, log_dir=log_dir, device=agent_cfg.device)
 

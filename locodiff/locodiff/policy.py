@@ -14,7 +14,6 @@ from locodiff.models.transformer import DiffusionTransformer
 from locodiff.plotting import plot_3d_guided_trajectory
 from locodiff.utils import (
     Normalizer,
-    calculate_return,
 )
 
 
@@ -109,7 +108,7 @@ class DiffusionPolicy(nn.Module):
 
         # inpaint
         x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
-        x_t[:, -1, 25:34] = data["goal"]
+        x_t[:, -1, self.action_dim : self.action_dim + 2] = data["goal"]
 
         # cfg masking
         if self.cond_mask_prob > 0:
@@ -119,7 +118,7 @@ class DiffusionPolicy(nn.Module):
 
         mask = torch.ones_like(x_t)
         mask[:, 0, self.action_dim :] = 0
-        mask[:, -1, 25:34] = 0
+        mask[:, -1, self.action_dim : self.action_dim + 2] = 0
 
         # compute model output
         out = self.model(x_t, t, data)
@@ -212,7 +211,7 @@ class DiffusionPolicy(nn.Module):
 
         # inpaint
         x[:, 0, self.action_dim :] = data["obs"][:, 0]
-        x[:, -1, 25:34] = data["goal"]
+        x[:, -1, self.action_dim : self.action_dim + 2] = data["goal"]
 
         # inference
         for i in range(self.sampling_steps):
@@ -232,7 +231,7 @@ class DiffusionPolicy(nn.Module):
 
             # inpaint
             x[:, 0, self.action_dim :] = data["obs"][:, 0]
-            x[:, -1, 25:34] = data["goal"]
+            x[:, -1, self.action_dim : self.action_dim + 2] = data["goal"]
 
         # denormalize
         x = self.normalizer.clip(x)
@@ -261,7 +260,6 @@ class DiffusionPolicy(nn.Module):
 
     @torch.no_grad()
     def process(self, data: dict) -> dict:
-        bsz = data["obs"].shape[0]
         data = self.dict_to_device(data)
         raw_action = data.get("action", None)
 
@@ -270,25 +268,27 @@ class DiffusionPolicy(nn.Module):
             input = None
             returns = torch.ones((data["obs"].shape[0], 1)).to(self.device)
             raw_obs = data["obs"].unsqueeze(1)
-            obstacle = self.normalizer.scale_3d_pos(data["obstacle"])
-            goal = self.normalizer.scale_9d_pos(data["goal"])
+            obstacle = torch.zeros((data["obs"].shape[0], 3)).to(self.device)
+            # obstacle = self.normalizer.scale_3d_pos(data["obstacle"])
+            goal = self.normalizer.goal(data["goal"])
         else:
             # train and test
             raw_obs = data["obs"]
             input = torch.cat([raw_action, raw_obs], dim=-1)
             # input = raw_action
             # goal = sample_goal_poses_from_list(bsz, self.device)
-            goal = data["goal"][:, 0]
+            goal = data["goal"]
 
             obstacle = torch.zeros((input.shape[0], 3)).to(self.device)
-            returns = calculate_return(
-                input[..., 25:28], raw_obs, goal, data["mask"], self.gammas
-            )
-            returns = self.normalizer.scale_return(returns)
+            # returns = calculate_return(
+            #     input[..., 25:28], raw_obs, goal, data["mask"], self.gammas
+            # )
+            returns = torch.ones((data["obs"].shape[0], 1)).to(self.device)
+            # returns = self.normalizer.scale_return(returns)
 
-            obstacle = self.normalizer.scale_3d_pos(obstacle)
+            # obstacle = self.normalizer.scale_3d_pos(obstacle)
             input = self.normalizer.scale_output(input)
-            goal = self.normalizer.scale_9d_pos(goal)
+            goal = self.normalizer.scale_goal(goal)
 
         obs = self.normalizer.scale_input(raw_obs[:, :1])
         return {

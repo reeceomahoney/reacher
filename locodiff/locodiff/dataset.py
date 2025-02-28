@@ -7,9 +7,7 @@ import minari
 import torch
 from torch.utils.data import DataLoader, Dataset, Subset, random_split
 
-from locodiff.utils import (
-    calculate_return,
-)
+from locodiff.envs import PDControlledParticleDataset
 
 log = logging.getLogger(__name__)
 
@@ -226,7 +224,18 @@ def get_dataloaders(
     num_workers: int,
 ):
     # Build the datasets
-    dataset = ExpertDataset(data_directory, T, T_cond, task_name)
+    dataset = PDControlledParticleDataset(
+        num_samples=10000,
+        trajectory_length=30,
+        grid_size=1.0,
+        process_noise=0.03,
+        measurement_noise=0.01,
+        init_pos_var=0.05,
+        kp=2.0,
+        kd=1.0,
+        dt=0.05,
+        seed=42,
+    )
     train, val = random_split(dataset, [train_fraction, 1 - train_fraction])
     train_set = SlicerWrapper(train, T_cond, T)
     test_set = SlicerWrapper(val, T_cond, T)
@@ -250,15 +259,16 @@ def get_dataloaders(
     # calculate value range
     gammas = torch.tensor([0.99**i for i in range(T)])
     returns = []
-    for batch in train_dataloader:
-        obs = batch["obs"]
-        mask = batch["mask"]
-        goal = batch["goal"][:, 0]
-        # goal = sample_goal_poses_from_list(obs.shape[0], obs.device)
-        returns.append(
-            calculate_return(obs[..., 18:21], obs[:, 0, 18:21], goal, mask, gammas)
-        )
-    returns = torch.cat(returns)
+    # for batch in train_dataloader:
+    #     obs = batch["obs"]
+    #     mask = batch["mask"]
+    #     goal = batch["goal"]
+    #     # goal = sample_goal_poses_from_list(obs.shape[0], obs.device)
+    #     returns.append(
+    #         calculate_return(obs[..., 18:21], obs[:, 0, 18:21], goal, mask, gammas)
+    #     )
+    # returns = torch.cat(returns)
+    returns = torch.ones(1)
 
     dl = train_dataloader.dataset.dataset.dataset
     dl.r_max = returns.max()

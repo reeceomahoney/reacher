@@ -348,6 +348,15 @@ class Normalizer(nn.Module):
         else:
             raise ValueError(f"Unknown scaling {self.scaling}")
 
+    def scale_goal(self, x) -> torch.Tensor:
+        if self.scaling == "linear":
+            return (x - self.x_min[:2]) / (self.x_max[:2] - self.x_min[:2]) * 2 - 1
+        elif self.scaling == "gaussian":
+            return (x - self.x_mean[:2]) / self.x_std[:2]
+        else:
+            raise ValueError(f"Unknown scaling {self.scaling}")
+
+
     def scale_3d_pos(self, pos) -> torch.Tensor:
         if self.scaling == "linear":
             return (pos - self.x_min[18:21]) / (

@@ -30,7 +30,7 @@ class DiffusionRunner:
         device="cpu",
     ):
         self.env = env
-        self.env.reset()
+        # self.env.reset()
         self.cfg = agent_cfg
         self.device = device
 
@@ -67,18 +67,18 @@ class DiffusionRunner:
             store_code_state(self.log_dir, [__file__])
 
     def learn(self):
-        obs, _ = self.env.get_observations()
-        obs = obs.to(self.device)
+        # obs, _ = self.env.get_observations()
+        # obs = obs.to(self.device)
         self.train_mode()
 
         rewbuffer = deque()
         lenbuffer = deque()
-        cur_reward_sum = torch.zeros(
-            self.env.num_envs, dtype=torch.float, device=self.device
-        )
-        cur_episode_length = torch.zeros(
-            self.env.num_envs, dtype=torch.float, device=self.device
-        )
+        # cur_reward_sum = torch.zeros(
+        #     self.env.num_envs, dtype=torch.float, device=self.device
+        # )
+        # cur_episode_length = torch.zeros(
+        #     self.env.num_envs, dtype=torch.float, device=self.device
+        # )
 
         start_iter = self.current_learning_iteration
         tot_iter = int(start_iter + self.cfg.num_iters)
@@ -87,7 +87,7 @@ class DiffusionRunner:
             start = time.time()
 
             # simulation
-            if it % self.cfg.sim_interval == 0:
+            if False:
                 t = 0
                 ep_infos = []
                 self.env.reset()
@@ -204,7 +204,7 @@ class DiffusionRunner:
                 step=locs["it"],
             )
         # simulation
-        if locs["it"] % self.cfg.sim_interval == 0:
+        if False:
             if locs["ep_infos"]:
                 for key in locs["ep_infos"][0]:
                     # get the mean of each ep info value
