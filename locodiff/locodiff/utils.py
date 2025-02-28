@@ -156,10 +156,10 @@ def calculate_return(
     obs = torch.tensor([0.4, 0.0, 0.6]).to(traj.device)
     goal = torch.tensor([0.8, 0.0, 0.6]).to(traj.device)
 
-    obs_reward = 1 - torch.exp(-torch.norm(traj[:, 0] - obs.unsqueeze(0), dim=-1))
-    goal_reward = 1 - torch.exp(-torch.norm(traj[:, -1] - goal.unsqueeze(0), dim=-1))
-    reward = (obs_reward + goal_reward).unsqueeze(-1)
-    return reward
+    rewards = torch.zeros_like(traj[..., 0])
+    rewards[:, 0] = 1 - torch.exp(-torch.norm(traj[:, 0] - obs.unsqueeze(0), dim=-1))
+    rewards[:, -1] = 1 - torch.exp(-torch.norm(traj[:, -1] - goal.unsqueeze(0), dim=-1))
+    return rewards.unsqueeze(-1)
     # return ((reward * mask) * gammas).sum(dim=-1, keepdim=True)
 
 
