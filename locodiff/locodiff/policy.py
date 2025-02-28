@@ -113,9 +113,12 @@ class DiffusionPolicy(nn.Module):
             # data["returns"][cond_mask] = -1
             data["goal"][cond_mask.expand(-1, 9)] = 0
 
+        weights = torch.ones_like(t)
+        weights[5:-5] = 0.1
+
         # compute model output
         out = self.model(x_t, t, data)
-        loss = F.mse_loss(out, dx_t)
+        loss = weights * F.mse_loss(out, dx_t, reduction="none").mean()
         # update model
         self.optimizer.zero_grad()
         loss.backward()
