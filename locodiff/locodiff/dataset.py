@@ -226,7 +226,7 @@ def get_dataloaders(
     # Build the datasets
     dataset = PDControlledParticleDataset(
         num_samples=10000,
-        trajectory_length=30,
+        trajectory_length=32,
         grid_size=1.0,
         process_noise=0.03,
         measurement_noise=0.01,

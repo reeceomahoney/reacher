@@ -128,8 +128,8 @@ class ConditionalUnet1D(nn.Module):
         value=False,
     ):
         super().__init__()
-        # input_dim = obs_dim + act_dim
-        input_dim = act_dim
+        input_dim = obs_dim + act_dim
+        # input_dim = act_dim
         all_dims = [input_dim] + list(down_dims)
         start_dim = down_dims[0]
         in_out = list(zip(all_dims[:-1], all_dims[1:], strict=False))
@@ -225,10 +225,11 @@ class ConditionalUnet1D(nn.Module):
         #     goal = data_dict["goal"]
         #     global_feature = torch.cat([sigma, goal], dim=-1)
         # else:
-        obs = data_dict["obs"].reshape(sample.shape[0], -1)
-        goal = data_dict["goal"]
-        global_feature = torch.cat([sigma, obs, goal], dim=-1)
-        global_feature = self.cond_encoder(global_feature)
+        # obs = data_dict["obs"].reshape(sample.shape[0], -1)
+        # goal = data_dict["goal"]
+        # global_feature = torch.cat([sigma, obs, goal], dim=-1)
+        # global_feature = self.cond_encoder(global_feature)
+        global_feature = self.cond_encoder(sigma)
 
         # encode local features
         h_local = list()
