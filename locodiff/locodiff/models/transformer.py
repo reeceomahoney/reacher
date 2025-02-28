@@ -42,6 +42,10 @@ class DiffusionTransformer(nn.Module):
             nn.Linear(9, d_model),
             Rearrange("b d -> b 1 d"),
         )
+        self.return_emb = nn.Sequential(
+            nn.Linear(1, d_model),
+            Rearrange("b d -> b 1 d"),
+        )
         self.t_emb = nn.Sequential(
             Rearrange("b 1 1 -> b 1"),
             SinusoidalPosEmb(d_model, device),
@@ -183,11 +187,12 @@ class DiffusionTransformer(nn.Module):
         # embed
         x_emb = self.x_emb(x)
         t_emb = self.t_emb(t)
-        obs_emb = self.obs_emb(data["obs"])
+        # obs_emb = self.obs_emb(data["obs"])
         # goal_emb = self.goal_emb(data["goal"])
+        return_emb = self.return_emb(data["returns"])
 
         # construct input
-        x = torch.cat([t_emb, obs_emb, x_emb], dim=1)
+        x = torch.cat([t_emb, return_emb, x_emb], dim=1)
         x = self.drop(x + self.pos_emb)
 
         # output

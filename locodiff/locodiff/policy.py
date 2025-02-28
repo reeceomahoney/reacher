@@ -109,9 +109,9 @@ class DiffusionPolicy(nn.Module):
 
         # cfg masking
         if self.cond_mask_prob > 0:
-            cond_mask = torch.rand(x_1.shape[0], 1, 1) < self.cond_mask_prob
-            # data["returns"][cond_mask] = -1
-            data["obs"][cond_mask.expand(-1, -1, 34 + 9)] = 0
+            cond_mask = torch.rand(x_1.shape[0], 1) < self.cond_mask_prob
+            data["returns"][cond_mask] = 0
+            # data["obs"][cond_mask.expand(-1, -1, 34 + 9)] = 0
 
         # compute model output
         out = self.model(x_t, t, data)
@@ -199,8 +199,8 @@ class DiffusionPolicy(nn.Module):
                 k: torch.cat([v] * 2) if v is not None else None
                 for k, v in data.items()
             }
-            # data["returns"][bsz:] = -1
-            data["obs"][bsz:] = 0
+            data["returns"][bsz:] = 0
+            # data["obs"][bsz:] = 0
 
         # inpaint
         # x[:, 0, self.action_dim :] = data["obs"][:, 0]
@@ -274,7 +274,7 @@ class DiffusionPolicy(nn.Module):
 
             obstacle = torch.zeros((input.shape[0], 3)).to(self.device)
             returns = calculate_return(
-                input[..., 25:28], goal, data["mask"], self.gammas
+                input[..., 25:28], raw_obs, goal, data["mask"], self.gammas
             )
             returns = self.normalizer.scale_return(returns)
 

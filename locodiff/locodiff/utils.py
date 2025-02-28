@@ -151,13 +151,16 @@ def check_collisions(traj: Tensor) -> Tensor:
 
 
 def calculate_return(
-    traj: Tensor, goal: Tensor, mask: Tensor, gammas: Tensor
+    traj: Tensor, obs: Tensor, goal: Tensor, mask: Tensor, gammas: Tensor
 ) -> Tensor:
-    # reward = check_collisions(traj).float()
-    # goal_reward = 1 - torch.exp(-torch.norm(traj - goal[:, :3].unsqueeze(1), dim=-1))
-    goal_reward = 0
-    # reward[:, -1] += goal_reward
-    return ((goal_reward * mask) * gammas).sum(dim=-1, keepdim=True)
+    obs = torch.tensor([0.4, 0.0, 0.6]).to(traj.device)
+    goal = torch.tensor([0.8, 0.0, 0.6]).to(traj.device)
+
+    obs_reward = 1 - torch.exp(-torch.norm(traj[:, 0] - obs.unsqueeze(0), dim=-1))
+    goal_reward = 1 - torch.exp(-torch.norm(traj[:, -1] - goal.unsqueeze(0), dim=-1))
+    reward = (obs_reward + goal_reward).unsqueeze(-1)
+    return reward
+    # return ((reward * mask) * gammas).sum(dim=-1, keepdim=True)
 
 
 def bidirectional_sliding_window_scheduler(
