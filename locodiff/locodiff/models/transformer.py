@@ -28,7 +28,7 @@ class DiffusionTransformer(nn.Module):
         # variables
         input_dim = act_dim + obs_dim
         # input_len = T + 3 if value else T + 2
-        input_len = T + 3
+        input_len = T + 2
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
         self.device = device
@@ -37,7 +37,7 @@ class DiffusionTransformer(nn.Module):
 
         # embeddings
         self.x_emb = nn.Linear(input_dim, d_model)
-        self.obs_emb = nn.Linear(obs_dim, d_model)
+        self.obs_emb = nn.Linear(obs_dim + 9, d_model)
         self.goal_emb = nn.Sequential(
             nn.Linear(9, d_model),
             Rearrange("b d -> b 1 d"),
@@ -184,29 +184,29 @@ class DiffusionTransformer(nn.Module):
         x_emb = self.x_emb(x)
         t_emb = self.t_emb(t)
         obs_emb = self.obs_emb(data["obs"])
-        goal_emb = self.goal_emb(data["goal"])
+        # goal_emb = self.goal_emb(data["goal"])
 
         # construct input
-        x = torch.cat([t_emb, obs_emb, x_emb, goal_emb], dim=1)
+        x = torch.cat([t_emb, obs_emb, x_emb], dim=1)
         x = self.drop(x + self.pos_emb)
 
         # output
-        x = self.encoder(x, mask=self.mask)[:, -(self.T + 1) : -1]
+        x = self.encoder(x)[:, -self.T :]
         x = self.ln_f(x)
         return self.output(x)
 
     def generate_mask(self, x):
         mask = torch.zeros(x, x, dtype=torch.bool)
-        # Every token attends to the first token
-        mask[:, 0] = True
-        # Create indices for rows and columns
-        indices = torch.arange(x)
-        # Calculate absolute distance between indices
-        distance = torch.abs(indices.unsqueeze(1) - indices.unsqueeze(0))
-        # Allow attention where distance is 0 (self) or 1 (adjacent)
-        mask = mask | (distance <= 1)
+        # # Every token attends to the first token
+        # mask[:, 0] = True
+        # # Create indices for rows and columns
+        # indices = torch.arange(x)
+        # # Calculate absolute distance between indices
+        # distance = torch.abs(indices.unsqueeze(1) - indices.unsqueeze(0))
+        # # Allow attention where distance is 0 (self) or 1 (adjacent)
+        # mask = mask | (distance <= 1)
 
-        # mask = (torch.triu(torch.ones(x, x)) == 1).transpose(0, 1)
+        mask = (torch.triu(torch.ones(x, x)) == 1).transpose(0, 1)
         mask = (
             mask.float()
             .masked_fill(mask == 0, float("-inf"))

@@ -111,14 +111,11 @@ class DiffusionPolicy(nn.Module):
         if self.cond_mask_prob > 0:
             cond_mask = torch.rand(x_1.shape[0], 1) < self.cond_mask_prob
             # data["returns"][cond_mask] = -1
-            data["goal"][cond_mask.expand(-1, 9)] = 0
-
-        weights = torch.ones_like(x_1[..., :1])
-        weights[:, 5:-5] = 0.1
+            data["obs"][cond_mask.expand(-1, 34 + 9)] = 0
 
         # compute model output
         out = self.model(x_t, t, data)
-        loss = (weights * F.mse_loss(out, dx_t, reduction="none")).mean()
+        loss = F.mse_loss(out, dx_t)
         # update model
         self.optimizer.zero_grad()
         loss.backward()
@@ -203,7 +200,7 @@ class DiffusionPolicy(nn.Module):
                 for k, v in data.items()
             }
             # data["returns"][bsz:] = -1
-            data["goal"][bsz:] = 0
+            data["obs"][bsz:] = 0
 
         # inpaint
         # x[:, 0, self.action_dim :] = data["obs"][:, 0]
@@ -286,6 +283,7 @@ class DiffusionPolicy(nn.Module):
             goal = self.normalizer.scale_9d_pos(goal)
 
         obs = self.normalizer.scale_input(raw_obs[:, :1])
+        obs = torch.cat([obs, goal.unsqueeze(1)], dim=-1)
         return {
             "obs": obs,
             "input": input,
