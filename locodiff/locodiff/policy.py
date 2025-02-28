@@ -118,7 +118,7 @@ class DiffusionPolicy(nn.Module):
 
         # compute model output
         out = self.model(x_t, t, data)
-        loss = weights * F.mse_loss(out, dx_t, reduction="none").mean()
+        loss = (weights * F.mse_loss(out, dx_t, reduction="none")).mean()
         # update model
         self.optimizer.zero_grad()
         loss.backward()
