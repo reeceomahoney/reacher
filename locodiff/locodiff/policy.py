@@ -216,7 +216,7 @@ class DiffusionPolicy(nn.Module):
                 with torch.enable_grad():
                     x_grad = x.detach().clone().requires_grad_(True)
                     y = self.classifier(x_grad, expand_t(time_steps[i + 1], bsz), data)
-                    grad = torch.autograd.grad(y, x_grad, create_graph=True)[0]
+                    grad = torch.autograd.grad(y.sum(), x_grad, create_graph=True)[0]
                     x = x_grad + self.alpha * (1 - time_steps[i + 1]) * grad.detach()
             elif self.cond_lambda > 0:
                 x_cond, x_uncond = x.chunk(2)
