@@ -15,6 +15,7 @@ from locodiff.plotting import plot_3d_guided_trajectory
 from locodiff.utils import (
     Normalizer,
 )
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 
 def expand_t(tensor: Tensor, bsz: int) -> Tensor:
@@ -59,6 +60,7 @@ class DiffusionPolicy(nn.Module):
         # flow matching
         self.sampling_steps = sampling_steps
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
+        self.scheduler = DDPMScheduler(self.sampling_steps)
 
         # optimizer and lr scheduler
         self.optimizer = AdamW(self.model.get_optim_groups(), lr=lr, betas=betas)
@@ -96,15 +98,19 @@ class DiffusionPolicy(nn.Module):
         # sample noise and timestep
         x_1 = data["input"]
         x_0 = torch.randn_like(x_1)
-        samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
-        t = 0.999 * (1 - samples)
+        # samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
+        # t = 0.999 * (1 - samples)
         # t_glob = torch.rand(x_1.shape[0], 1).to(self.device)
         # t = bidirectional_sliding_window_scheduler(t_glob, self.T)
         # t_grad = torch.where((t == 0) | (t == 1), 0, 1)
 
         # compute target
-        x_t = (1 - t) * x_0 + t * x_1
-        dx_t = x_1 - x_0
+        # x_t = (1 - t) * x_0 + t * x_1
+        # dx_t = x_1 - x_0
+
+
+        t = torch.randint(0, self.sampling_steps, (x_1.shape[0], 1)).to(self.device)
+        x_t = self.scheduler.add_noise(x_1, x_0, t)
 
         # inpaint
         x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
@@ -121,8 +127,8 @@ class DiffusionPolicy(nn.Module):
         mask[:, -1, self.action_dim : self.action_dim + 2] = 0
 
         # compute model output
-        out = self.model(x_t, t, data)
-        loss = (mask * F.mse_loss(out, dx_t, reduction="none")).mean()
+        out = self.model(x_t, t.float(), data)
+        loss = (mask * F.mse_loss(out, x_0, reduction="none")).mean()
         # update model
         self.optimizer.zero_grad()
         loss.backward()
@@ -199,7 +205,9 @@ class DiffusionPolicy(nn.Module):
         # sample noise
         bsz = data["obs"].shape[0]
         x = torch.randn((bsz, self.T, self.input_dim)).to(self.device)
-        time_steps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
+        # time_steps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
+
+        self.scheduler.set_timesteps(self.sampling_steps)
 
         if self.cond_lambda > 0:
             data = {
@@ -214,20 +222,22 @@ class DiffusionPolicy(nn.Module):
         x[:, -1, self.action_dim : self.action_dim + 2] = data["goal"]
 
         # inference
-        for i in range(self.sampling_steps):
+        for t in self.scheduler.timesteps:
             x = torch.cat([x] * 2) if self.cond_lambda > 0 else x
-            x = self.step(x, time_steps[i], time_steps[i + 1], data)
+            # x = self.step(x, time_steps[i], time_steps[i + 1], data)
+            out = self.model(x, t.float(), data)
+            x = self.scheduler.step(out, t, x).prev_sample
 
             # guidance
-            if self.alpha > 0:
-                with torch.enable_grad():
-                    x_grad = x.detach().clone().requires_grad_(True)
-                    y = self.classifier(x_grad, expand_t(time_steps[i + 1], bsz), data)
-                    grad = torch.autograd.grad(y.sum(), x_grad, create_graph=True)[0]
-                    x = x_grad + self.alpha * (1 - time_steps[i + 1]) * grad.detach()
-            elif self.cond_lambda > 0:
-                x_cond, x_uncond = x.chunk(2)
-                x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
+            # if self.alpha > 0:
+            #     with torch.enable_grad():
+            #         x_grad = x.detach().clone().requires_grad_(True)
+            #         y = self.classifier(x_grad, expand_t(time_steps[i + 1], bsz), data)
+            #         grad = torch.autograd.grad(y.sum(), x_grad, create_graph=True)[0]
+            #         x = x_grad + self.alpha * (1 - time_steps[i + 1]) * grad.detach()
+            # elif self.cond_lambda > 0:
+            #     x_cond, x_uncond = x.chunk(2)
+            #     x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
 
             # inpaint
             x[:, 0, self.action_dim :] = data["obs"][:, 0]

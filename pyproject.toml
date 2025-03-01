@@ -19,6 +19,7 @@ dependencies = [
   "wandb==0.12.21",
   "minari[all]>=0.5.2",
   "pyqt6>=6.8.0",
+  "diffusers>=0.32.2",
 ]
 
 [tool.uv.sources]
