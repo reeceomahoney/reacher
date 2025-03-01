@@ -49,6 +49,9 @@ class DiffusionTransformer(nn.Module):
         self.t_emb = nn.Sequential(
             # Rearrange("b 1 1 -> b 1"),
             SinusoidalPosEmb(d_model, device),
+            nn.Linear(d_model, d_model * 4),
+            nn.Mish(),
+            nn.Linear(d_model * 4, d_model),
         )
         self.pos_emb = SinusoidalPosEmb(d_model, device)(
             torch.arange(input_len)
