@@ -60,7 +60,7 @@ class DiffusionPolicy(nn.Module):
         # flow matching
         self.sampling_steps = sampling_steps
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
-        self.scheduler = DDPMScheduler(self.sampling_steps)
+        self.scheduler = DDPMScheduler(self.sampling_steps, prediction_type="velocity")
 
         # optimizer and lr scheduler
         self.optimizer = AdamW(self.model.get_optim_groups(), lr=lr, betas=betas)
@@ -98,18 +98,18 @@ class DiffusionPolicy(nn.Module):
         # sample noise and timestep
         x_1 = data["input"]
         x_0 = torch.randn_like(x_1)
-        samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
-        t = 0.999 * (1 - samples)
+        # samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
+        # t = 0.999 * (1 - samples)
         # t_glob = torch.rand(x_1.shape[0], 1).to(self.device)
         # t = bidirectional_sliding_window_scheduler(t_glob, self.T)
         # t_grad = torch.where((t == 0) | (t == 1), 0, 1)
 
         # compute target
-        x_t = (1 - t) * x_0 + t * x_1
-        dx_t = x_1 - x_0
+        # x_t = (1 - t) * x_0 + t * x_1
+        # dx_t = x_1 - x_0
 
-        # t = torch.randint(0, self.sampling_steps, (x_1.shape[0], 1)).to(self.device)
-        # x_t = self.scheduler.add_noise(x_1, x_0, t)
+        t = torch.randint(0, self.sampling_steps, (x_1.shape[0], 1)).to(self.device)
+        x_t = self.scheduler.add_noise(x_1, x_0, t)
 
         # inpaint
         x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
@@ -126,8 +126,9 @@ class DiffusionPolicy(nn.Module):
         mask[:, -1, self.action_dim : self.action_dim + 2] = 0
 
         # compute model output
-        out = self.model(x_t, t, data)
-        loss = (mask * F.mse_loss(out, dx_t, reduction="none")).mean()
+        out = self.model(x_t, t.float(), data)
+        target = self.scheduler.get_velocity(x_1, x_0, t)
+        loss = (mask * F.mse_loss(out, target, reduction="none")).mean()
         # update model
         self.optimizer.zero_grad()
         loss.backward()
@@ -204,9 +205,9 @@ class DiffusionPolicy(nn.Module):
         # sample noise
         bsz = data["obs"].shape[0]
         x = torch.randn((bsz, self.T, self.input_dim)).to(self.device)
-        time_steps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
+        # time_steps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
 
-        # self.scheduler.set_timesteps(self.sampling_steps)
+        self.scheduler.set_timesteps(self.sampling_steps)
 
         if self.cond_lambda > 0:
             data = {
@@ -221,12 +222,12 @@ class DiffusionPolicy(nn.Module):
         x[:, -1, self.action_dim : self.action_dim + 2] = data["goal"]
 
         # inference
-        for i in range(self.sampling_steps):
+        for t in self.scheduler.timesteps:
             x = torch.cat([x] * 2) if self.cond_lambda > 0 else x
-            x = self.step(x, time_steps[i], time_steps[i + 1], data)
-            # t_ = t.view(-1, 1).expand(bsz, 1).float()
-            # out = self.model(x, t_, data)
-            # x = self.scheduler.step(out, t, x).prev_sample
+            # x = self.step(x, time_steps[i], time_steps[i + 1], data)
+            t_ = t.view(-1, 1).expand(bsz, 1).float()
+            out = self.model(x, t_, data)
+            x = self.scheduler.step(out, t, x).prev_sample
 
             # guidance
             # if self.alpha > 0:
