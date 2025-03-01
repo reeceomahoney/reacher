@@ -224,7 +224,8 @@ class DiffusionPolicy(nn.Module):
         for t in self.scheduler.timesteps:
             x = torch.cat([x] * 2) if self.cond_lambda > 0 else x
             # x = self.step(x, time_steps[i], time_steps[i + 1], data)
-            out = self.model(x, t.float(), data)
+            t_ = t.view(-1, 1).expand(bsz, 1).float()
+            out = self.model(x, t_, data)
             x = self.scheduler.step(out, t, x).prev_sample
 
             # guidance
