@@ -138,11 +138,17 @@ class ConditionalUnet1D(nn.Module):
 
         # diffusion step embedding and observations
         # cond_dim = 10 if inpaint else (obs_dim * T_cond) + 10
-        self.cond_encoder = SinusoidalPosEmb(32, device)
+        dim = 32
+        self.cond_encoder = nn.Sequential(
+            SinusoidalPosEmb(dim, device),
+            nn.Linear(dim, dim * 4),
+            nn.Mish(),
+            nn.Linear(dim * 4, dim),
+        )
 
         CondResBlock = partial(
             ConditionalResidualBlock1D,
-            cond_dim=32,
+            cond_dim=dim,
             kernel_size=kernel_size,
             n_groups=n_groups,
             cond_predict_scale=cond_predict_scale,
