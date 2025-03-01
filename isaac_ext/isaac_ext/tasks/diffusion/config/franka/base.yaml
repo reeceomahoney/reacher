@@ -1,5 +1,5 @@
 defaults:
-  - model: transformer
+  - model: unet
   - _self_
 
 logger: wandb
