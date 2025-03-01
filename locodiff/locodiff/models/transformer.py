@@ -101,6 +101,7 @@ class DiffusionTransformer(nn.Module):
             SinusoidalPosEmb,
             Rearrange,
             Reduce,
+            nn.Mish,
         )
         if isinstance(module, (nn.Linear, nn.Embedding)):
             torch.nn.init.normal_(module.weight, mean=0.0, std=0.02)
