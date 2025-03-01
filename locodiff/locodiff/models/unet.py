@@ -6,6 +6,8 @@ import torch
 import torch.nn as nn
 from einops.layers.torch import Rearrange
 
+from locodiff.utils import SinusoidalPosEmb
+
 logger = logging.getLogger(__name__)
 
 
@@ -136,7 +138,7 @@ class ConditionalUnet1D(nn.Module):
 
         # diffusion step embedding and observations
         # cond_dim = 10 if inpaint else (obs_dim * T_cond) + 10
-        self.cond_encoder = nn.Linear(1, 32)
+        self.cond_encoder = SinusoidalPosEmb(32, device)
 
         CondResBlock = partial(
             ConditionalResidualBlock1D,
@@ -229,7 +231,7 @@ class ConditionalUnet1D(nn.Module):
         # goal = data_dict["goal"]
         # global_feature = torch.cat([sigma, obs, goal], dim=-1)
         # global_feature = self.cond_encoder(global_feature)
-        global_feature = self.cond_encoder(sigma)
+        global_feature = self.cond_encoder(sigma).squeeze(1)
 
         # encode local features
         h_local = list()

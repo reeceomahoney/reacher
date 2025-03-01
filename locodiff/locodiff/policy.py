@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import wandb
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from torch import Tensor
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -15,7 +16,6 @@ from locodiff.plotting import plot_3d_guided_trajectory
 from locodiff.utils import (
     Normalizer,
 )
-from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 
 
 def expand_t(tensor: Tensor, bsz: int) -> Tensor:
@@ -107,7 +107,6 @@ class DiffusionPolicy(nn.Module):
         # compute target
         # x_t = (1 - t) * x_0 + t * x_1
         # dx_t = x_1 - x_0
-
 
         t = torch.randint(0, self.sampling_steps, (x_1.shape[0], 1)).to(self.device)
         x_t = self.scheduler.add_noise(x_1, x_0, t)

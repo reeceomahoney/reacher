@@ -128,7 +128,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
         obs = torch.zeros(1, 4).to(agent_cfg.device)
         goal = torch.ones(1, 2).to(agent_cfg.device)
-        obs[0, 1] = 1
+        # obs[0, 1] = 1
 
         # plot trajectory
         if args_cli.plot:
