@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import wandb
-from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
+from diffusers.schedulers.scheduling_ddim import DDIMScheduler
 from torch import Tensor
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -60,7 +60,7 @@ class DiffusionPolicy(nn.Module):
         # flow matching
         self.sampling_steps = sampling_steps
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
-        self.scheduler = DDPMScheduler(self.sampling_steps, prediction_type="velocity")
+        self.scheduler = DDIMScheduler(self.sampling_steps)
 
         # optimizer and lr scheduler
         self.optimizer = AdamW(self.model.get_optim_groups(), lr=lr, betas=betas)
