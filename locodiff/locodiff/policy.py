@@ -127,8 +127,7 @@ class DiffusionPolicy(nn.Module):
 
         # compute model output
         out = self.model(x_t, t.float(), data)
-        target = self.scheduler.get_velocity(x_1, x_0, t)
-        loss = (mask * F.mse_loss(out, target, reduction="none")).mean()
+        loss = (mask * F.mse_loss(out, x_0, reduction="none")).mean()
         # update model
         self.optimizer.zero_grad()
         loss.backward()
