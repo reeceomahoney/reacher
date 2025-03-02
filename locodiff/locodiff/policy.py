@@ -5,7 +5,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import wandb
-from diffusers.schedulers.scheduling_ddim import DDIMScheduler
+from diffusers.schedulers.scheduling_ddpm import DDPMScheduler
 from torch import Tensor
 from torch.optim.adamw import AdamW
 from torch.optim.lr_scheduler import CosineAnnealingLR
@@ -60,7 +60,7 @@ class DiffusionPolicy(nn.Module):
         # flow matching
         self.sampling_steps = sampling_steps
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
-        self.scheduler = DDIMScheduler(self.sampling_steps, prediction_type="sample")
+        self.scheduler = DDPMScheduler(self.sampling_steps)
 
         # optimizer and lr scheduler
         self.optimizer = AdamW(self.model.get_optim_groups(), lr=lr, betas=betas)
@@ -113,7 +113,7 @@ class DiffusionPolicy(nn.Module):
 
         # inpaint
         x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
-        x_t[:, -1, self.action_dim : self.action_dim + 2] = data["goal"]
+        x_t[:, -1, self.action_dim :] = data["goal"]
 
         # cfg masking
         if self.cond_mask_prob > 0:
@@ -123,11 +123,11 @@ class DiffusionPolicy(nn.Module):
 
         mask = torch.ones_like(x_t)
         mask[:, 0, self.action_dim :] = 0
-        mask[:, -1, self.action_dim : self.action_dim + 2] = 0
+        mask[:, -1, self.action_dim :] = 0
 
         # compute model output
         out = self.model(x_t, t.float(), data)
-        loss = (mask * F.mse_loss(out, x_1, reduction="none")).mean()
+        loss = (mask * F.mse_loss(out, x_0, reduction="none")).mean()
         # update model
         self.optimizer.zero_grad()
         loss.backward()
@@ -218,7 +218,7 @@ class DiffusionPolicy(nn.Module):
 
         # inpaint
         x[:, 0, self.action_dim :] = data["obs"][:, 0]
-        x[:, -1, self.action_dim : self.action_dim + 2] = data["goal"]
+        x[:, -1, self.action_dim :] = data["goal"]
 
         # inference
         for t in self.scheduler.timesteps:
@@ -241,7 +241,7 @@ class DiffusionPolicy(nn.Module):
 
             # inpaint
             x[:, 0, self.action_dim :] = data["obs"][:, 0]
-            x[:, -1, self.action_dim : self.action_dim + 2] = data["goal"]
+            x[:, -1, self.action_dim :] = data["goal"]
 
         # denormalize
         x = self.normalizer.clip(x)
@@ -280,7 +280,7 @@ class DiffusionPolicy(nn.Module):
             raw_obs = data["obs"].unsqueeze(1)
             obstacle = torch.zeros((data["obs"].shape[0], 3)).to(self.device)
             # obstacle = self.normalizer.scale_3d_pos(data["obstacle"])
-            goal = self.normalizer.scale_goal(data["goal"])
+            goal = self.normalizer.scale_input(data["goal"])
         else:
             # train and test
             raw_obs = data["obs"]
@@ -298,7 +298,7 @@ class DiffusionPolicy(nn.Module):
 
             # obstacle = self.normalizer.scale_3d_pos(obstacle)
             input = self.normalizer.scale_output(input)
-            goal = self.normalizer.scale_goal(goal)
+            goal = self.normalizer.scale_input(goal)
 
         obs = self.normalizer.scale_input(raw_obs[:, :1])
         return {

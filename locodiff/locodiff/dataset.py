@@ -376,7 +376,7 @@ class PDControlledParticleDataset(Dataset):
         return {
             "obs": self.obs[idx],
             "action": self.actions[idx],
-            "goal": self.obs[idx, -1, :2],
+            "goal": self.obs[idx, -1],
             "mask": torch.ones(self.trajectory_length),
         }
 
