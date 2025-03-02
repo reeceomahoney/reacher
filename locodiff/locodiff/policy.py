@@ -60,7 +60,7 @@ class DiffusionPolicy(nn.Module):
         # flow matching
         self.sampling_steps = sampling_steps
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
-        self.scheduler = DDIMScheduler(self.sampling_steps)
+        self.scheduler = DDIMScheduler(self.sampling_steps, prediction_type="sample")
 
         # optimizer and lr scheduler
         self.optimizer = AdamW(self.model.get_optim_groups(), lr=lr, betas=betas)
@@ -127,7 +127,7 @@ class DiffusionPolicy(nn.Module):
 
         # compute model output
         out = self.model(x_t, t.float(), data)
-        loss = (mask * F.mse_loss(out, x_0, reduction="none")).mean()
+        loss = (mask * F.mse_loss(out, x_1, reduction="none")).mean()
         # update model
         self.optimizer.zero_grad()
         loss.backward()
