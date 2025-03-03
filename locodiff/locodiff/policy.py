@@ -61,7 +61,7 @@ class DiffusionPolicy(nn.Module):
         # diffusion / flow matching
         self.sampling_steps = sampling_steps
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
-        self.scheduler = DDPMScheduler(self.sampling_steps, prediction_type="sample")
+        self.scheduler = DDPMScheduler(self.sampling_steps)
         self.algo = algo  # ddpm or flow
 
         # optimizer and lr scheduler
@@ -111,7 +111,7 @@ class DiffusionPolicy(nn.Module):
         elif self.algo == "ddpm":
             t = torch.randint(0, self.sampling_steps, (x_1.shape[0], 1)).to(self.device)
             x_t = self.scheduler.add_noise(x_1, x_0, t)
-            target = x_1
+            target = x_0
 
         # inpaint
         x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
@@ -126,10 +126,12 @@ class DiffusionPolicy(nn.Module):
         mask = torch.ones_like(x_t)
         mask[:, 0, self.action_dim :] = 0
         mask[:, -1, self.action_dim :] = 0
+        target *= mask
 
         # compute model output
         out = self.model(x_t, t.float(), data)
-        loss = (mask * F.mse_loss(out, target, reduction="none")).mean()
+        # loss = (mask * F.mse_loss(out, target, reduction="none")).mean()
+        loss = F.mse_loss(out, target)
         # update model
         self.optimizer.zero_grad()
         loss.backward()
