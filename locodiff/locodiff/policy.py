@@ -102,8 +102,10 @@ class DiffusionPolicy(nn.Module):
         x_0 = torch.randn_like(x_1)
 
         if self.algo == "flow":
-            samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
-            t = 0.999 * (1 - samples)
+            # samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
+            # t = 0.999 * (1 - samples)
+            samples = torch.randn(x_1.shape[0], 1, 1).to(self.device)
+            t = 1 / (1 + torch.exp(-samples))
             # compute target
             x_t = (1 - t) * x_0 + t * x_1
             target = x_1 - x_0
