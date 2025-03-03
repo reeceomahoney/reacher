@@ -65,7 +65,7 @@ class DiffusionPolicy(nn.Module):
         self.algo = algo  # ddpm or flow
 
         # optimizer and lr scheduler
-        self.optimizer = AdamW(self.model.get_optim_groups(), lr=lr, betas=betas)
+        self.optimizer = AdamW(self.model.parameters(), lr=2e-4)
         self.classifier_optimizer = AdamW(
             self.classifier.get_optim_groups(), lr=lr, betas=betas
         )
@@ -114,8 +114,8 @@ class DiffusionPolicy(nn.Module):
             target = x_0
 
         # inpaint
-        # x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
-        # x_t[:, -1, self.action_dim :] = data["goal"]
+        x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
+        x_t[:, -1, self.action_dim :] = data["goal"]
 
         # cfg masking
         if self.cond_mask_prob > 0:
@@ -124,8 +124,8 @@ class DiffusionPolicy(nn.Module):
 
         # inpaint
         mask = torch.ones_like(x_t)
-        # mask[:, 0, self.action_dim :] = 0
-        # mask[:, -1, self.action_dim :] = 0
+        mask[:, 0, self.action_dim :] = 0
+        mask[:, -1, self.action_dim :] = 0
 
         # compute model output
         out = self.model(x_t, t.float(), data)
@@ -222,8 +222,8 @@ class DiffusionPolicy(nn.Module):
             # data["obs"][bsz:] = 0
 
         # inpaint
-        # x[:, 0, self.action_dim :] = data["obs"][:, 0]
-        # x[:, -1, self.action_dim :] = data["goal"]
+        x[:, 0, self.action_dim :] = data["obs"][:, 0]
+        x[:, -1, self.action_dim :] = data["goal"]
 
         # inference
         for i in range(self.sampling_steps):
@@ -236,19 +236,19 @@ class DiffusionPolicy(nn.Module):
                 x = self.scheduler.step(out, timesteps[i], x).prev_sample  # type: ignore
 
             # guidance
-            # if self.alpha > 0:
-            #     with torch.enable_grad():
-            #         x_grad = x.detach().clone().requires_grad_(True)
-            #         y = self.classifier(x_grad, expand_t(time_steps[i + 1], bsz), data)
-            #         grad = torch.autograd.grad(y.sum(), x_grad, create_graph=True)[0]
-            #         x = x_grad + self.alpha * (1 - time_steps[i + 1]) * grad.detach()
-            # elif self.cond_lambda > 0:
-            #     x_cond, x_uncond = x.chunk(2)
-            #     x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
+            if self.alpha > 0:
+                with torch.enable_grad():
+                    x_grad = x.detach().clone().requires_grad_(True)
+                    y = self.classifier(x_grad, expand_t(timesteps[i + 1], bsz), data)
+                    grad = torch.autograd.grad(y.sum(), x_grad, create_graph=True)[0]
+                    x = x_grad + self.alpha * (1 - timesteps[i + 1]) * grad.detach()
+            elif self.cond_lambda > 0:
+                x_cond, x_uncond = x.chunk(2)
+                x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
 
             # inpaint
-            # x[:, 0, self.action_dim :] = data["obs"][:, 0]
-            # x[:, -1, self.action_dim :] = data["goal"]
+            x[:, 0, self.action_dim :] = data["obs"][:, 0]
+            x[:, -1, self.action_dim :] = data["goal"]
 
         # denormalize
         x = self.normalizer.clip(x)

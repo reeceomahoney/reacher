@@ -137,9 +137,9 @@ class ConditionalUnet1D(nn.Module):
         in_out = list(zip(all_dims[:-1], all_dims[1:], strict=False))
 
         # diffusion step embedding and observations
-        dim = 32 + 8
-        self.t_emb = SinusoidalPosEmb(32, device)
+        dim = 32
         self.cond_encoder = nn.Sequential(
+            SinusoidalPosEmb(32, device),
             nn.Linear(dim, dim * 4),
             nn.Mish(),
             nn.Linear(dim * 4, dim),
@@ -228,11 +228,10 @@ class ConditionalUnet1D(nn.Module):
         sigma = sigma.to(sample.device).view(-1, 1)
 
         # create global feature
-        obs = data_dict["obs"].reshape(sample.shape[0], -1)
-        goal = data_dict["goal"]
-        sigma = self.t_emb(sigma).squeeze(1)
-        global_feature = torch.cat([sigma, obs, goal], dim=-1)
-        global_feature = self.cond_encoder(global_feature)
+        # obs = data_dict["obs"].reshape(sample.shape[0], -1)
+        # goal = data_dict["goal"]
+        # global_feature = torch.cat([sigma, obs, goal], dim=-1)
+        global_feature = self.cond_encoder(sigma).squeeze(1)
 
         # encode local features
         h_local = list()
@@ -270,19 +269,6 @@ class ConditionalUnet1D(nn.Module):
 
         x = einops.rearrange(x, "b h t -> b t h")
         return x
-
-    def mask_cond(self, cond, force_mask=False):
-        cond = cond.clone()
-        if force_mask:
-            cond[...] = 0
-            return cond
-        elif self.training and self.cond_mask_prob > 0:
-            mask = (torch.rand(cond.shape[0], 1) > self.cond_mask_prob).float()
-            mask = mask.expand_as(cond)
-            cond[mask == 0] = 0
-            return cond
-        else:
-            return cond
 
     def get_optim_groups(self):
         return [{"params": self.parameters(), "weight_decay": self.weight_decay}]
@@ -406,19 +392,6 @@ class ValueUnet1D(nn.Module):
         x = x.view(x.shape[0], -1)
         x = self.final_block(torch.cat([x, global_feature], dim=-1))
         return x
-
-    def mask_cond(self, cond, force_mask=False):
-        cond = cond.clone()
-        if force_mask:
-            cond[...] = 0
-            return cond
-        elif self.training and self.cond_mask_prob > 0:
-            mask = (torch.rand(cond.shape[0], 1) > self.cond_mask_prob).float()
-            mask = mask.expand_as(cond)
-            cond[mask == 0] = 0
-            return cond
-        else:
-            return cond
 
     def get_optim_groups(self):
         return [{"params": self.parameters(), "weight_decay": self.weight_decay}]
