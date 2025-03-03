@@ -212,9 +212,9 @@ class DiffusionTransformer(nn.Module):
         # Create indices for rows and columns
         indices = torch.arange(x)
         # Calculate absolute distance between indices
-        distance = torch.abs(indices.unsqueeze(1) - indices.unsqueeze(0))
+        distance = indices.unsqueeze(1) - indices.unsqueeze(0)
         # Allow attention where distance is 0 (self) or 1 (adjacent)
-        mask = mask | (distance <= 1)
+        mask = mask | distance == 1
 
         # mask = (torch.triu(torch.ones(x, x)) == 1).transpose(0, 1)
 

@@ -1,5 +1,5 @@
 defaults:
-  - model: unet
+  - model: transformer
   - _self_
 
 logger: wandb
@@ -41,7 +41,7 @@ policy:
   betas: [0.9, 0.999]
   num_iters: ${num_iters}
   device: ${device}
-  algo: ddpm
+  algo: flow
 
 dataset:
   task_name: ${task}
