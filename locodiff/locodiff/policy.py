@@ -114,8 +114,8 @@ class DiffusionPolicy(nn.Module):
             target = x_0
 
         # inpaint
-        x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
-        x_t[:, -1, self.action_dim :] = data["goal"]
+        # x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
+        # x_t[:, -1, self.action_dim :] = data["goal"]
 
         # cfg masking
         if self.cond_mask_prob > 0:
@@ -124,8 +124,8 @@ class DiffusionPolicy(nn.Module):
 
         # inpaint
         mask = torch.ones_like(x_t)
-        mask[:, 0, self.action_dim :] = 0
-        mask[:, -1, self.action_dim :] = 0
+        # mask[:, 0, self.action_dim :] = 0
+        # mask[:, -1, self.action_dim :] = 0
 
         # compute model output
         out = self.model(x_t, t.float(), data)
@@ -222,8 +222,8 @@ class DiffusionPolicy(nn.Module):
             # data["obs"][bsz:] = 0
 
         # inpaint
-        x[:, 0, self.action_dim :] = data["obs"][:, 0]
-        x[:, -1, self.action_dim :] = data["goal"]
+        # x[:, 0, self.action_dim :] = data["obs"][:, 0]
+        # x[:, -1, self.action_dim :] = data["goal"]
 
         # inference
         for i in range(self.sampling_steps):
@@ -231,8 +231,8 @@ class DiffusionPolicy(nn.Module):
             if self.algo == "flow":
                 x = self.step(x, timesteps[i], timesteps[i + 1], data)
             elif self.algo == "ddpm":
-                t_ = timesteps[i].view(-1, 1).expand(bsz, 1).float()
-                out = self.model(x, t_, data)
+                t = timesteps[i].view(-1, 1).expand(bsz, 1).float()
+                out = self.model(x, t, data)
                 x = self.scheduler.step(out, timesteps[i], x).prev_sample  # type: ignore
 
             # guidance
@@ -247,8 +247,8 @@ class DiffusionPolicy(nn.Module):
             #     x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
 
             # inpaint
-            x[:, 0, self.action_dim :] = data["obs"][:, 0]
-            x[:, -1, self.action_dim :] = data["goal"]
+            # x[:, 0, self.action_dim :] = data["obs"][:, 0]
+            # x[:, -1, self.action_dim :] = data["goal"]
 
         # denormalize
         x = self.normalizer.clip(x)
