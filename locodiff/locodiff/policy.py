@@ -191,9 +191,6 @@ class DiffusionPolicy(nn.Module):
 
     def step(self, x_t: Tensor, t_start: Tensor, t_end: Tensor, data: dict) -> Tensor:
         t_start = expand_t(t_start, x_t.shape[0])
-        # t_end = expand_t(t_end, x_t.shape[0])
-        # t_start = bidirectional_sliding_window_scheduler(t_start, self.T)
-        # t_end = bidirectional_sliding_window_scheduler(t_end, self.T)
 
         return x_t + (t_end - t_start) * self.model(
             x_t + self.model(x_t, t_start, data) * (t_end - t_start) / 2,
@@ -219,7 +216,6 @@ class DiffusionPolicy(nn.Module):
                 for k, v in data.items()
             }
             data["returns"][bsz:] = 0
-            # data["obs"][bsz:] = 0
 
         # inpaint
         x[:, 0, self.action_dim :] = data["obs"][:, 0]
