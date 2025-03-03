@@ -193,12 +193,13 @@ class DiffusionPolicy(nn.Module):
 
     def step(self, x_t: Tensor, t_start: Tensor, t_end: Tensor, data: dict) -> Tensor:
         t_start = expand_t(t_start, x_t.shape[0])
+        return x_t + (t_end - t_start) * self.model(x_t, t_start, data)
 
-        return x_t + (t_end - t_start) * self.model(
-            x_t + self.model(x_t, t_start, data) * (t_end - t_start) / 2,
-            t_start + (t_end - t_start) / 2,
-            data,
-        )
+        # return x_t + (t_end - t_start) * self.model(
+        #     x_t + self.model(x_t, t_start, data) * (t_end - t_start) / 2,
+        #     t_start + (t_end - t_start) / 2,
+        #     data,
+        # )
 
     @torch.no_grad()
     def forward(self, data: dict) -> torch.Tensor:
