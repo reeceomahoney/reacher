@@ -139,7 +139,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
             )
             traj = output["obs_traj"][0].detach().cpu().numpy()
             plot_trajectory(traj, traj[0], goal[0].cpu().numpy())
-            plt.savefig("guidance.png")
+            plt.show()
             simulation_app.close()
             exit()
 
