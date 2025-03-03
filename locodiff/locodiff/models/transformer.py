@@ -191,7 +191,7 @@ class DiffusionTransformer(nn.Module):
     def forward(self, x, t, data):
         # embed
         x_emb = self.x_emb(x)
-        t_emb = self.t_emb(t)
+        t_emb = self.t_emb(t).squeeze(1)
         # obs_emb = self.obs_emb(data["obs"])
         # goal_emb = self.goal_emb(data["goal"])
         # return_emb = self.return_emb(data["returns"])
