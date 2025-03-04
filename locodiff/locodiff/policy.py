@@ -213,6 +213,8 @@ class DiffusionPolicy(nn.Module):
         if self.algo == "flow":
             # timesteps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
             timesteps = self.scheduling_matrix
+            timesteps[:, 0] = 1.0
+            timesteps[:, -1] = 1.0
         elif self.algo == "ddpm":
             self.scheduler.set_timesteps(self.sampling_steps)
             timesteps = self.scheduler.timesteps
@@ -337,9 +339,7 @@ class DiffusionPolicy(nn.Module):
         row_indices = torch.arange(height, dtype=torch.float32).view(-1, 1)
         col_indices = torch.arange(horizon, dtype=torch.float32)
         t_scaled = col_indices * uncertainty_scale
-        normalized_matrix = (
-            self.sampling_steps + t_scaled - row_indices
-        ) / self.sampling_steps
+        normalized_matrix = (row_indices - t_scaled) / self.sampling_steps
         return torch.clamp(normalized_matrix, min=0.0, max=1.0).to(self.device)
 
     def dict_to_device(self, data):
