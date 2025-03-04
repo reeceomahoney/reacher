@@ -64,7 +64,7 @@ class DiffusionPolicy(nn.Module):
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
         self.scheduler = DDPMScheduler(self.sampling_steps)
         self.algo = algo  # ddpm or flow
-        self.scheduling_matrix = self._generate_pyramid_scheduling_matrix(T, 1.0)
+        self.scheduling_matrix = self._generate_trapezoid_scheduling_matrix(T, 1.0)
 
         # optimizer and lr scheduler
         self.optimizer = AdamW(self.model.parameters(), lr=2e-4)
@@ -347,6 +347,18 @@ class DiffusionPolicy(nn.Module):
         t_scaled = col_indices * uncertainty_scale
         normalized_matrix = (row_indices - t_scaled) / self.sampling_steps
         return torch.clamp(normalized_matrix, min=0.0, max=1.0).to(self.device)
+
+    def _generate_trapezoid_scheduling_matrix(
+        self, horizon: int, uncertainty_scale: float
+    ):
+        height = self.sampling_steps + int((horizon + 1) // 2 * uncertainty_scale)
+        scheduling_matrix = torch.zeros((height, horizon))
+        for m in range(height):
+            for t in range((horizon + 1) // 2):
+                scheduling_matrix[m, t] = m - int(t * uncertainty_scale)
+                scheduling_matrix[m, -(t + 1)] = m - int(t * uncertainty_scale)
+        scheduling_matrix /= self.sampling_steps
+        return torch.clamp(scheduling_matrix, min=0, max=1).to(self.device)
 
     def dict_to_device(self, data):
         return {k: v.to(self.device) for k, v in data.items()}

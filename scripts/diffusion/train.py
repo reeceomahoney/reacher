@@ -73,7 +73,6 @@ import isaac_ext.tasks  # noqa: F401
 from isaaclab.envs import ManagerBasedRLEnvCfg
 from isaaclab.utils.dict import print_dict
 from isaaclab.utils.io import dump_pickle, dump_yaml
-from isaaclab_rl.rsl_rl import RslRlVecEnvWrapper
 from locodiff.runner import DiffusionRunner
 from locodiff.utils import dynamic_hydra_main
 
@@ -155,6 +154,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 if __name__ == "__main__":
     # check if running in debug mode
     # run the main function
+    # torch.set_printoptions(precision=1, threshold=1000000, linewidth=500)
     main()  # type: ignore
     # close sim app
     simulation_app.close()
