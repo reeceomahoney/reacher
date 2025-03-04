@@ -93,6 +93,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     # env = RslRlVecEnvWrapper(env)  # type: ignore
     agent_cfg.obs_dim = 4
     agent_cfg.act_dim = 2
+    agent_cfg.dataset.test = True
 
     # load previously trained model
     runner = DiffusionRunner(env, agent_cfg, device=agent_cfg.device)

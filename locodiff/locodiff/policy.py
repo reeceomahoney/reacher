@@ -352,6 +352,7 @@ class DiffusionPolicy(nn.Module):
         self, horizon: int, uncertainty_scale: float
     ):
         height = self.sampling_steps + int((horizon + 1) // 2 * uncertainty_scale)
+        self.global_timesteps = height
         scheduling_matrix = torch.zeros((height, horizon))
         for m in range(height):
             for t in range((horizon + 1) // 2):

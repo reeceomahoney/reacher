@@ -453,10 +453,11 @@ def get_dataloaders(
     train_batch_size: int,
     test_batch_size: int,
     num_workers: int,
+    test: bool = False,
 ):
     # Build the datasets
     dataset = PDControlledParticleDataset(
-        num_samples=10000,
+        num_samples=100 if test else 10000,
         trajectory_length=32,
         grid_size=1.0,
         process_noise=0.03,
