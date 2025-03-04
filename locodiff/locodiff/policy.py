@@ -19,7 +19,7 @@ from locodiff.utils import (
 
 
 def expand_t(tensor: Tensor, bsz: int) -> Tensor:
-    return tensor.view(1, 1, 1).expand(bsz, 1, -1)
+    return tensor.view(1, -1, 1).expand(bsz, -1, 1)
 
 
 class DiffusionPolicy(nn.Module):
@@ -51,6 +51,7 @@ class DiffusionPolicy(nn.Module):
         # other classes
         self.env = env
         self.normalizer = normalizer
+        self.device = device
 
         # dims
         self.input_dim = act_dim + obs_dim
@@ -63,6 +64,7 @@ class DiffusionPolicy(nn.Module):
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
         self.scheduler = DDPMScheduler(self.sampling_steps)
         self.algo = algo  # ddpm or flow
+        self.scheduling_matrix = self._generate_pyramid_scheduling_matrix(T, 1.0)
 
         # optimizer and lr scheduler
         self.optimizer = AdamW(self.model.parameters(), lr=2e-4)
@@ -79,7 +81,6 @@ class DiffusionPolicy(nn.Module):
         self.cond_mask_prob = cond_mask_prob
         self.cond_lambda = cond_lambda
 
-        self.device = device
         self.to(device)
 
     ############
@@ -104,8 +105,7 @@ class DiffusionPolicy(nn.Module):
         if self.algo == "flow":
             # samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
             # t = 0.999 * (1 - samples)
-            samples = torch.randn(x_1.shape[0], 1, 1).to(self.device)
-            t = 1 / (1 + torch.exp(-samples))
+            t = torch.rand(x_1.shape[0], self.T, 1).to(self.device)
             # compute target
             x_t = (1 - t) * x_0 + t * x_1
             target = x_1 - x_0
@@ -195,6 +195,7 @@ class DiffusionPolicy(nn.Module):
 
     def step(self, x_t: Tensor, t_start: Tensor, t_end: Tensor, data: dict) -> Tensor:
         t_start = expand_t(t_start, x_t.shape[0])
+        t_end = expand_t(t_end, x_t.shape[0])
         return x_t + (t_end - t_start) * self.model(x_t, t_start, data)
 
         # return x_t + (t_end - t_start) * self.model(
@@ -210,7 +211,8 @@ class DiffusionPolicy(nn.Module):
         x = torch.randn((bsz, self.T, self.input_dim)).to(self.device)
 
         if self.algo == "flow":
-            timesteps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
+            # timesteps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
+            timesteps = self.scheduling_matrix
         elif self.algo == "ddpm":
             self.scheduler.set_timesteps(self.sampling_steps)
             timesteps = self.scheduler.timesteps
@@ -227,7 +229,7 @@ class DiffusionPolicy(nn.Module):
         x[:, -1, self.action_dim :] = data["goal"]
 
         # inference
-        for i in range(self.sampling_steps):
+        for i in range(self.global_timesteps - 1):
             x = torch.cat([x] * 2) if self.cond_lambda > 0 else x
             if self.algo == "flow":
                 x = self.step(x, timesteps[i], timesteps[i + 1], data)
@@ -326,6 +328,19 @@ class DiffusionPolicy(nn.Module):
     ###########
     # Helpers #
     ###########
+
+    def _generate_pyramid_scheduling_matrix(
+        self, horizon: int, uncertainty_scale: float
+    ):
+        height = self.sampling_steps + int((horizon - 1) * uncertainty_scale) + 1
+        self.global_timesteps = height
+        row_indices = torch.arange(height, dtype=torch.float32).view(-1, 1)
+        col_indices = torch.arange(horizon, dtype=torch.float32)
+        t_scaled = col_indices * uncertainty_scale
+        normalized_matrix = (
+            self.sampling_steps + t_scaled - row_indices
+        ) / self.sampling_steps
+        return torch.clamp(normalized_matrix, min=0.0, max=1.0).to(self.device)
 
     def dict_to_device(self, data):
         return {k: v.to(self.device) for k, v in data.items()}
