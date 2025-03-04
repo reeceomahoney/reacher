@@ -46,15 +46,14 @@ class DiffusionTransformer(nn.Module):
             nn.Linear(1, d_model),
             Rearrange("b d -> b 1 d"),
         )
-        dim = 32
-        self.t_emb = nn.Sequential(
-            # Rearrange("b 1 1 -> b 1"),
-            SinusoidalPosEmb(dim, device),
-            nn.Linear(dim, dim * 4),
-            nn.Mish(),
-            nn.Linear(dim * 4, dim),
+        self.t_emb = SinusoidalPosEmb(d_model, device)
+        self.cond_emb = nn.Sequential(
+            nn.Linear(d_model * 2, d_model),
+            nn.SiLU(),
+            nn.Linear(d_model, d_model),
         )
-        self.pos_emb = SinusoidalPosEmb(d_model + dim, device)(
+
+        self.pos_emb = SinusoidalPosEmb(d_model, device)(
             torch.arange(input_len)
         ).unsqueeze(0)
 
@@ -63,7 +62,7 @@ class DiffusionTransformer(nn.Module):
         # transformer
         self.encoder = nn.TransformerEncoder(
             nn.TransformerEncoderLayer(
-                d_model=d_model + dim,
+                d_model=d_model,
                 nhead=nhead,
                 dim_feedforward=4 * d_model,
                 dropout=attn_dropout,
@@ -74,7 +73,7 @@ class DiffusionTransformer(nn.Module):
             num_layers=num_layers,
         )
         self.register_buffer("mask", self.generate_mask(input_len))
-        self.ln_f = nn.LayerNorm(d_model + dim)
+        self.ln_f = nn.LayerNorm(d_model)
 
         if value:
             self.output = nn.Linear(d_model, 1)
@@ -82,7 +81,7 @@ class DiffusionTransformer(nn.Module):
             #     nn.Linear(d_model, 1), Rearrange("b t 1 -> b t"), nn.Linear(T, 1)
             # )
         else:
-            self.output = nn.Linear(d_model + dim, input_dim)
+            self.output = nn.Linear(d_model, input_dim)
 
         self.apply(self._init_weights)
         self.to(device)
@@ -198,7 +197,7 @@ class DiffusionTransformer(nn.Module):
         # return_emb = self.return_emb(data["returns"])
 
         # construct input
-        x = torch.cat([t_emb, x_emb], dim=-1)
+        x = self.cond_emb(torch.cat([x_emb, t_emb], dim=-1))
         x = self.drop(x + self.pos_emb)
 
         # output

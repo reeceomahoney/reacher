@@ -64,7 +64,7 @@ class DiffusionPolicy(nn.Module):
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
         self.scheduler = DDPMScheduler(self.sampling_steps)
         self.algo = algo  # ddpm or flow
-        self.scheduling_matrix = self._generate_trapezoid_scheduling_matrix(T, 1.0)
+        self.scheduling_matrix = self._generate_scheduling_matrix("full")
 
         # optimizer and lr scheduler
         self.optimizer = AdamW(self.model.parameters(), lr=2e-4)
@@ -105,7 +105,9 @@ class DiffusionPolicy(nn.Module):
         if self.algo == "flow":
             # samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
             # t = 0.999 * (1 - samples)
-            t = torch.rand(x_1.shape[0], self.T, 1).to(self.device)
+            # t = torch.rand(x_1.shape[0], self.T, 1).to(self.device)
+            t = torch.rand(x_1.shape[0], 1, 1).to(self.device)
+            t = t.repeat(1, self.T, 1)
             t[:, 0] = 1
             t[:, -1] = 1
             # compute target
@@ -116,7 +118,7 @@ class DiffusionPolicy(nn.Module):
 
         elif self.algo == "ddpm":
             t = torch.randint(0, self.sampling_steps, (x_1.shape[0], 1)).to(self.device)
-            x_t = self.scheduler.add_noise(x_1, x_0, t)
+            x_t = self.scheduler.add_noise(x_1, x_0, t)  # type: ignore
             target = x_0
 
         # inpaint
@@ -337,6 +339,16 @@ class DiffusionPolicy(nn.Module):
     # Helpers #
     ###########
 
+    def _generate_scheduling_matrix(self, schedule_type: str):
+        match schedule_type:
+            case "pyramid":
+                return self._generate_pyramid_scheduling_matrix(self.T, 1.0)
+            case "trapezoid":
+                return self._generate_trapezoid_scheduling_matrix(self.T, 1.0)
+            case "full":
+                return self._generate_full_sequence_scheduling_matrix(self.T)
+        raise ValueError(f"Invalid scheduling matrix type: {schedule_type}")
+
     def _generate_pyramid_scheduling_matrix(
         self, horizon: int, uncertainty_scale: float
     ):
@@ -360,6 +372,15 @@ class DiffusionPolicy(nn.Module):
                 scheduling_matrix[m, -(t + 1)] = m - int(t * uncertainty_scale)
         scheduling_matrix /= self.sampling_steps
         return torch.clamp(scheduling_matrix, min=0, max=1).to(self.device)
+
+    def _generate_full_sequence_scheduling_matrix(self, horizon: int):
+        self.global_timesteps = self.sampling_steps
+        return (
+            torch.linspace(0, 1, self.sampling_steps + 1)
+            .repeat(horizon, 1)
+            .to(self.device)
+            .T
+        )
 
     def dict_to_device(self, data):
         return {k: v.to(self.device) for k, v in data.items()}

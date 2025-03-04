@@ -166,5 +166,6 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 if __name__ == "__main__":
     sys.argv.append("hydra.output_subdir=null")
     sys.argv.append("hydra.run.dir=.")
+    # torch.set_printoptions(precision=1, threshold=1000000, linewidth=500)
     main()  # type: ignore
     simulation_app.close()
