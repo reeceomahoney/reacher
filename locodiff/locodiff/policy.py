@@ -106,9 +106,13 @@ class DiffusionPolicy(nn.Module):
             # samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
             # t = 0.999 * (1 - samples)
             t = torch.rand(x_1.shape[0], self.T, 1).to(self.device)
+            t[:, 0] = 1
+            t[:, -1] = 1
             # compute target
             x_t = (1 - t) * x_0 + t * x_1
             target = x_1 - x_0
+            target[:, 0] = 0
+            target[:, -1] = 0
 
         elif self.algo == "ddpm":
             t = torch.randint(0, self.sampling_steps, (x_1.shape[0], 1)).to(self.device)
@@ -116,8 +120,8 @@ class DiffusionPolicy(nn.Module):
             target = x_0
 
         # inpaint
-        x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
-        x_t[:, -1, self.action_dim :] = data["goal"]
+        # x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
+        # x_t[:, -1, self.action_dim :] = data["goal"]
 
         # cfg masking
         if self.cond_mask_prob > 0:
@@ -125,10 +129,10 @@ class DiffusionPolicy(nn.Module):
             data["returns"][cond_mask] = 0
 
         # inpaint
-        mask = torch.ones_like(x_t)
-        mask[:, 0, self.action_dim :] = 0
-        mask[:, -1, self.action_dim :] = 0
-        target *= mask
+        # mask = torch.ones_like(x_t)
+        # mask[:, 0, self.action_dim :] = 0
+        # mask[:, -1, self.action_dim :] = 0
+        # target *= mask
 
         # compute model output
         out = self.model(x_t, t.float(), data)
@@ -227,6 +231,8 @@ class DiffusionPolicy(nn.Module):
             data["returns"][bsz:] = 0
 
         # inpaint
+        x[:, 0] = 0
+        x[:, -1] = 0
         x[:, 0, self.action_dim :] = data["obs"][:, 0]
         x[:, -1, self.action_dim :] = data["goal"]
 
@@ -252,8 +258,8 @@ class DiffusionPolicy(nn.Module):
                 x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
 
             # inpaint
-            x[:, 0, self.action_dim :] = data["obs"][:, 0]
-            x[:, -1, self.action_dim :] = data["goal"]
+            # x[:, 0, self.action_dim :] = data["obs"][:, 0]
+            # x[:, -1, self.action_dim :] = data["goal"]
 
         # denormalize
         x = self.normalizer.clip(x)
