@@ -156,10 +156,8 @@ class DiffusionPolicy(nn.Module):
         # calculate losses
         input = self.normalizer.inverse_scale_output(data["input"])
         loss = F.mse_loss(x, input, reduction="none")
-        # obs_loss = loss[:, :, self.action_dim :].mean().item()
-        # action_loss = loss[:, :, : self.action_dim].mean().item()
-        obs_loss = 0
-        action_loss = 0
+        obs_loss = loss[:, :, self.action_dim :].mean().item()
+        action_loss = loss[:, :, : self.action_dim].mean().item()
 
         return loss.mean().item(), obs_loss, action_loss
 
