@@ -108,13 +108,9 @@ class DiffusionPolicy(nn.Module):
             # t = torch.rand(x_1.shape[0], self.T, 1).to(self.device)
             t = torch.rand(x_1.shape[0], 1, 1).to(self.device)
             t = t.repeat(1, self.T, 1)
-            # t[:, 0] = 1
-            # t[:, -1] = 1
             # compute target
             x_t = (1 - t) * x_0 + t * x_1
             target = x_1 - x_0
-            target[:, 0, self.action_dim :] = 0
-            target[:, -1, self.action_dim :] = 0
 
         elif self.algo == "ddpm":
             t = torch.randint(0, self.sampling_steps, (x_1.shape[0], 1)).to(self.device)
@@ -122,19 +118,15 @@ class DiffusionPolicy(nn.Module):
             target = x_0
 
         # inpaint
-        # x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
-        # x_t[:, -1, self.action_dim :] = data["goal"]
+        x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
+        x_t[:, -1, self.action_dim :] = data["goal"]
+        target[:, 0, self.action_dim :] = 0
+        target[:, -1, self.action_dim :] = 0
 
         # cfg masking
         if self.cond_mask_prob > 0:
             cond_mask = torch.rand(x_1.shape[0], 1) < self.cond_mask_prob
             data["returns"][cond_mask] = 0
-
-        # inpaint
-        # mask = torch.ones_like(x_t)
-        # mask[:, 0, self.action_dim :] = 0
-        # mask[:, -1, self.action_dim :] = 0
-        # target *= mask
 
         # compute model output
         out = self.model(x_t, t.float(), data)

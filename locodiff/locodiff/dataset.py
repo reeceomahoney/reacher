@@ -269,29 +269,37 @@ class PDControlledParticleDataset(Dataset):
         self.accelerations = []  # Store accelerations for analysis
         self.control_signals = []  # Store control signals for analysis
 
-        for i in range(num_samples):
-            # Randomly choose starting corner (0: bottom-left, 1: bottom-right)
-            start_corner = i % 2
+        if os.path.exists("data/diffusion/pd_env/dataset.pt"):
+            data = torch.load("data/diffusion/pd_env/dataset.pt")
+            self.obs = data["obs"]
+            self.actions = data["actions"]
+        else:
+            for i in range(num_samples):
+                # Randomly choose starting corner (0: bottom-left, 1: bottom-right)
+                start_corner = i % 2
 
-            # Generate the trajectory with PD control
-            trajectory, velocity, acceleration, control = self._generate_pd_trajectory(
-                start_corner
+                # Generate the trajectory with PD control
+                trajectory, velocity, acceleration, control = (
+                    self._generate_pd_trajectory(start_corner)
+                )
+
+                self.trajectories.append(trajectory)
+                self.start_corners.append(start_corner)
+                self.velocities.append(velocity)
+                self.accelerations.append(acceleration)
+                self.control_signals.append(control)
+
+            # Convert lists to tensors
+            self.obs = torch.cat(
+                [torch.stack(self.trajectories), torch.stack(self.velocities)], dim=-1
             )
+            # self.obs = torch.stack(self.trajectories)
+            self.start_corners = torch.tensor(self.start_corners)
+            self.accelerations = torch.stack(self.accelerations)
+            self.actions = torch.stack(self.control_signals)
 
-            self.trajectories.append(trajectory)
-            self.start_corners.append(start_corner)
-            self.velocities.append(velocity)
-            self.accelerations.append(acceleration)
-            self.control_signals.append(control)
-
-        # Convert lists to tensors
-        self.obs = torch.cat(
-            [torch.stack(self.trajectories), torch.stack(self.velocities)], dim=-1
-        )
-        # self.obs = torch.stack(self.trajectories)
-        self.start_corners = torch.tensor(self.start_corners)
-        self.accelerations = torch.stack(self.accelerations)
-        self.actions = torch.stack(self.control_signals)
+            data = {"obs": self.obs, "actions": self.actions}
+            torch.save(data, "data/diffusion/pd_env/dataset.pt")
 
         self.calculate_norm_data(self.obs, self.actions)
 
