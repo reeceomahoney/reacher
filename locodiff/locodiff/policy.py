@@ -217,8 +217,6 @@ class DiffusionPolicy(nn.Module):
         if self.algo == "flow":
             # timesteps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
             timesteps = self.scheduling_matrix
-            timesteps[:, 0] = 1.0
-            timesteps[:, -1] = 1.0
         elif self.algo == "ddpm":
             self.scheduler.set_timesteps(self.sampling_steps)
             timesteps = self.scheduler.timesteps
