@@ -108,13 +108,13 @@ class DiffusionPolicy(nn.Module):
             # t = torch.rand(x_1.shape[0], self.T, 1).to(self.device)
             t = torch.rand(x_1.shape[0], 1, 1).to(self.device)
             t = t.repeat(1, self.T, 1)
-            t[:, 0] = 1
-            t[:, -1] = 1
+            # t[:, 0] = 1
+            # t[:, -1] = 1
             # compute target
             x_t = (1 - t) * x_0 + t * x_1
             target = x_1 - x_0
-            target[:, 0] = 0
-            target[:, -1] = 0
+            target[:, 0, self.action_dim :] = 0
+            target[:, -1, self.action_dim :] = 0
 
         elif self.algo == "ddpm":
             t = torch.randint(0, self.sampling_steps, (x_1.shape[0], 1)).to(self.device)
@@ -231,8 +231,6 @@ class DiffusionPolicy(nn.Module):
             data["returns"][bsz:] = 0
 
         # inpaint
-        x[:, 0] = 0
-        x[:, -1] = 0
         x[:, 0, self.action_dim :] = data["obs"][:, 0]
         x[:, -1, self.action_dim :] = data["goal"]
 
@@ -258,8 +256,8 @@ class DiffusionPolicy(nn.Module):
                 x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
 
             # inpaint
-            # x[:, 0, self.action_dim :] = data["obs"][:, 0]
-            # x[:, -1, self.action_dim :] = data["goal"]
+            x[:, 0, self.action_dim :] = data["obs"][:, 0]
+            x[:, -1, self.action_dim :] = data["goal"]
 
         # denormalize
         x = self.normalizer.clip(x)
