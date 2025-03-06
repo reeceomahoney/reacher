@@ -339,7 +339,7 @@ class DiffusionPolicy(nn.Module):
         self, horizon: int, uncertainty_scale: float
     ):
         height = self.sampling_steps + int((horizon - 1) * uncertainty_scale) + 1
-        self.global_timesteps = height
+        self.global_timesteps = height - 1
         row_indices = torch.arange(height, dtype=torch.float32).view(-1, 1)
         col_indices = torch.arange(horizon, dtype=torch.float32)
         t_scaled = col_indices * uncertainty_scale
@@ -350,7 +350,7 @@ class DiffusionPolicy(nn.Module):
         self, horizon: int, uncertainty_scale: float
     ):
         height = self.sampling_steps + int((horizon + 1) // 2 * uncertainty_scale)
-        self.global_timesteps = height
+        self.global_timesteps = height - 1
         scheduling_matrix = torch.zeros((height, horizon))
         for m in range(height):
             for t in range((horizon + 1) // 2):
