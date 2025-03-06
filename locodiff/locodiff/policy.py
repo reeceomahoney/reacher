@@ -225,7 +225,7 @@ class DiffusionPolicy(nn.Module):
         x[:, -1, self.action_dim :] = data["goal"]
 
         # inference
-        for i in range(self.global_timesteps - 1):
+        for i in range(self.global_timesteps):
             x = torch.cat([x] * 2) if self.cond_lambda > 0 else x
             if self.algo == "flow":
                 x = self.step(x, timesteps[i], timesteps[i + 1], data)
