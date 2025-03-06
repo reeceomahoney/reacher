@@ -64,7 +64,7 @@ class DiffusionPolicy(nn.Module):
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
         self.scheduler = DDPMScheduler(self.sampling_steps)
         self.algo = algo  # ddpm or flow
-        self.scheduling_matrix = self._generate_scheduling_matrix("full")
+        self.scheduling_matrix = self._generate_scheduling_matrix("pyramid")
 
         # optimizer and lr scheduler
         self.optimizer = AdamW(self.model.parameters(), lr=2e-4)
@@ -105,9 +105,9 @@ class DiffusionPolicy(nn.Module):
         if self.algo == "flow":
             # samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
             # t = 0.999 * (1 - samples)
-            # t = torch.rand(x_1.shape[0], self.T, 1).to(self.device)
-            t = torch.rand(x_1.shape[0], 1, 1).to(self.device)
-            t = t.repeat(1, self.T, 1)
+            t = torch.rand(x_1.shape[0], self.T, 1).to(self.device)
+            # t = torch.rand(x_1.shape[0], 1, 1).to(self.device)
+            # t = t.repeat(1, self.T, 1)
             # compute target
             x_t = (1 - t) * x_0 + t * x_1
             target = x_1 - x_0
