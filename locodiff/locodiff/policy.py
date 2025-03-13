@@ -64,7 +64,7 @@ class DiffusionPolicy(nn.Module):
         self.beta_dist = torch.distributions.beta.Beta(1.5, 1.0)
         self.scheduler = DDPMScheduler(self.sampling_steps)
         self.algo = algo  # ddpm or flow
-        self.scheduling_matrix = self._generate_scheduling_matrix("pyramid")
+        self.scheduling_matrix = self._generate_scheduling_matrix("autoregressive")
 
         # optimizer and lr scheduler
         self.optimizer = AdamW(self.model.parameters(), lr=2e-4)
@@ -103,11 +103,8 @@ class DiffusionPolicy(nn.Module):
         x_0 = torch.randn_like(x_1)
 
         if self.algo == "flow":
-            # samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
-            # t = 0.999 * (1 - samples)
-            t = torch.rand(x_1.shape[0], self.T, 1).to(self.device)
-            # t = torch.rand(x_1.shape[0], 1, 1).to(self.device)
-            # t = t.repeat(1, self.T, 1)
+            samples = self.beta_dist.sample((len(x_1), 1, 1)).to(self.device)
+            t = 0.999 * (1 - samples)
             # compute target
             x_t = (1 - t) * x_0 + t * x_1
             target = x_1 - x_0
@@ -120,8 +117,6 @@ class DiffusionPolicy(nn.Module):
         # inpaint
         x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
         x_t[:, -1, self.action_dim :] = data["goal"]
-        target[:, 0, self.action_dim :] = 0
-        target[:, -1, self.action_dim :] = 0
 
         # cfg masking
         if self.cond_mask_prob > 0:
@@ -130,7 +125,9 @@ class DiffusionPolicy(nn.Module):
 
         # compute model output
         out = self.model(x_t, t.float(), data)
-        # loss = (mask * F.mse_loss(out, target, reduction="none")).mean()
+        out[:, 0, self.action_dim :] = data["obs"][:, 0]
+        out[:, -1, self.action_dim :] = data["goal"]
+
         loss = F.mse_loss(out, target)
         # update model
         self.optimizer.zero_grad()
@@ -329,6 +326,8 @@ class DiffusionPolicy(nn.Module):
         match schedule_type:
             case "pyramid":
                 return self._generate_pyramid_scheduling_matrix(self.T, 1.0)
+            case "autoregressive":
+                return self._generate_autoregressive_scheduling_matrix(self.T)
             case "trapezoid":
                 return self._generate_trapezoid_scheduling_matrix(self.T, 1.0)
             case "full":
@@ -345,6 +344,12 @@ class DiffusionPolicy(nn.Module):
         t_scaled = col_indices * uncertainty_scale
         normalized_matrix = (row_indices - t_scaled) / self.sampling_steps
         return torch.clamp(normalized_matrix, min=0.0, max=1.0).to(self.device)
+
+    def _generate_autoregressive_scheduling_matrix(self, horizon: int):
+        matrix = self._generate_pyramid_scheduling_matrix(horizon, self.sampling_steps)
+        for i in range(matrix.shape[1]):
+            matrix[20 + 10 * i :, i] = 0
+        return matrix
 
     def _generate_trapezoid_scheduling_matrix(
         self, horizon: int, uncertainty_scale: float
