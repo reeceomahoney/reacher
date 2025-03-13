@@ -139,7 +139,7 @@ class ConditionalUnet1D(nn.Module):
         # diffusion step embedding and observations
         dim = 32
         self.cond_encoder = nn.Sequential(
-            SinusoidalPosEmb(32, device),
+            SinusoidalPosEmb(dim, device),
             nn.Linear(dim, dim * 4),
             nn.Mish(),
             nn.Linear(dim * 4, dim),
