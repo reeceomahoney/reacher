@@ -204,8 +204,7 @@ class DiffusionPolicy(nn.Module):
         x = torch.randn((bsz, self.T, self.input_dim)).to(self.device)
 
         if self.algo == "flow":
-            # timesteps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
-            timesteps = self.scheduling_matrix
+            timesteps = torch.linspace(0, 1.0, self.sampling_steps + 1).to(self.device)
         elif self.algo == "ddpm":
             self.scheduler.set_timesteps(self.sampling_steps)
             timesteps = self.scheduler.timesteps
@@ -222,7 +221,7 @@ class DiffusionPolicy(nn.Module):
         x[:, -1, self.action_dim :] = data["goal"]
 
         # inference
-        for i in range(self.global_timesteps):
+        for i in range(self.sampling_steps):
             x = torch.cat([x] * 2) if self.cond_lambda > 0 else x
             if self.algo == "flow":
                 x = self.step(x, timesteps[i], timesteps[i + 1], data)

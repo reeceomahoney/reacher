@@ -46,8 +46,8 @@ class DiffusionTransformer(nn.Module):
             nn.Linear(1, d_model),
             Rearrange("b d -> b 1 d"),
         )
-        self.t_emb = SinusoidalPosEmb(d_model, device)
-        self.cond_emb = nn.Sequential(
+        self.t_emb = nn.Sequential(
+            SinusoidalPosEmb(d_model, device),
             nn.Linear(d_model * 2, d_model),
             nn.SiLU(),
             nn.Linear(d_model, d_model),
