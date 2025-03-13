@@ -1,6 +1,6 @@
 from torch.utils.data import DataLoader
 
-from locodiff.envs import PDControlledParticleDataset
+from locodiff.dataset import PDControlledParticleDataset
 
 if __name__ == "__main__":
     # Create dataset with PD control
@@ -26,6 +26,6 @@ if __name__ == "__main__":
     # Iterate through the dataloader
     for batch in dataloader:
         # Access batch['trajectory], batch['start_corner'], etc.
-        print(f"Batch trajectories shape: {batch['trajectory'].shape}")
-        print(f"Batch start corners shape: {batch['start_corner'].shape}")
+        print(f"Batch trajectories shape: {batch['obs'].shape}")
+        print(f"Batch start corners shape: {batch['action'].shape}")
         break  # Just show the first batch

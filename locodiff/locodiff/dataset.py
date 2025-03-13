@@ -409,11 +409,9 @@ class PDControlledParticleDataset(Dataset):
 
         for i in range(min(batch_size, self.num_samples)):
             sample = self[i]
-            trajectory = sample["trajectory"]
-            start_corner = sample["start_corner"]
+            trajectory = sample["obs"][:, :2]
 
-            color = "blue" if start_corner == 0 else "orange"
-            plt.plot(trajectory[:, 0], trajectory[:, 1], c=color, alpha=0.6)
+            plt.plot(trajectory[:, 0], trajectory[:, 1], c="blue", alpha=0.6)
             plt.scatter(trajectory[0, 0], trajectory[0, 1], c="green", s=30)
             plt.scatter(trajectory[-1, 0], trajectory[-1, 1], c="red", s=30)
 
