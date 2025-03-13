@@ -224,15 +224,15 @@ class PDControlledParticleDataset(Dataset):
 
     def __init__(
         self,
-        num_samples=1000,
-        trajectory_length=100,
+        num_samples=100,
+        trajectory_length=64,
         grid_size=1.0,
-        process_noise=0.02,
+        process_noise=0.1,
         measurement_noise=0.01,
-        init_pos_var=0.05,
-        kp=1.0,
-        kd=0.5,
-        dt=0.1,
+        init_pos_var=0.01,
+        kp=4.0,
+        kd=2.0,
+        dt=0.02,
         seed=42,
     ):
         """
@@ -309,9 +309,7 @@ class PDControlledParticleDataset(Dataset):
             # Bottom-left to top-right
             # Add variation to the initial position
             init_pos = torch.tensor([0.0, 0.0]) + torch.randn(2) * self.init_pos_var
-            init_pos = torch.clamp(
-                init_pos, 0, self.grid_size * 0.2
-            )  # Keep it in the corner region
+            # init_pos = torch.clamp(init_pos, 0, self.grid_size * 0.2)
             target_pos = torch.tensor([self.grid_size, self.grid_size])
         else:
             # Bottom-right to top-left
@@ -319,11 +317,11 @@ class PDControlledParticleDataset(Dataset):
             init_pos = (
                 torch.tensor([0.0, self.grid_size]) + torch.randn(2) * self.init_pos_var
             )
-            init_pos = torch.clamp(
-                init_pos,
-                torch.tensor([0.0, self.grid_size * 0.8]),
-                torch.tensor([self.grid_size * 0.2, self.grid_size]),
-            )
+            # init_pos = torch.clamp(
+            #     init_pos,
+            #     torch.tensor([0.0, self.grid_size * 0.8]),
+            #     torch.tensor([self.grid_size * 0.2, self.grid_size]),
+            # )
             target_pos = torch.tensor([self.grid_size, 0.0])
 
         # Initialize trajectory arrays
@@ -365,7 +363,8 @@ class PDControlledParticleDataset(Dataset):
             noisy_pos = new_pos + torch.randn(2) * self.measurement_noise
 
             # Clip position to grid boundaries
-            trajectory[t] = torch.clamp(noisy_pos, 0, self.grid_size)
+            # trajectory[t] = torch.clamp(noisy_pos, 0, self.grid_size)
+            trajectory[t] = noisy_pos
 
         return trajectory, velocity, acceleration, control_signal
 
@@ -464,14 +463,14 @@ def get_dataloaders(
     # Build the datasets
     dataset = PDControlledParticleDataset(
         num_samples=100 if test else 10000,
-        trajectory_length=32,
+        trajectory_length=64,
         grid_size=1.0,
-        process_noise=0.03,
+        process_noise=0.1,
         measurement_noise=0.01,
-        init_pos_var=0.05,
-        kp=2.0,
-        kd=1.0,
-        dt=0.05,
+        init_pos_var=0.01,
+        kp=4.0,
+        kd=2.0,
+        dt=0.02,
         seed=42,
     )
     train, val = random_split(dataset, [train_fraction, 1 - train_fraction])
