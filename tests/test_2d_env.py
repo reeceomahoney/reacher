@@ -6,14 +6,14 @@ if __name__ == "__main__":
     # Create dataset with PD control
     dataset = PDControlledParticleDataset(
         num_samples=100,
-        trajectory_length=64,
+        trajectory_length=30,
         grid_size=1.0,
-        process_noise=0.1,
+        process_noise=0.03,
         measurement_noise=0.01,
-        init_pos_var=0.01,
-        kp=4.0,
-        kd=2.0,
-        dt=0.02,
+        init_pos_var=0.05,
+        kp=2.0,
+        kd=1.0,
+        dt=0.05,
         seed=42,
     )
 
