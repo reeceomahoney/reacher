@@ -28,7 +28,7 @@ class DiffusionTransformer(nn.Module):
         # variables
         input_dim = act_dim + obs_dim
         # input_len = T + 3 if value else T + 2
-        input_len = T
+        input_len = T + 1
         self.cond_mask_prob = cond_mask_prob
         self.weight_decay = weight_decay
         self.device = device
@@ -48,8 +48,8 @@ class DiffusionTransformer(nn.Module):
         )
         self.t_emb = nn.Sequential(
             SinusoidalPosEmb(d_model, device),
-            nn.Linear(d_model * 2, d_model),
-            nn.SiLU(),
+            nn.Linear(d_model, d_model),
+            nn.Mish(),
             nn.Linear(d_model, d_model),
         )
 
@@ -191,13 +191,13 @@ class DiffusionTransformer(nn.Module):
     def forward(self, x, t, data):
         # embed
         x_emb = self.x_emb(x)
-        t_emb = self.t_emb(t).squeeze(1)
+        t_emb = self.t_emb(t)
         # obs_emb = self.obs_emb(data["obs"])
         # goal_emb = self.goal_emb(data["goal"])
         # return_emb = self.return_emb(data["returns"])
 
         # construct input
-        x = self.cond_emb(torch.cat([x_emb, t_emb], dim=-1))
+        x = torch.cat([t_emb, x_emb], dim=1)
         x = self.drop(x + self.pos_emb)
 
         # output
