@@ -117,7 +117,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
     #     task, cfg=env_cfg, render_mode="rgb_array" if args_cli.video else None
     # )
     env = None
-    agent_cfg.obs_dim = 2
+    agent_cfg.obs_dim = 4
     agent_cfg.act_dim = 2
 
     # wrap for video recording

@@ -91,7 +91,7 @@ def main(agent_cfg: DictConfig, env_cfg: ManagerBasedRLEnvCfg):
 
     # wrap around environment for rsl-rl
     # env = RslRlVecEnvWrapper(env)  # type: ignore
-    agent_cfg.obs_dim = 2
+    agent_cfg.obs_dim = 4
     agent_cfg.act_dim = 2
     agent_cfg.dataset.test = True
 
