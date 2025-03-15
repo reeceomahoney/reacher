@@ -294,7 +294,6 @@ class PDControlledParticleDataset(Dataset):
             # self.obs = torch.cat(
             #     [torch.stack(self.trajectories), torch.stack(self.velocities)], dim=-1
             # )
-            # self.obs = torch.stack(self.trajectories)
             self.start_corners = torch.tensor(self.start_corners)
             self.accelerations = torch.stack(self.accelerations)
             self.actions = torch.stack(self.control_signals)

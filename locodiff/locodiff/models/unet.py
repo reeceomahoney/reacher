@@ -137,17 +137,16 @@ class ConditionalUnet1D(nn.Module):
         in_out = list(zip(all_dims[:-1], all_dims[1:], strict=False))
 
         # diffusion step embedding and observations
-        dim = 32
         self.cond_encoder = nn.Sequential(
-            SinusoidalPosEmb(dim, device),
-            nn.Linear(dim, dim * 4),
+            SinusoidalPosEmb(cond_embed_dim, device),
+            nn.Linear(cond_embed_dim, cond_embed_dim * 4),
             nn.Mish(),
-            nn.Linear(dim * 4, dim),
+            nn.Linear(cond_embed_dim * 4, cond_embed_dim),
         )
 
         CondResBlock = partial(
             ConditionalResidualBlock1D,
-            cond_dim=dim,
+            cond_dim=cond_embed_dim,
             kernel_size=kernel_size,
             n_groups=n_groups,
             cond_predict_scale=cond_predict_scale,
