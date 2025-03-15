@@ -115,19 +115,15 @@ class DiffusionPolicy(nn.Module):
             x_t = self.scheduler.add_noise(x_1, x_0, t)  # type: ignore
             target = x_0
 
-        # inpaint
-        x_t[:, 0, self.action_dim :] = data["obs"][:, 0]
-        x_t[:, -1, self.action_dim :] = data["goal"]
-
         # cfg masking
         if self.cond_mask_prob > 0:
             cond_mask = torch.rand(x_1.shape[0], 1) < self.cond_mask_prob
             data["returns"][cond_mask] = 0
 
         # compute model output
+        x_t = self.inpaint(x_t, data)
         out = self.model(x_t, t.float(), data)
-        out[:, 0, self.action_dim :] = data["obs"][:, 0]
-        out[:, -1, self.action_dim :] = data["goal"]
+        out = self.inpaint(out, data)
 
         loss = F.mse_loss(out, target)
         # update model
@@ -217,9 +213,7 @@ class DiffusionPolicy(nn.Module):
             }
             data["returns"][bsz:] = 0
 
-        # inpaint
-        x[:, 0, self.action_dim :] = data["obs"][:, 0]
-        x[:, -1, self.action_dim :] = data["goal"]
+        x = self.inpaint(x, data)
 
         # inference
         for i in range(self.sampling_steps):
@@ -242,9 +236,7 @@ class DiffusionPolicy(nn.Module):
                 x_cond, x_uncond = x.chunk(2)
                 x = x_uncond + self.cond_lambda * (x_cond - x_uncond)
 
-            # inpaint
-            x[:, 0, self.action_dim :] = data["obs"][:, 0]
-            x[:, -1, self.action_dim :] = data["goal"]
+            x = self.inpaint(x, data)
 
         # denormalize
         x = self.normalizer.clip(x)
@@ -373,8 +365,13 @@ class DiffusionPolicy(nn.Module):
             .T
         )
 
-    def dict_to_device(self, data):
+    def dict_to_device(self, data: dict) -> dict:
         return {k: v.to(self.device) for k, v in data.items()}
+
+    def inpaint(self, x: Tensor, data: dict) -> Tensor:
+        x[:, 0, self.action_dim :] = data["obs"][:, 0]
+        x[:, -1, self.action_dim :] = data["goal"]
+        return x
 
     def plot_collsion_rate(self, batch_size):
         cond_lambda = [0, 1, 2, 3, 5, 10]
